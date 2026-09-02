@@ -154,7 +154,7 @@
 .j-heading {
   font-family: $font-stack;
   font-weight: 800;
-  font-size: calc(#{du(96)} * var(--fit, 1));
+  font-size: calc(var(--heading-font, #{du(96)}) * var(--fit, 1));
   line-height: 1.08;
   text-transform: uppercase;
   color: #fff;
@@ -167,27 +167,19 @@
 }
 
 ///
-/// Digit tiles (21770:2953 -> 2954).
+/// Digit tiles (21770:2953 -> 2954 and friends).
 ///
-/// TWO sizes, and they are genuinely different components in the mock:
-///   lg — Days in the Spotlight: 350 tall, 386.108 digits, 58.978 gap.
-///   sm — Headline Win: the row is 699.856 x 120.8 with ~101.679-wide tiles on
-///        a 122.035 pitch, so the gap is 20.356. The rest of `sm` is derived
-///        from the lg ratio (120.8 / 350 = 0.345) and is PROVISIONAL until the
-///        Headline Win page is built and measured against the mock.
+/// HEIGHT-DRIVEN. Measuring all four tile sizes in the mock (350 / 200 / 172 /
+/// 120.8) showed gap/height is 0.16851 in every one, constant to five decimals,
+/// so the whole geometry is one similarity class. JDigitTiles derives the
+/// custom properties below from a single `height` prop; an enum could not have
+/// expressed 172 or 200.
 ///
 .j-tiles {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.j-tiles--lg {
-  gap: du(58.978);
-}
-
-.j-tiles--sm {
-  gap: du(20.356);
+  gap: var(--tile-gap);
 }
 
 .j-tile {
@@ -195,33 +187,26 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  height: var(--tile-h);
+  padding: var(--tile-pad);
   overflow: clip;
-  border-style: solid;
-  border-color: $accent;
-  // backdrop-filter is safe here: a leaf below the preserve-3d chain. If it
-  // ever costs frames on an SE-class device, a flat rgba fill is visually
-  // indistinguishable behind a 0.68-scaled rotated page.
-  backdrop-filter: blur(du(7.735));
+  // The stroke is drawn INSIDE in Figma, so it must not add to the layout
+  // width. MEASURED on Bonus Report (21770:3718): the tile is 167.68 wide and
+  // its text node is 150 wide at x = 8.84 — i.e. content + 2 * padding exactly,
+  // with no border contribution. A real `border` made every tile ~10% too wide
+  // and pushed 7-digit rows off the page.
+  box-shadow: inset 0 0 0 var(--tile-border) #{$accent};
+  border-radius: var(--tile-radius);
+  // Safe here: a leaf below the preserve-3d chain. If it ever costs frames on
+  // an SE-class device, a flat rgba fill is indistinguishable behind a
+  // 0.68-scaled rotated page.
+  backdrop-filter: blur(var(--tile-blur));
 }
 
-.j-tiles--lg .j-tile {
-  height: du(350);
-  border-width: du(13.536);
-  border-radius: du(24.171);
-  padding: du(15.47);
-}
-
-.j-tiles--sm .j-tile {
-  height: du(120.8);
-  border-width: du(4.67);
-  border-radius: du(8.34);
-  padding: du(5.34);
-}
-
-/// Gap-only cell for separators (space, comma, dot) so a grouped number keeps
-/// its rhythm without drawing a bordered box around a comma.
+/// Gap-only cell for separators, so a grouped number keeps its rhythm without
+/// drawing a bordered box around a comma.
 .j-tile--sep {
-  border-color: transparent;
+  box-shadow: none;
   backdrop-filter: none;
   padding: 0;
 }
@@ -229,11 +214,10 @@
 .j-tile__digit {
   font-family: $font-stack;
   font-weight: 800;
+  font-size: calc(var(--tile-font) * var(--tile-fit, 1));
   line-height: 0.94;
   text-align: center;
   white-space: nowrap;
-  // Gradient text. `color: transparent` + background-clip is the only way to
-  // fill glyphs with a gradient.
   background-image: $accent-grad;
   background-clip: text;
   -webkit-background-clip: text;
@@ -241,16 +225,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.j-tiles--lg .j-tile__digit {
-  font-size: calc(#{du(386.108)} * var(--tile-fit, 1));
-}
-
-.j-tiles--sm .j-tile__digit {
-  font-size: calc(#{du(133.2)} * var(--tile-fit, 1));
-}
-
 .j-tile--sep .j-tile__digit {
-  width: du(28);
+  width: calc(var(--tile-h) * 0.08);
 }
 
 /// Currency label — a separate node in the mock (21811:3479), never inside the
@@ -258,13 +234,51 @@
 .j-currency {
   font-family: $font-stack;
   font-weight: 800;
-  font-size: calc(#{du(96)} * var(--fit, 1));
+  font-size: calc(var(--currency-font) * var(--fit, 1));
   line-height: 1;
   text-transform: uppercase;
   background-image: $accent-grad;
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
+}
+
+/// Big gradient number without tiles — Seasonal Power (21770:3046).
+.j-value {
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: calc(var(--value-font) * var(--fit, 1));
+  line-height: 1;
+  white-space: nowrap;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+///
+/// Hero art slot — the 919 x 919 `image` frame with the shared glow behind it.
+///
+.j-hero {
+  overflow: visible;
+}
+
+.j-hero__glow {
+  position: absolute;
+  pointer-events: none;
+  // In Figma the `lighting_1296x576` bitmap lives inside a "Mask group" with an
+  // ellipse mask (e.g. 21770:3197 -> Ellipse 3276). Used raw it reads as a hard
+  // bright blob that swamps the page, so the mask is reproduced here and the
+  // opacity dialled back to match the mock's density.
+  opacity: 0.72;
+  mask-image: radial-gradient(closest-side ellipse, #000 42%, transparent 78%);
+  -webkit-mask-image: radial-gradient(closest-side ellipse, #000 42%, transparent 78%);
+}
+
+.j-hero__icon {
+  position: absolute;
+  pointer-events: none;
 }
 
 ///
@@ -294,4 +308,105 @@
   width: du(752);
   height: du(956);
   object-fit: cover;
+}
+
+///
+/// Per-page art placement. Every offset is a design px from the page body's
+/// top-left, straight out of the mock's metadata.
+///
+/// Seasonal Power — 21770:3031
+.sp__galaxy {
+  left: du(-463);
+  top: du(-208);
+  width: du(3049.644);
+  height: du(2284.992);
+  object-fit: cover;
+  opacity: 0.55;
+}
+.sp__icon {
+  left: du(143.234);
+  top: du(-125);
+  width: du(1135.351);
+  height: du(1135.351);
+}
+
+/// Money Talks — 21770:3185
+.mt__galaxy {
+  left: du(-463);
+  top: du(-208);
+  width: du(3049.644);
+  height: du(2284.992);
+  object-fit: cover;
+  opacity: 0.55;
+}
+.mt__planets {
+  left: du(-212.727);
+  top: du(1026);
+  width: du(1501.563);
+  height: du(1258.608);
+  object-fit: cover;
+}
+.mt__icon {
+  left: du(548.063);
+  top: du(-287);
+  width: du(1469.05);
+  height: du(1458.255);
+}
+
+/// Bonus Report — 21770:3689
+.br__galaxy {
+  left: du(-161.977);
+  top: du(398);
+  width: du(2354.516);
+  height: du(1763.832);
+  object-fit: cover;
+  opacity: 0.55;
+}
+.br__icon {
+  left: du(260.889);
+  top: du(90);
+  width: du(770);
+  height: du(770);
+}
+.br__coins {
+  left: du(231.217);
+  top: du(456.551);
+  width: du(151.759);
+  height: du(176.949);
+}
+
+/// Sports Desk — 21770:3838
+.sd__galaxy {
+  left: du(-463);
+  top: du(-208);
+  width: du(3049.644);
+  height: du(2284.992);
+  object-fit: cover;
+  opacity: 0.55;
+}
+.sd__planets {
+  left: du(-212.727);
+  top: du(1026);
+  width: du(1501.563);
+  height: du(1258.608);
+  object-fit: cover;
+  opacity: 0.5;
+}
+.sd__ball {
+  left: du(368.85);
+  top: du(-68.386);
+  width: du(563.636);
+  height: du(563.636);
+}
+.sd__trophy {
+  left: du(368.85);
+  top: du(177.848);
+  width: du(563.636);
+  height: du(563.636);
+}
+.sd__coins {
+  left: du(270.224);
+  top: du(459.614);
+  width: du(140.52);
+  height: du(172.247);
 }
