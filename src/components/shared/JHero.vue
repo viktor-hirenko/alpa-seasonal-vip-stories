@@ -18,7 +18,7 @@
   -->
   <div class="page__art j-hero" :style="frameStyle">
     <div class="j-hero__glow j-hero__glow--hard" :style="glowStyle" />
-    <div class="j-hero__glow j-hero__glow--plus" :style="glowStyle" />
+    <div v-if="glowPlus" class="j-hero__glow j-hero__glow--plus" :style="glowStyle" />
     <slot />
   </div>
 </template>
@@ -36,6 +36,8 @@ const props = defineProps({
   glowTop: { type: Number, default: -112 },
   glowWidth: { type: Number, default: 1908.199 },
   glowHeight: { type: Number, default: 1143.676 },
+  /** Most pages stack two glow copies; VIP Status has only the hard-light one. */
+  glowPlus: { type: Boolean, default: true },
 })
 
 const d = n => `calc(${+n.toFixed(3)} * var(--u))`

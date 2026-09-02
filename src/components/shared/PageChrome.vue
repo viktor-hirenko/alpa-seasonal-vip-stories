@@ -10,6 +10,22 @@
     <img class="page__edge" :src="edge" alt="" />
 
     <div class="page__body">
+      <!-- Backdrop art: sits BELOW the colour wash, so the wash tints it. -->
+      <slot name="backdrop" />
+
+      <!--
+        Colour wash (21770:3108). Some pages lay a magenta layer with
+        mix-blend-mode: color over their background; it is what makes them read
+        magenta instead of dark navy.
+
+        Its position in the stack is load-bearing: in the mock it sits directly
+        after the background image and BEFORE the hero, so it tints only the
+        backdrop. Putting it above everything turned VIP Status' silver badge
+        pink.
+      -->
+      <div v-if="tint" class="page__tint" :style="{ background: tint }" />
+
+      <!-- Foreground art: heroes, icons — above the wash, untinted. -->
       <slot name="art" />
 
       <!-- Left-edge fade (21770:3190). NOT an image: a 1868x395 vertical
@@ -35,6 +51,8 @@ defineProps({
    * colour; Bonus Report stops at rgba(0,10,18,0.8).
    */
   spineFadeTo: { type: String, default: '#000a12' },
+  /** Colour wash laid over the background with mix-blend-mode: color. */
+  tint: { type: String, default: '' },
 })
 
 import spine from '@/assets/pages/spine.svg'

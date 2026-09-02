@@ -392,3 +392,61 @@
     pointer-events: none;
   }
 }
+
+///
+/// VIP level badge (21770:3120). The artwork is inset inside a clipping box and
+/// carries the mock's inner glow.
+///
+.j-level {
+  position: absolute;
+  pointer-events: none;
+}
+
+.j-level__clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+
+  img {
+    position: absolute;
+    left: 12.12%;
+    top: 14.27%;
+    width: 71.84%;
+    height: 71.84%;
+    max-width: none;
+    object-fit: contain;
+  }
+}
+
+.j-level::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset du(15) du(15) du(17.2) rgba(255, 0, 212, 0.13);
+}
+
+///
+/// Colour wash some pages lay over their background (21770:3108 on VIP Status:
+/// rgba(255,0,181,0.62) with mix-blend-mode: color). THIS is what makes those
+/// pages read magenta rather than dark navy — without it the whole page looks
+/// like a different design.
+///
+.page__tint {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: du(1443);
+  height: du(1868);
+  mix-blend-mode: color;
+  pointer-events: none;
+}
+
+/// VIP Status starfield (21770:3107): 4096 x 2295, page-centred, top -144.
+.vip__starfield {
+  left: calc(50% - #{du(2049.5)});
+  top: du(-144);
+  width: du(4096);
+  height: du(2295);
+  object-fit: cover;
+}
