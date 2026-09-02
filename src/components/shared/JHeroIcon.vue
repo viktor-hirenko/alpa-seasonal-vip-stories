@@ -1,20 +1,20 @@
 <template>
-  <!--
-    A hero icon inside JHero. Takes the wrapper box, the intrinsic image box and
-    a rotation, exactly as the mock nests them: an outer flex box that centres a
-    rotated inner box.
-
-    This nesting is why get_metadata cannot be trusted here — for a rotated
-    child it reports a coordinate in the wrong frame. On Money Talks the
-    metadata put the icon at x=548 inside a 919-wide frame (off the edge); the
-    real value from get_design_context is left=-276 with a 48.92deg rotation.
-  -->
   <div class="j-hero__slot" :style="slotStyle">
     <img :src="src" alt="" :style="imgStyle" />
   </div>
 </template>
 
 <script setup>
+/**
+ * A hero icon inside JHero. Takes the wrapper box, the intrinsic image box and
+ * a rotation, exactly as the mock nests them: an outer flex box that centres a
+ * rotated inner box.
+ *
+ * This nesting is why get_metadata cannot be trusted here — for a rotated
+ * child it reports a coordinate in the wrong frame. On Money Talks the
+ * metadata put the icon at x=548 inside a 919-wide frame (off the edge); the
+ * real value from get_design_context is left=-276 with a 48.92deg rotation.
+ */
 import { computed } from 'vue'
 
 const props = defineProps({

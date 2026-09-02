@@ -1,11 +1,4 @@
 <template>
-  <!--
-    Top Sport Signal. Figma set 21770:3986, EN variant 21770:3987.
-    Slide frame 18, cut at 57.07 s. Dynamic: `sports_multiplier`.
-
-    Combines the canonical galaxy backdrop with the starfield and magenta wash
-    that VIP Status also uses, and introduces a FIFTH tile height (286).
-  -->
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
       <PageBackdrop :planets="false" />
@@ -43,6 +36,13 @@
 </template>
 
 <script setup>
+/**
+ * Top Sport Signal. Figma set 21770:3986, EN variant 21770:3987.
+ * Slide frame 18, cut at 57.07 s. Dynamic: `sports_multiplier`.
+ *
+ * Combines the canonical galaxy backdrop with the starfield and magenta wash
+ * that VIP Status also uses, and introduces a FIFTH tile height (286).
+ */
 import PageChrome from '@/components/shared/PageChrome.vue'
 import PageBackdrop from '@/components/shared/PageBackdrop.vue'
 import JChip from '@/components/shared/JChip.vue'

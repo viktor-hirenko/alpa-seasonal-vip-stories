@@ -1,11 +1,4 @@
 <template>
-  <!--
-    Days in the Spotlight. Figma set 21770:2945, EN variant 21770:2946.
-    Slide frame 9, cut at 17.10 s. Dynamic value: the `days` query param.
-
-    All offsets are design px measured off the mock and recorded in
-    _context/31-pages.md.
-  -->
   <PageChrome>
     <template #art>
       <!-- planets 4, rotated -150.33deg inside a 2230.908 x 1961.63 wrapper -->
@@ -18,12 +11,19 @@
 
     <JChip :top="129">{{ copy.chip }}</JChip>
     <JHeading :text="copy.headline" :top="536" :max-width="1269" />
-    <JDigitTiles :value="days" size="lg" :top="767.5" />
+    <JDigitTiles :value="days" :height="350" :top="767.5" />
     <JHeading :text="copy.footer" :top="1245" :max-width="1269" />
   </PageChrome>
 </template>
 
 <script setup>
+/**
+ * Days in the Spotlight. Figma set 21770:2945, EN variant 21770:2946.
+ * Slide frame 9, cut at 17.10 s. Dynamic value: the `days` query param.
+ *
+ * All offsets are design px measured off the mock and recorded in
+ * _context/31-pages.md.
+ */
 import PageChrome from '@/components/shared/PageChrome.vue'
 import JChip from '@/components/shared/JChip.vue'
 import JHeading from '@/components/shared/JHeading.vue'

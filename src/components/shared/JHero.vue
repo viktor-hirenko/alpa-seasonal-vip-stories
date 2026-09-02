@@ -1,30 +1,36 @@
 <template>
-  <!--
-    Hero art slot — the 919 x 919 `image` frame on most data pages.
-    Geometry from get_design_context on 21770:3196.
-
-    The glow is the `lighting_1296x576` bitmap under an ELLIPSE MASK
-    (glow-mask.svg = a radial-gradient ellipse 1908.2 x 1143.68), stacked twice
-    with `hard-light` and `plus-lighter`. That double blend is what gives it the
-    hot core and the coloured spill; a single plain copy reads as a flat blob.
-
-    Simplified against the mock: the mock nests the bitmap inside the mask box
-    with per-cent insets and a separate mask-position. Here the mask box and the
-    bitmap box are the same element, which is visually equivalent and far less
-    fragile.
-
-    Never use the frame's own Figma export as art — it composites the page
-    background and the glow into an opaque rectangle.
-  -->
   <div class="page__art j-hero" :style="frameStyle">
-    <div class="j-hero__glow j-hero__glow--hard" :style="glowStyle" />
-    <div v-if="glowPlus" class="j-hero__glow j-hero__glow--plus" :style="glowStyle" />
+    <JGlow
+      :left="glowBox.left"
+      :top="glowBox.top"
+      :width="glowWidth"
+      :height="glowHeight"
+      :plus="glowPlus"
+    />
     <slot />
   </div>
 </template>
 
 <script setup>
+/**
+ * Hero art slot — the 919 x 919 `image` frame on most data pages.
+ * Geometry from get_design_context on 21770:3196.
+ *
+ * The glow is the `lighting_1296x576` bitmap under an ELLIPSE MASK
+ * (glow-mask.svg = a radial-gradient ellipse 1908.2 x 1143.68), stacked twice
+ * with `hard-light` and `plus-lighter`. That double blend is what gives it the
+ * hot core and the coloured spill; a single plain copy reads as a flat blob.
+ *
+ * Simplified against the mock: the mock nests the bitmap inside the mask box
+ * with per-cent insets and a separate mask-position. Here the mask box and the
+ * bitmap box are the same element, which is visually equivalent and far less
+ * fragile.
+ *
+ * Never use the frame's own Figma export as art — it composites the page
+ * background and the glow into an opaque rectangle.
+ */
 import { computed } from 'vue'
+import JGlow from './JGlow.vue'
 
 const props = defineProps({
   left: { type: Number, required: true },
@@ -49,10 +55,8 @@ const frameStyle = computed(() => ({
   height: d(props.height),
 }))
 
-const glowStyle = computed(() => ({
-  left: d(props.width / 2 + props.glowX - props.glowWidth / 2),
-  top: d(props.glowTop),
-  width: d(props.glowWidth),
-  height: d(props.glowHeight),
+const glowBox = computed(() => ({
+  left: props.width / 2 + props.glowX - props.glowWidth / 2,
+  top: props.glowTop,
 }))
 </script>

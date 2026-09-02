@@ -6,6 +6,8 @@ import PageBonusReport from './PageBonusReport.vue'
 import PageSportsDesk from './PageSportsDesk.vue'
 import PageVipStatus from './PageVipStatus.vue'
 import PageTopSportSignal from './PageTopSportSignal.vue'
+import PagePlayersPick from './PagePlayersPick.vue'
+import PageHeadlineWin from './PageHeadlineWin.vue'
 
 /**
  * Page registry. The player and the lab both resolve through this, so a page
@@ -22,6 +24,8 @@ export const PAGE_COMPONENTS = {
   sports_desk: PageSportsDesk,
   vip_status: PageVipStatus,
   top_sport_signal: PageTopSportSignal,
+  players_pick: PagePlayersPick,
+  headline_win: PageHeadlineWin,
 }
 
 /** @param {string} page page id from slides.js */

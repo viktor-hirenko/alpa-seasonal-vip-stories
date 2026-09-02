@@ -1,28 +1,13 @@
 <template>
-  <!--
-    Shared shell for every data page. Values from get_design_context on
-    Money Talks (21770:3185), which is the canonical skeleton — every data page
-    repeats it.
-  -->
   <div class="page">
-    <!-- Right paper-stack edge (21770:3186). An SVG in the mock, not a CSS
-         gradient as the metadata suggested. -->
+    <!-- Right paper-stack edge (21770:3186) -->
     <img class="page__edge" :src="edge" alt="" />
 
     <div class="page__body">
       <!-- Backdrop art: sits BELOW the colour wash, so the wash tints it. -->
       <slot name="backdrop" />
 
-      <!--
-        Colour wash (21770:3108). Some pages lay a magenta layer with
-        mix-blend-mode: color over their background; it is what makes them read
-        magenta instead of dark navy.
-
-        Its position in the stack is load-bearing: in the mock it sits directly
-        after the background image and BEFORE the hero, so it tints only the
-        backdrop. Putting it above everything turned VIP Status' silver badge
-        pink.
-      -->
+      <!-- Colour wash (21770:3108) — order is load-bearing, see the doc above. -->
       <div v-if="tint" class="page__tint" :style="{ background: tint }" />
 
       <!-- Foreground art: heroes, icons — above the wash, untinted. -->
@@ -45,6 +30,19 @@
 </template>
 
 <script setup>
+/**
+ * Shared shell for every data page. Values from get_design_context on
+ * Money Talks (21770:3185), which is the canonical skeleton — every data page
+ * repeats it.
+ *
+ * The right paper-stack edge is an SVG in the mock, not the CSS gradient the
+ * metadata suggested.
+ *
+ * The colour wash's position in the stack is load-bearing: in the mock it sits
+ * directly after the background image and BEFORE the hero, so it tints only
+ * the backdrop. Putting it above everything turned VIP Status' silver badge
+ * pink. Hence two art slots: #backdrop (tinted) and #art (untinted).
+ */
 defineProps({
   /**
    * End colour of the left-edge fade (21770:3190). Most pages fade to the page

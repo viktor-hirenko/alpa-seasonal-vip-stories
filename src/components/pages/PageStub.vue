@@ -1,10 +1,4 @@
 <template>
-  <!--
-    Temporary stand-in until phase 2 builds the real 17 pages on top of
-    PageChrome + the primitives. It intentionally uses the real page tokens
-    (chip, heading, page background) so the journal reads correctly in 3D and
-    the pose work can be verified before any page art exists.
-  -->
   <div class="page-stub">
     <div>
       <span class="page-stub__chip">{{ label }}</span>
@@ -15,6 +9,12 @@
 </template>
 
 <script setup>
+/**
+ * Temporary stand-in until phase 2 builds the real 17 pages on top of
+ * PageChrome + the primitives. It intentionally uses the real page tokens
+ * (chip, heading, page background) so the journal reads correctly in 3D and
+ * the pose work can be verified before any page art exists.
+ */
 import { computed } from 'vue'
 
 const props = defineProps({

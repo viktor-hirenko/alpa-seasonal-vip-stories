@@ -1,13 +1,4 @@
 <template>
-  <!--
-    Sports Desk. Figma set 21770:3837, EN variant 21770:3838, hero 21770:3849.
-    Slide frame 17, cut at 53.27 s. Dynamic: `sports_wins` + currency.
-
-    Hero geometry is from get_design_context, NOT metadata. Metadata put the
-    icon group at left=117.295 (real: 36.66) and reported the `Lvl 1` ray burst
-    at x=997, i.e. off the frame — it is actually dead-centre. Percentage insets
-    from the mock are resolved to design px in the comments below.
-  -->
   <PageChrome>
     <template #art>
       <PageBackdrop />
@@ -49,6 +40,15 @@
 </template>
 
 <script setup>
+/**
+ * Sports Desk. Figma set 21770:3837, EN variant 21770:3838, hero 21770:3849.
+ * Slide frame 17, cut at 53.27 s. Dynamic: `sports_wins` + currency.
+ *
+ * Hero geometry is from get_design_context, NOT metadata. Metadata put the
+ * icon group at left=117.295 (real: 36.66) and reported the `Lvl 1` ray burst
+ * at x=997, i.e. off the frame — it is actually dead-centre. Percentage insets
+ * from the mock are resolved to design px in the comments below.
+ */
 import PageChrome from '@/components/shared/PageChrome.vue'
 import PageBackdrop from '@/components/shared/PageBackdrop.vue'
 import JChip from '@/components/shared/JChip.vue'

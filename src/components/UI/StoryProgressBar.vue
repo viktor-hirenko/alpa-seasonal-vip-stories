@@ -1,14 +1,4 @@
 <template>
-  <!--
-    Segmented steps bar. Figma `Parts / steps` inside header 21770:2682:
-    976 px wide, 10 px tall, 10 px gap, radius 100, white track, #fdd835 fill.
-
-    One div per segment with its own fill width, rather than Thor's single
-    progress rect behind an SVG alpha mask. Thor needed the mask because it drew
-    one continuous bar across N rounded windows; Alpa's design is genuinely
-    per-step (the mock shows a filled step 1 and an empty step 7), and per-step
-    divs express that directly.
-  -->
   <div class="steps" role="progressbar" :aria-valuenow="Math.round(overall)" aria-valuemin="0" aria-valuemax="100">
     <div v-for="(p, i) in fills" :key="i" class="steps__track">
       <div class="steps__fill" :style="{ width: p * 100 + '%' }" />
@@ -17,6 +7,16 @@
 </template>
 
 <script setup>
+/**
+ * Segmented steps bar. Figma `Parts / steps` inside header 21770:2682:
+ * 976 px wide, 10 px tall, 10 px gap, radius 100, white track, #fdd835 fill.
+ *
+ * One div per segment with its own fill width, rather than Thor's single
+ * progress rect behind an SVG alpha mask. Thor needed the mask because it drew
+ * one continuous bar across N rounded windows; Alpa's design is genuinely
+ * per-step (the mock shows a filled step 1 and an empty step 7), and per-step
+ * divs express that directly.
+ */
 import { computed } from 'vue'
 
 const props = defineProps({

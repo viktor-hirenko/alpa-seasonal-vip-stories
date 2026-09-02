@@ -1,15 +1,15 @@
 <template>
-  <!--
-    Currency label. A SEPARATE node in every mock (e.g. 21770:3204,
-    21770:3716, 21811:3479) — never inside the digit tiles, and its size
-    differs per page, so it takes an explicit font size in design px.
-  -->
   <div class="j-slot" :style="slotStyle">
     <span class="j-currency" data-fit-role="currency"><slot /></span>
   </div>
 </template>
 
 <script setup>
+/**
+ * Currency label. A SEPARATE node in every mock (e.g. 21770:3204,
+ * 21770:3716, 21811:3479) — never inside the digit tiles, and its size
+ * differs per page, so it takes an explicit font size in design px.
+ */
 import { computed } from 'vue'
 
 const props = defineProps({

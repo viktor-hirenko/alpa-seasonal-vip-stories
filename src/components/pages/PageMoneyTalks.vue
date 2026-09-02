@@ -1,11 +1,4 @@
 <template>
-  <!--
-    Money Talks. Figma set 21770:3184, EN variant 21770:3185.
-    Slide frame 12, cut at 30.10 s. Dynamic: `total_wins` + currency.
-
-    This is the CANONICAL data page — every number here comes from
-    get_design_context, not metadata, and the other pages repeat its skeleton.
-  -->
   <PageChrome>
     <template #art>
       <PageBackdrop />
@@ -33,6 +26,13 @@
 </template>
 
 <script setup>
+/**
+ * Money Talks. Figma set 21770:3184, EN variant 21770:3185.
+ * Slide frame 12, cut at 30.10 s. Dynamic: `total_wins` + currency.
+ *
+ * This is the CANONICAL data page — every number here comes from
+ * get_design_context, not metadata, and the other pages repeat its skeleton.
+ */
 import PageChrome from '@/components/shared/PageChrome.vue'
 import JChip from '@/components/shared/JChip.vue'
 import JHeading from '@/components/shared/JHeading.vue'

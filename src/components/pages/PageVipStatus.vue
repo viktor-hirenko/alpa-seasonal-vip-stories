@@ -1,16 +1,4 @@
 <template>
-  <!--
-    VIP Status. Figma set 21770:3103, EN body 21770:3106, hero 21770:3115.
-    Slide frame 11, cut at 26.07 s. Dynamic: the `level` query param drives both
-    the badge artwork and the level name.
-
-    Two things specific to this page:
-      - a 4096 x 2295 starfield background, centred and bleeding well past the
-        page on both sides;
-      - a magenta colour wash (rgba(255,0,181,0.62), mix-blend-mode: color).
-        Without it the page reads dark navy instead of magenta.
-      - only ONE glow copy (hard-light), unlike the two-copy stack elsewhere.
-  -->
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
       <img class="page__art page__starfield" :src="starfield" alt="" />
@@ -35,6 +23,18 @@
 </template>
 
 <script setup>
+/**
+ * VIP Status. Figma set 21770:3103, EN body 21770:3106, hero 21770:3115.
+ * Slide frame 11, cut at 26.07 s. Dynamic: the `level` query param drives both
+ * the badge artwork and the level name.
+ *
+ * Two things specific to this page:
+ *   - a 4096 x 2295 starfield background, centred and bleeding well past the
+ *     page on both sides;
+ *   - a magenta colour wash (rgba(255,0,181,0.62), mix-blend-mode: color).
+ *     Without it the page reads dark navy instead of magenta.
+ *   - only ONE glow copy (hard-light), unlike the two-copy stack elsewhere.
+ */
 import { computed } from 'vue'
 import PageChrome from '@/components/shared/PageChrome.vue'
 import JChip from '@/components/shared/JChip.vue'

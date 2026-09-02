@@ -165,7 +165,7 @@
   font-family: $font-stack;
   font-weight: 800;
   font-size: calc(var(--heading-font, #{du(96)}) * var(--fit, 1));
-  line-height: 1.08;
+  line-height: var(--heading-lh, 1.08);
   text-transform: uppercase;
   color: #fff;
   text-shadow: 0 du(8.359) du(27.865) $heading-shadow;
@@ -259,12 +259,18 @@
   color: transparent;
 }
 
-/// Big gradient number without tiles — Seasonal Power (21770:3046).
+/// Big gradient value without tiles — Seasonal Power's number (21770:3046),
+/// VIP Status' level name, Player's Pick's game name.
+///
+/// `uppercase` is inherited from the mock's wrapper (21770:3588 carries it for
+/// both the heading and the game name), so it belongs here rather than being
+/// applied per page.
 .j-value {
   font-family: $font-stack;
   font-weight: 800;
   font-size: calc(var(--value-font) * var(--fit, 1));
-  line-height: 1;
+  line-height: 0.94;
+  text-transform: uppercase;
   white-space: nowrap;
   background-image: $accent-grad;
   background-clip: text;
@@ -286,7 +292,7 @@
 /// (21770:3197 and 21770:3200). The double blend is what produces the hot core
 /// plus the coloured spill — one plain copy reads as a flat blob.
 ///
-.j-hero__glow {
+.j-glow {
   position: absolute;
   pointer-events: none;
   background-image: url('@/assets/pages/glow.webp');
@@ -300,11 +306,11 @@
   -webkit-mask-repeat: no-repeat;
 }
 
-.j-hero__glow--hard {
+.j-glow--hard {
   mix-blend-mode: hard-light;
 }
 
-.j-hero__glow--plus {
+.j-glow--plus {
   mix-blend-mode: plus-lighter;
 }
 
@@ -465,4 +471,65 @@
     max-width: none;
     object-fit: cover;
   }
+}
+
+///
+/// Game thumbnail (21770:3591). Fixed box, real border (the box is not
+/// content-driven here, unlike the digit tiles), and the mock's double pink glow.
+///
+.j-thumb {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: clip;
+  background: $page-bg;
+  border: du(28.503) solid $accent;
+  border-radius: du(50.898);
+  box-shadow:
+    0 du(21) du(81.2) rgba(255, 0, 212, 0.56),
+    0 du(15) du(22.3) rgba(255, 0, 212, 0.27);
+
+  img {
+    flex: none;
+    object-fit: cover;
+    max-width: none;
+  }
+}
+
+/// Name-only degradation when the thumbnail URL is missing or blocked.
+.j-thumb__fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: du(60);
+  font: 800 du(84) / 1.1 $font-stack;
+  text-transform: uppercase;
+  text-align: center;
+  text-wrap: balance;
+  background: radial-gradient(120% 90% at 50% 30%, #2a1038 0%, #000a12 70%);
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/// Headline Win: gradient rule under the amount (21770:3330).
+.hw__divider {
+  position: absolute;
+  left: du(108);
+  top: du(729);
+  width: du(1227);
+  height: du(9);
+  background: linear-gradient(90deg, #{$accent} 0%, rgba(255, 255, 123, 0) 100%);
+}
+
+/// Headline Win: coin spray behind the thumbnail (21770:3333).
+.hw__coins {
+  left: du(279);
+  top: du(917);
+  width: du(1098);
+  height: du(770);
+  object-fit: cover;
 }

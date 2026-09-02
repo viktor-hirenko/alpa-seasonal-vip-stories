@@ -1,15 +1,4 @@
 <template>
-  <!--
-    Bonus Report. Figma set 21770:3688, EN body 21770:3691, hero 21770:3700.
-    Slide frame 16, cut at 49.10 s. Dynamic: `bonuses` + currency.
-
-    Everything here is from get_design_context. Two things this page does
-    differently from the canonical Money Talks skeleton:
-      - its own galaxy/planets placement (planets is mirrored vertically and
-        rotated 155.59deg), so PageBackdrop does not apply;
-      - the left-edge fade ends at rgba(0,10,18,0.8), not full opacity;
-      - headings are 78 px, not the standard 96.
-  -->
   <PageChrome :spine-fade-to="'rgba(0, 10, 18, 0.8)'">
     <template #art>
       <!-- galaxy 3: 2354.516 x 1763.832 at (-425.18, 398), image
@@ -60,6 +49,17 @@
 </template>
 
 <script setup>
+/**
+ * Bonus Report. Figma set 21770:3688, EN body 21770:3691, hero 21770:3700.
+ * Slide frame 16, cut at 49.10 s. Dynamic: `bonuses` + currency.
+ *
+ * Everything here is from get_design_context. Two things this page does
+ * differently from the canonical Money Talks skeleton:
+ *   - its own galaxy/planets placement (planets is mirrored vertically and
+ *     rotated 155.59deg), so PageBackdrop does not apply;
+ *   - the left-edge fade ends at rgba(0,10,18,0.8), not full opacity;
+ *   - headings are 78 px, not the standard 96.
+ */
 import PageChrome from '@/components/shared/PageChrome.vue'
 import JChip from '@/components/shared/JChip.vue'
 import JHeading from '@/components/shared/JHeading.vue'

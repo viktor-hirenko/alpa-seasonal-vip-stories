@@ -1,13 +1,4 @@
 <template>
-  <!--
-    The persistent journal. One instance for the whole 94 s: never unmounted,
-    never re-keyed, never re-created. Only its pose changes and its page content
-    cuts. That is both what the reference does and the only way to keep the idle
-    drift continuous.
-
-    The four-layer nesting is the transform-ownership contract from ADR-0002 —
-    read _stage.scss before changing it.
-  -->
   <div class="journal-pos">
     <div class="journal-hover">
       <div class="journal-box">
@@ -21,6 +12,15 @@
 </template>
 
 <script setup>
+/**
+ * The persistent journal. One instance for the whole 94 s: never unmounted,
+ * never re-keyed, never re-created. Only its pose changes and its page content
+ * cuts. That is both what the reference does and the only way to keep the idle
+ * drift continuous.
+ *
+ * The four-layer nesting is the transform-ownership contract from ADR-0002 —
+ * read _stage.scss before changing it.
+ */
 import { onMounted, watch } from 'vue'
 import JournalFaces from './JournalFaces.vue'
 import { FACE, DEPTH, SEAM } from '@/story/journalGeometry.js'
