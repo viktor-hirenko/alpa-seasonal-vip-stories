@@ -40,22 +40,30 @@
 /// inside the first 5.573%, so the remaining width resolves to the final
 /// `#562c26` — a dark block with fine stripes at the far edge, which is how the
 /// page stack reads at this angle.
-.page__fore {
+/// Right paper-stack edge (21770:3186). An SVG in the mock — the 7-stop CSS
+/// ramp I first inferred from metadata was wrong.
+.page__edge {
   position: absolute;
   left: 63.6%;
   right: 0.57%;
   top: 0.84%;
   bottom: 1.41%;
-  background-image: linear-gradient(
-    270deg,
-    #b26c3b 0%,
-    #2c2c2c 0.577%,
-    #b26c3b 1.2906%,
-    #2c2c2c 2.1141%,
-    #b26c3b 2.9926%,
-    #2c2c2c 3.871%,
-    #562c26 5.573%
-  );
+  width: auto;
+  height: auto;
+  pointer-events: none;
+}
+
+/// Left-edge fade (21770:3190). In the mock this is a 1868 x 395 vertical
+/// gradient rotated 90deg — i.e. the page colour at the spine fading out to the
+/// right — sitting 395 wide at left: -19. Reproduced directly as a horizontal
+/// gradient; the rotation was only Figma's way of authoring it.
+.page__spine-fade {
+  position: absolute;
+  left: du(-19);
+  top: 0;
+  bottom: 0;
+  width: du(395);
+  background: linear-gradient(90deg, #{$page-bg} 0%, rgba(0, 10, 18, 0) 100%);
   pointer-events: none;
 }
 
@@ -71,7 +79,7 @@
   overflow: clip;
 }
 
-/// Bottom fade into the page colour (21770:2950).
+/// Bottom fade into the page colour (21770:2950) — Days only, opt-in.
 .page__fade {
   position: absolute;
   left: du(-175);
@@ -85,10 +93,12 @@
 /// Specular sheen across the whole sheet (21770:2952), `mix-blend-mode: screen`.
 .page__sheen {
   position: absolute;
-  left: du(1);
-  top: du(-39);
-  width: du(1442);
-  height: du(1987);
+  // The mock insets the SVG slightly beyond its own box
+  // (inset -1.61% -2.22% -1.61% -1.75% of a 1442 x 1987 layer at 1,-39).
+  left: du(-24.25);
+  top: du(-71);
+  width: du(1499.2);
+  height: du(2051);
   mix-blend-mode: screen;
   pointer-events: none;
 }
@@ -197,6 +207,9 @@
   // and pushed 7-digit rows off the page.
   box-shadow: inset 0 0 0 var(--tile-border) #{$accent};
   border-radius: var(--tile-radius);
+  // 21770:3206: bg rgba(0,10,18,0.65) behind the digit. Without it the tiles
+  // read as bare outlines over whatever art is behind them.
+  background: rgba(0, 10, 18, 0.65);
   // Safe here: a leaf below the preserve-3d chain. If it ever costs frames on
   // an SE-class device, a flat rgba fill is indistinguishable behind a
   // 0.68-scaled rotated page.
@@ -207,6 +220,7 @@
 /// drawing a bordered box around a comma.
 .j-tile--sep {
   box-shadow: none;
+  background: none;
   backdrop-filter: none;
   padding: 0;
 }
@@ -235,7 +249,9 @@
   font-family: $font-stack;
   font-weight: 800;
   font-size: calc(var(--currency-font) * var(--fit, 1));
-  line-height: 1;
+  // 21770:3204: line-height 0.94 and a heavy soft shadow.
+  line-height: 0.94;
+  text-shadow: 0 du(33.72) du(112.401) rgba(0, 0, 0, 0.37);
   text-transform: uppercase;
   background-image: $accent-grad;
   background-clip: text;
@@ -264,22 +280,49 @@
   overflow: visible;
 }
 
+///
+/// Glow: the `lighting_1296x576` bitmap under the mock's own ellipse mask
+/// (glow-mask.svg), stacked twice with `hard-light` and `plus-lighter`
+/// (21770:3197 and 21770:3200). The double blend is what produces the hot core
+/// plus the coloured spill — one plain copy reads as a flat blob.
+///
 .j-hero__glow {
   position: absolute;
   pointer-events: none;
-  // In Figma the `lighting_1296x576` bitmap lives inside a "Mask group" with an
-  // ellipse mask (e.g. 21770:3197 -> Ellipse 3276). Used raw it reads as a hard
-  // bright blob that swamps the page, so the mask is reproduced here and the
-  // opacity dialled back to match the mock's density.
-  opacity: 0.72;
-  mask-image: radial-gradient(closest-side ellipse, #000 42%, transparent 78%);
-  -webkit-mask-image: radial-gradient(closest-side ellipse, #000 42%, transparent 78%);
+  background-image: url('@/assets/pages/glow.webp');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  mask-image: url('@/assets/pages/glow-mask.svg');
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: url('@/assets/pages/glow-mask.svg');
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
 }
 
-.j-hero__icon {
-  position: absolute;
-  pointer-events: none;
+.j-hero__glow--hard {
+  mix-blend-mode: hard-light;
 }
+
+.j-hero__glow--plus {
+  mix-blend-mode: plus-lighter;
+}
+
+/// A rotated icon inside the hero frame: outer box positions, inner image rotates.
+.j-hero__slot {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+
+  img {
+    flex: none;
+    object-fit: cover;
+  }
+}
+
+
 
 ///
 /// Days in the Spotlight — page-specific art placement. Figma 21770:2946.
@@ -314,99 +357,23 @@
 /// Per-page art placement. Every offset is a design px from the page body's
 /// top-left, straight out of the mock's metadata.
 ///
-/// Seasonal Power — 21770:3031
-.sp__galaxy {
-  left: du(-463);
-  top: du(-208);
-  width: du(3049.644);
-  height: du(2284.992);
-  object-fit: cover;
-  opacity: 0.55;
-}
-.sp__icon {
-  left: du(143.234);
-  top: du(-125);
-  width: du(1135.351);
-  height: du(1135.351);
-}
 
-/// Money Talks — 21770:3185
-.mt__galaxy {
-  left: du(-463);
-  top: du(-208);
-  width: du(3049.644);
-  height: du(2284.992);
-  object-fit: cover;
-  opacity: 0.55;
-}
-.mt__planets {
-  left: du(-212.727);
-  top: du(1026);
-  width: du(1501.563);
-  height: du(1258.608);
-  object-fit: cover;
-}
-.mt__icon {
-  left: du(548.063);
-  top: du(-287);
-  width: du(1469.05);
-  height: du(1458.255);
-}
 
-/// Bonus Report — 21770:3689
-.br__galaxy {
-  left: du(-161.977);
-  top: du(398);
-  width: du(2354.516);
-  height: du(1763.832);
-  object-fit: cover;
-  opacity: 0.55;
-}
-.br__icon {
-  left: du(260.889);
-  top: du(90);
-  width: du(770);
-  height: du(770);
-}
-.br__coins {
-  left: du(231.217);
-  top: du(456.551);
-  width: du(151.759);
-  height: du(176.949);
-}
 
-/// Sports Desk — 21770:3838
-.sd__galaxy {
-  left: du(-463);
-  top: du(-208);
-  width: du(3049.644);
-  height: du(2284.992);
-  object-fit: cover;
-  opacity: 0.55;
-}
-.sd__planets {
-  left: du(-212.727);
-  top: du(1026);
-  width: du(1501.563);
-  height: du(1258.608);
-  object-fit: cover;
-  opacity: 0.5;
-}
-.sd__ball {
-  left: du(368.85);
-  top: du(-68.386);
-  width: du(563.636);
-  height: du(563.636);
-}
-.sd__trophy {
-  left: du(368.85);
-  top: du(177.848);
-  width: du(563.636);
-  height: du(563.636);
-}
-.sd__coins {
-  left: du(270.224);
-  top: du(459.614);
-  width: du(140.52);
-  height: du(172.247);
+
+///
+/// Art nesting from the mock: an outer box centres a rotated inner image.
+/// See src/components/shared/artBox.js for why this shape matters.
+///
+.art-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+
+  img {
+    flex: none;
+    object-fit: cover;
+    pointer-events: none;
+  }
 }

@@ -4,10 +4,11 @@
        The value is a plain gradient number here, not digit tiles. -->
   <PageChrome>
     <template #art>
-      <img class="page__art sp__galaxy" :src="galaxy" alt="" />
-      <JHero :left="261" :top="566" :glow-left="-195.992" :glow-top="40.324"
-             :glow-width="1439.454" :glow-height="862.735">
-        <img class="j-hero__icon sp__icon" :src="icon" alt="" />
+      <PageBackdrop :planets="false" />
+      <JHero :left="261" :top="566">
+        <!-- Icon box from metadata; the rotation is unknown without a
+             get_design_context pass on this hero, so it is left unrotated. -->
+        <JHeroIcon :src="icon" :left="143.234" :top="-125" :width="1135.351" :height="1135.351" />
       </JHero>
     </template>
 
@@ -25,7 +26,8 @@ import JChip from '@/components/shared/JChip.vue'
 import JHeading from '@/components/shared/JHeading.vue'
 import JValue from '@/components/shared/JValue.vue'
 import JHero from '@/components/shared/JHero.vue'
-import galaxy from '@/assets/pages/planets-4.webp'
+import JHeroIcon from '@/components/shared/JHeroIcon.vue'
+import PageBackdrop from '@/components/shared/PageBackdrop.vue'
 import icon from '@/assets/pages/hero-seasonal-power.webp'
 
 defineProps({ points: { type: [String, Number], default: '1 200 000' } })
