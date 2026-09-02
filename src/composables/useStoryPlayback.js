@@ -1,5 +1,5 @@
-import { STORY_SEGMENTS } from '@/story/slides.js'
-import { SYNC_EPSILON } from '@/story/timing.js'
+import { STORY_SEGMENTS, segmentAt } from '@/story/slides.js'
+import { SYNC_EPSILON, TIMING } from '@/story/timing.js'
 
 /**
  * Playback + navigation. Ported from Thor's useStoryPlayback.js, which is ~490
@@ -78,16 +78,17 @@ export function useStoryPlayback(ctx) {
   /**
    * Frame-exact page cut, driven by the clock rather than the timeline.
    *
-   * Binary-search-free because 17 entries is nothing, but the important part is
-   * that it is a pure function of currentTime: it therefore lands correctly
-   * after ANY seek, including backwards and from the debug hook, which a
-   * timeline `.set()` could not do without reverse bookkeeping.
+   * The boundary is the segment's `cut`, not its `start`: the journal begins
+   * turning at `start` and is edge-on TIMING.flip.out later, and that hairline
+   * instant is where the content may swap without being seen. Before it, the
+   * outgoing page is still the one facing the camera.
+   *
+   * `segmentAt` is a pure function of currentTime, so the cut lands correctly
+   * after ANY seek, including backwards and from the debug hook — which a
+   * timeline `.set()` could not do without reverse bookkeeping (ADR-0008).
    */
   const applySegment = t => {
-    let idx = -1
-    for (let i = 0; i < STORY_SEGMENTS.length; i++) {
-      if (t >= STORY_SEGMENTS[i].start - 1e-3) idx = i
-    }
+    const idx = segmentAt(t)
     if (idx !== activeSegment.value) {
       activeSegment.value = idx
       onSegmentChange?.(idx)
@@ -418,10 +419,10 @@ export function useStoryPlayback(ctx) {
   /**
    * Landing rule. Each page's window opens with the journal still mid-turn, so
    * landing exactly on `start` while PAUSED freezes a half-rotated frame. When
-   * paused we land past the re-pose so the page reads as fully formed; when
+   * paused we land past the whole turn so the page reads as fully formed; when
    * playing we land on the exact start so the turn plays.
    */
-  const SETTLE_LEAD = 0.75
+  const SETTLE_LEAD = TIMING.flip.out + TIMING.flip.back
 
   const landingTime = seg => {
     const v = videoPlayer.value
@@ -432,10 +433,9 @@ export function useStoryPlayback(ctx) {
   const jumpToSegment = direction => {
     const v = videoPlayer.value
     const t = v ? v.currentTime : tl.time()
-    let idx = 0
-    for (let i = 0; i < STORY_SEGMENTS.length; i++) {
-      if (t >= STORY_SEGMENTS[i].start - 1e-3) idx = i
-    }
+    // Same definition of "where we are" as the page cut uses, so an arrow
+    // pressed mid-turn goes where the eye expects rather than skipping a page.
+    const idx = Math.max(0, segmentAt(t))
     let targetIdx
     if (direction === 'forward') {
       if (idx >= STORY_SEGMENTS.length - 1) return // already on the last page

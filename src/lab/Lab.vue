@@ -29,10 +29,10 @@
                      so the lab is the authoring surface for page work too.
                      Pages not yet built fall through to PageStub. -->
                 <component
-                  :is="resolvePage(slide?.page)"
-                  :page="slide?.page || 'journal'"
-                  :frame="slide?.frame ?? 0"
-                  :start="slide?.at ?? 0"
+                  :is="resolvePage(shownSlide?.page)"
+                  :page="shownSlide?.page || 'journal'"
+                  :frame="shownSlide?.frame ?? 0"
+                  :start="shownSlide?.at ?? 0"
                 />
               </div>
             </JournalStage>
@@ -183,6 +183,7 @@ const BG_OPTIONS = [
 
 /** Presets worth a button. `hover` and `flyingObject` are driven separately. */
 const PRESET_NAMES = [
+  'rePose',
   'edgeOnPose',
   'flyInFromFloor',
   'swingOpen',
@@ -318,7 +319,8 @@ function firePreset(name) {
     const probe = fn.length >= 3 ? null : fn(targets, {})
     Object.keys(schema).forEach(k => {
       const fromTimeline = probe && probe.vars && probe.vars[k]
-      params[k] = fromTimeline ?? schema[k].min + (schema[k].max - schema[k].min) / 2
+      params[k] =
+        fn.PARAM_DEFAULTS?.[k] ?? fromTimeline ?? schema[k].min + (schema[k].max - schema[k].min) / 2
     })
     if (probe) probe.kill()
   }
@@ -331,6 +333,10 @@ function firePreset(name) {
     const from = SLIDES.find(s => s.frame === 23)?.pose
     const to = SLIDES.find(s => s.frame === 24)?.pose
     current = fn(targets, from, to, params)
+  } else if (name === 'rePose') {
+    // The turn INTO the parked slide, which is the one worth looking at.
+    const i = Math.max(1, slideIndex())
+    current = fn(targets, SLIDES[i - 1].pose, SLIDES[i].pose, { flip: true, ...params })
   } else {
     current = fn(targets, params)
   }
@@ -362,6 +368,7 @@ function gotoSlide(s) {
     z: 0,
   })
   applyManualPose()
+  parkFlip()
   const v = videoRef.value
   if (v) {
     v.pause()
@@ -385,13 +392,52 @@ function toggleJournal() {
  *    slide looks misaligned. `?play=1` opts into live playback for checking
  *    motion rather than poses.
  *
- * 2. Seek to `at + SEEK_LEAD`, not `at`. The scene-detection timecodes are the
- *    first frame of the new content, but seeking to exactly that timestamp
- *    lands on the frame BEFORE it, so you end up comparing the DOM against the
- *    previous page — and against the previous page's pose, which makes a
- *    correct pose look badly wrong.
+ * 2. Seek to `at + SEEK_LEAD`, not `at`. The scene-detection timecode is where
+ *    the journal STARTS TURNING, not where the new page appears: seek to it and
+ *    the reference still shows the previous page, at the previous page's pose,
+ *    which makes a correct pose look badly wrong.
+ *
+ *    The default clears the whole page turn (TIMING.flip.out + .back = 0.93),
+ *    because anything inside it compares a settled DOM pose against a reference
+ *    frame that is still rotating. The old default of 0.2 sat in the MIDDLE of
+ *    the turn — that is the "everything looks slightly off" ADR-0011 is about.
  */
-const SEEK_LEAD = qNum('lead', 0.2)
+const SEEK_LEAD = qNum('lead', 0.95)
+
+/**
+ * PAGE-TURN PARKING. When `lead` is given explicitly, the lab does not park the
+ * SETTLED pose — it parks the real `rePose` timeline seeked to `lead` seconds
+ * after the cut, which is exactly the state the player would be in at
+ * `slide.at + lead`. So `?bg=preview&frame=11&lead=0.14` puts the DOM journal
+ * edge-on on top of the reference frame that is edge-on, and an error in the
+ * turn shows up as a doubled edge just like a pose error does.
+ *
+ * Gated on the parameter being PRESENT, not on its value: `pose:check` drives
+ * this same page without `lead` and must keep measuring settled poses.
+ */
+const flipLead = Q.has('lead') ? SEEK_LEAD : null
+
+/** Index of the parked slide in SLIDES. By `frame`, never by identity: `slide`
+ *  is a ref, so `slide.value` is a reactive PROXY of the record and an identity
+ *  lookup would always return -1. */
+const slideIndex = () => SLIDES.findIndex(x => x.frame === slide.value?.frame)
+
+/** The page actually facing the camera at `lead` — before the edge-on instant
+ *  that is still the OUTGOING one (TIMING.flip.out). */
+const shownSlide = computed(() => {
+  if (flipLead == null || flipLead >= TIMING.flip.out) return slide.value
+  const i = slideIndex()
+  return i > 0 ? SLIDES[i - 1] : slide.value
+})
+
+function parkFlip() {
+  if (!targets || flipLead == null) return
+  const i = slideIndex()
+  if (i < 1) return
+  killCurrent()
+  current = presets.rePose(targets, SLIDES[i - 1].pose, slide.value.pose, { flip: true })
+  current.time(flipLead) // stays paused: this renders the frame, it does not play it
+}
 function setBg(id) {
   bg.value = id
   requestAnimationFrame(() => {
@@ -425,6 +471,7 @@ onMounted(() => {
   targets = resolveTargets(stageRef.value)
   stageRef.value.style.setProperty('--persp', String(persp.value))
   applyManualPose()
+  parkFlip()
   if (!journalVisible.value) gsap.set(targets.pos, { autoAlpha: 0 })
   if (bg.value !== 'grid') setBg(bg.value)
 

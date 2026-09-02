@@ -150,10 +150,29 @@ export function hover(t, params) {
 }
 hover.PARAM_SCHEMA = {}
 
-/** Per-slide re-pose. The page content cut is clock-driven (ADR-0008); this
- *  only moves the journal. */
+/**
+ * Per-slide re-pose, and with `flip: true` the PAGE TURN.
+ *
+ * The turn is a yaw out to `peak` and back, not a 180 (TIMING.flip carries the
+ * measurement and the reason). The journal therefore keeps its orientation:
+ * the spine stays on the left, which is what the reference does on every page.
+ *
+ * rotationY is written ABSOLUTELY — a `set` to 0 at the head, then out, then
+ * back — never as a relative `+=`. The master timeline is seeked arbitrarily
+ * (ADR-0008), and a relative tween would freeze whatever value it happened to
+ * find on its first render, so scrubbing backwards would accumulate garbage.
+ * That head `set` is also what normalises the -4deg of yaw the entrance leaves
+ * behind, at the first page turn.
+ *
+ * The page content cut is clock-driven and lands at `out`, the edge-on instant,
+ * where the front face is a hairline — see useStoryPlayback.applySegment.
+ */
 export function rePose(t, from, to, params) {
-  const p = P({ dur: TIMING.rePose, ease: EASE.rePose }, params)
+  const p = P(
+    { dur: TIMING.rePose, ease: EASE.rePose, flip: false, ...TIMING.flip,
+      easeOut: EASE.flipOut, easeBack: EASE.flipBack },
+    params,
+  )
   const s = tl()
   if (from) {
     s.set(t.pos, posVars(from))
@@ -161,16 +180,31 @@ export function rePose(t, from, to, params) {
   }
   s.to(t.pos, { ...posVars(to), duration: p.dur, ease: p.ease }, 0)
   s.to(t.box, { ...boxVars(to), duration: p.dur, ease: p.ease }, 0)
+  if (p.flip) {
+    s.set(t.box, { rotationY: 0 }, 0)
+    s.to(t.box, { rotationY: p.peak, duration: p.out, ease: p.easeOut }, 0)
+    s.to(t.box, { rotationY: 0, duration: p.back, ease: p.easeBack }, p.out)
+  }
   return s
 }
-rePose.PARAM_SCHEMA = { dur: { min: 0.1, max: 2, step: 0.05 } }
+rePose.PARAM_SCHEMA = {
+  dur: { min: 0.1, max: 2, step: 0.05 },
+  peak: { min: 0, max: 180, step: 1 },
+  out: { min: 0.02, max: 0.6, step: 0.01 },
+  back: { min: 0.05, max: 1.5, step: 0.01 },
+}
+/** The lab seeds its sliders from here: the midpoint of a range is a useless
+ *  starting point when the real value is a measurement. */
+rePose.PARAM_DEFAULTS = { dur: TIMING.rePose, ...TIMING.flip }
 
 /** The journal draws back and tilts before the flash (frames 23 -> 24). */
 export function recede(t, from, to, params) {
   const p = P({ dur: TIMING.recede.dur, ease: EASE.recede }, params)
+  // No flip: frames 23 and 24 are the same page, so there is nothing to turn.
   return rePose(t, from, to, { dur: p.dur, ease: p.ease })
 }
 recede.PARAM_SCHEMA = { dur: { min: 1, max: 10, step: 0.1 } }
+recede.PARAM_DEFAULTS = { dur: TIMING.recede.dur }
 
 /**
  * EXIT. A white flash covers the screen and the journal is simply gone — it is

@@ -6,14 +6,15 @@
 # are the fallback for when the 187 MB reference isn't available.
 #
 # Timecodes are the slide cuts plus the entrance/exit landmarks, each offset by
-# SEEK_LEAD so the frame shows the NEW page rather than the last frame of the
-# previous one (see the note in src/lab/Lab.vue).
+# LEAD so the frame shows the NEW page, settled, rather than the last frame of
+# the previous one or a frame from the middle of the page turn. The default
+# clears TIMING.flip.out + TIMING.flip.back (see the note in src/lab/Lab.vue).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="$ROOT/_refs/DP-15152 - preview.mp4"
 OUT="$ROOT/_refs/frames"
-LEAD="${LEAD:-0.2}"
+LEAD="${LEAD:-0.95}"
 [ -f "$SRC" ] || { echo "missing: $SRC" >&2; exit 1; }
 mkdir -p "$OUT"
 

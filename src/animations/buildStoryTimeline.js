@@ -58,13 +58,18 @@ export function buildStoryTimeline(targets, ctx) {
   nest(tl, swingOpen(targets), snap(TIMING.entrance.start))
 
   // Per-slide re-pose from frame 8 onwards (4-7 are the entrance keyframes,
-  // owned by swingOpen).
+  // owned by swingOpen). Every one of these IS a page turn: the journal yaws
+  // out to edge-on and back while it re-poses. Measured at five separate cuts,
+  // including the cover -> page handover at 11.07 (TIMING.flip).
   const posed = SLIDES.filter(s => s.frame >= 8 && s.frame <= 23)
   posed.forEach((slide, i) => {
     const from = i === 0 ? SLIDES.find(s => s.frame === 7).pose : posed[i - 1].pose
     const at = snap(slide.at)
-    tl.call(() => setFace(slide.face), null, at)
-    nest(tl, rePose(targets, from, slide.pose), at)
+    // The face swap (cover 1465x1868 -> page 1564x1911) is a 6 % size change,
+    // so it goes where the content cut goes: the edge-on instant, where the
+    // front face is a hairline and nothing about it can be seen.
+    tl.call(() => setFace(slide.face), null, snap(at + TIMING.flip.out))
+    nest(tl, rePose(targets, from, slide.pose, { flip: true }), at)
   })
 
   const f23 = SLIDES.find(s => s.frame === 23)

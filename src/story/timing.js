@@ -30,6 +30,43 @@ export const TIMING = {
   /** Per-slide re-pose. */
   rePose: 0.5,
 
+  /**
+   * THE PAGE TURN. The journal yaws out to edge-on and comes BACK; it does not
+   * complete a 180. Measured against the reference with a difference mask
+   * (preview.mp4 minus clean bg.mp4 isolates the journal exactly, because the
+   * two clips differ nowhere else), one frame at a time across five cuts. The
+   * journal's on-screen silhouette width, cut at 17.10 s:
+   *
+   *   +0.000  871   settled        +0.167   74   EDGE-ON, only the spine
+   *   +0.033  842                  +0.233  378
+   *   +0.067  685                  +0.333  657
+   *   +0.100  414                  +0.500  808
+   *   +0.133  151                  +0.667  863   settled again
+   *
+   * `out` is the MEAN edge-on offset over the cuts at 11.07 / 17.10 / 22.07 /
+   * 26.07 / 44.03 (0.100 / 0.167 / 0.133 / 0.133 / 0.167). Fitting the 17.10
+   * leg alone prefers 0.16, but the timecodes themselves carry a frame of
+   * error, so the mean across five cuts is the better estimate — and 0.15
+   * happens to land on a half-frame boundary, where `snap` could go either way.
+   *
+   * `back` and both eases come from a least-squares fit of
+   * `angle = acos(w / w0)` over the 17.10 series, the cleanest of the five
+   * (nothing clipped by the frame edge on either side of it): rms 0.033 out,
+   * 0.041 back, in normalised progress. The last few degrees of `back` trail
+   * off below the amplitude of the idle drift, so the turn READS as finished
+   * around +0.65 even though the tween runs to +0.93.
+   *
+   * `out` is ALSO when the page content cuts: at edge-on the front face is a
+   * hairline, so the swap cannot be seen. ADR-0008 still owns the cut — it just
+   * happens at `start + out` rather than at `start`.
+   *
+   * Why not the 180 that _context/34-page-flip.md specified: the glowing
+   * magenta spine sits on the LEFT of the page on every settled frame of six
+   * consecutive pages (20.0 / 24.5 / 28.5 / 32.5 / 37.0 / 42.0 s). A real 180
+   * would land it on the right for every other page. See that doc's correction.
+   */
+  flip: { peak: 90, out: 0.14, back: 0.79 },
+
   /** Idle drift. Per-property periods are deliberately co-prime-ish so the
    *  loop never reads as periodic. */
   hover: {

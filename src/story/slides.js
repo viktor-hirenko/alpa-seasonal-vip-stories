@@ -1,4 +1,4 @@
-import { snap } from './timing.js'
+import { snap, TIMING } from './timing.js'
 
 /**
  * THE join table. Figma storyboard frame -> timecode -> page -> pose -> face.
@@ -75,8 +75,14 @@ export const slideByFrame = n => SLIDES.find(s => s.frame === n)
  * 4-7 are all the cover's entrance and 23/24 are both the Final page, so 21
  * slides collapse into 17 navigable segments.
  *
- * @typedef {{ page: string, index: number, start: number, end: number,
- *             dur: number, firstFrame: number, skip?: string }} Segment
+ * `start` is when the JOURNAL starts moving; `cut` is when the CONTENT changes,
+ * one edge-on instant later. They differ because the page turn hides the swap:
+ * for the first TIMING.flip.out seconds the outgoing page is still the one
+ * facing the camera. The page cut keys off `cut`; navigation and the progress
+ * bar key off `start`, because that is where the slide's window opens.
+ *
+ * @typedef {{ page: string, index: number, start: number, cut: number,
+ *             end: number, dur: number, firstFrame: number, skip?: string }} Segment
  */
 export const STORY_SEGMENTS = PAGE_ORDER.map((page, index) => {
   const own = SLIDES.filter(s => s.page === page)
@@ -89,6 +95,8 @@ export const STORY_SEGMENTS = PAGE_ORDER.map((page, index) => {
     page,
     index,
     start: first.at,
+    // The cover is not turned into view, it flies in — so it has no lead.
+    cut: index === 0 ? first.at : snap(first.at + TIMING.flip.out),
     end,
     dur: end - first.at,
     firstFrame: first.frame,
@@ -96,4 +104,15 @@ export const STORY_SEGMENTS = PAGE_ORDER.map((page, index) => {
   }
 })
 
-
+/**
+ * Which segment is ON SCREEN at video time `t`. A pure function of the clock,
+ * which is what makes it land correctly after any seek, backwards included
+ * (ADR-0008). Returns -1 before the first page exists.
+ */
+export const segmentAt = t => {
+  let idx = -1
+  for (let i = 0; i < STORY_SEGMENTS.length; i++) {
+    if (t >= STORY_SEGMENTS[i].cut - 1e-3) idx = i
+  }
+  return idx
+}
