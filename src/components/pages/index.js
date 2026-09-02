@@ -1,18 +1,17 @@
 import PageStub from './PageStub.vue'
+import PageDaysInSpotlight from './PageDaysInSpotlight.vue'
 
 /**
- * Page registry. Phase 2 replaces entries here one at a time as the real page
- * components land, so the player never has to change: anything not yet built
- * falls through to PageStub.
+ * Page registry. The player never changes as pages land: anything not yet
+ * registered falls through to PageStub.
  *
  * Keys are the page ids from src/story/slides.js.
  */
 export const PAGE_COMPONENTS = {
-  // cover:            () => import('./PageCover.vue'),
-  // editors_note:     () => import('./PageEditorsNote.vue'),
-  // ...
+  days_in_spotlight: PageDaysInSpotlight,
 }
 
-export const resolvePage = () => PageStub
+/** @param {string} page page id from slides.js */
+export const resolvePage = page => PAGE_COMPONENTS[page] || PageStub
 
 export { PageStub }

@@ -1,0 +1,48 @@
+////
+/// Rubik, self-hosted. Figma 21770:2955 / 2960 / 2964.
+///
+/// TWO files, not four. Google serves Rubik as a VARIABLE font — one woff2 per
+/// subset covers the whole 300-900 weight axis — so `latin` (35 KB) and
+/// `latin-ext` (19 KB) give us both 400 and 800 for 54 KB total. Four static
+/// instances would have been more files and more bytes. Verified by fetching
+/// the css2 API: all six weight/subset combinations resolve to one file per
+/// subset. (This supersedes the plan's assumption that two statics would win.)
+///
+/// `latin-ext` is required, not optional: FR needs `é à è ç ô û î`, DE needs
+/// `ä ö ü ß`, IT needs `à è é ì ò ù`. It only downloads when such a codepoint
+/// is actually used, thanks to unicode-range.
+///
+/// NOT loaded: cyrillic, cyrillic-ext, hebrew, arabic — no locale needs them.
+///
+/// `font-display: block`, NOT `swap`. The text fitter measures rendered glyphs
+/// (ADR-0004), so a metric-changing swap partway through a 94 s cinematic would
+/// both look broken and invalidate every computed `--fit`. The inline preloader
+/// already masks the block period.
+///
+/// Never `@import url('https://fonts.googleapis.com/...')`: render-blocking,
+/// two extra RTTs, third-party, and it fails outright inside a customer iframe
+/// where the domain is blocked — the same failure class the marketing doc warns
+/// about for game thumbnails.
+////
+
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: block;
+  src: url('@/assets/fonts/rubik-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Rubik';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: block;
+  src: url('@/assets/fonts/rubik-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}

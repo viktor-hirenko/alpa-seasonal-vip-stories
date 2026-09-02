@@ -25,12 +25,15 @@
                 <div class="lab-back"><span>BACK COVER</span></div>
               </template>
               <div class="journal-page journal-page--active">
-                <div class="lab-page">
-                  <div>
-                    <div class="lab-page__label">{{ slide?.page || 'journal' }}</div>
-                    <div class="lab-page__sub">frame {{ slide?.frame ?? '—' }}</div>
-                  </div>
-                </div>
+                <!-- The REAL page, through the same registry the player uses,
+                     so the lab is the authoring surface for page work too.
+                     Pages not yet built fall through to PageStub. -->
+                <component
+                  :is="resolvePage(slide?.page)"
+                  :page="slide?.page || 'journal'"
+                  :frame="slide?.frame ?? 0"
+                  :start="slide?.at ?? 0"
+                />
               </div>
             </JournalStage>
             <div class="fly-layer" />
@@ -165,6 +168,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { gsap } from 'gsap'
 import JournalStage from '@/components/Journal/JournalStage.vue'
+import { resolvePage } from '@/components/pages/index.js'
 import { resolveTargets, setPose } from '@/journal3d'
 import * as presets from '@/journal3d/presets.js'
 import { SLIDES } from '@/story/slides.js'

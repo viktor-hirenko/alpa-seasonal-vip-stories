@@ -1,0 +1,297 @@
+@use 'sass:list';
+@use 'units' as *;
+@use 'tokens' as *;
+
+////
+/// Journal page shell and primitives.
+///
+/// Every number here is a Figma design pixel in the PAGE coordinate system
+/// (1564x1911) and cites its node. Because `.journal-box` is laid out at the
+/// component's base size in scene units, one page px == one scene px, so
+/// `du()` is the correct unit throughout (ADR-0010).
+///
+/// Centring here uses `inset-inline: 0` + `margin-inline: auto`, NOT
+/// `translateX(-50%)`. Not because a transform would break anything — page
+/// content sits below the last `preserve-3d` element, so it is flat and safe —
+/// but because it keeps the "GSAP owns transform, layout owns position" habit
+/// intact everywhere, so nobody has to stop and check which side of the 3D
+/// boundary a rule is on.
+////
+
+/// Shared shell: spine, paper fore-edge, clipped body. Figma 21770:2946.
+.page {
+  position: absolute;
+  inset: 0;
+}
+
+/// The DRAWN spine strip, 109 x 1910.5 at x=0 (21770:2965).
+/// Not to be confused with `.jedge--spine`, which is the real 3D left face of
+/// the box. Both exist at once: this one is graphic, that one is geometry.
+.page__spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: du(109);
+  height: du(1910.5);
+  pointer-events: none;
+}
+
+/// Right-hand paper-stack edge (21770:2947). The gradient's stops all sit
+/// inside the first 5.573%, so the remaining width resolves to the final
+/// `#562c26` — a dark block with fine stripes at the far edge, which is how the
+/// page stack reads at this angle.
+.page__fore {
+  position: absolute;
+  left: 63.6%;
+  right: 0.57%;
+  top: 0.84%;
+  bottom: 1.41%;
+  background-image: linear-gradient(
+    270deg,
+    #b26c3b 0%,
+    #2c2c2c 0.577%,
+    #b26c3b 1.2906%,
+    #2c2c2c 2.1141%,
+    #b26c3b 2.9926%,
+    #2c2c2c 3.871%,
+    #562c26 5.573%
+  );
+  pointer-events: none;
+}
+
+/// Page body (21770:2948). `overflow: clip` is per the mock and is safe: it
+/// sits below the last preserve-3d element so it cannot flatten the scene.
+.page__body {
+  position: absolute;
+  left: 6.32%;
+  right: 1.53%;
+  top: 0.84%;
+  bottom: 1.41%;
+  background: $page-bg;
+  overflow: clip;
+}
+
+/// Bottom fade into the page colour (21770:2950).
+.page__fade {
+  position: absolute;
+  left: du(-175);
+  bottom: 0;
+  width: du(2081);
+  height: du(383);
+  background: linear-gradient(180deg, rgba(0, 10, 18, 0) 0%, $page-bg 100%);
+  pointer-events: none;
+}
+
+/// Specular sheen across the whole sheet (21770:2952), `mix-blend-mode: screen`.
+.page__sheen {
+  position: absolute;
+  left: du(1);
+  top: du(-39);
+  width: du(1442);
+  height: du(1987);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.page__art {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+}
+
+///
+/// Slots. A page declares WHERE something goes; the primitive declares what it
+/// looks like.
+///
+.j-slot {
+  position: absolute;
+  inset-inline: 0;
+  margin-inline: auto;
+  width: fit-content;
+  max-width: calc(100% - #{du(60)});
+  text-align: center;
+}
+
+/// Full-width slot: the child centres itself with `justify-content`.
+///
+/// Needed for the digit row. MEASURED: Rubik's digit advance is 0.688 em, so a
+/// tile at font-size 386.108 is 265.7 + 2*15.47 padding + 2*13.536 border =
+/// 323.7 design px — which matches the mock exactly. But four of them plus
+/// three 58.978 gaps come to 1471.7, and the page body is only 1441.2 wide, so
+/// a 4-digit value overflows BY DESIGN and the mock lets it sit hard against
+/// both page edges.
+///
+/// With `width: fit-content` + `margin-inline: auto` that overflow lands
+/// entirely on the RIGHT (the box clamps to the available width and the flex
+/// row starts at its left edge), which reads as a bug. A full-width slot with
+/// `justify-content: center` overflows symmetrically, like the mock.
+///
+/// Five digits or more must actually shrink — that is the digit role's job in
+/// useJournalFit (task B), via the shared `--tile-fit`.
+.j-slot--full {
+  inset-inline: 0;
+  width: auto;
+  max-width: none;
+  margin-inline: 0;
+}
+
+/// Chip / "Tabs" (21770:2962).
+.j-chip {
+  display: inline-block;
+  padding: du(49.908) du(99.817);
+  border-radius: du(25);
+  background: $chip-bg;
+  font-family: $font-stack;
+  font-weight: 400;
+  font-size: calc(#{du(56.479)} * var(--fit, 1));
+  line-height: 0.88;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/// Display heading (21770:2960 / 2961).
+.j-heading {
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: calc(#{du(96)} * var(--fit, 1));
+  line-height: 1.08;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 du(8.359) du(27.865) $heading-shadow;
+  text-wrap: balance;
+}
+
+.j-heading__line {
+  display: block;
+}
+
+///
+/// Digit tiles (21770:2953 -> 2954).
+///
+/// TWO sizes, and they are genuinely different components in the mock:
+///   lg — Days in the Spotlight: 350 tall, 386.108 digits, 58.978 gap.
+///   sm — Headline Win: the row is 699.856 x 120.8 with ~101.679-wide tiles on
+///        a 122.035 pitch, so the gap is 20.356. The rest of `sm` is derived
+///        from the lg ratio (120.8 / 350 = 0.345) and is PROVISIONAL until the
+///        Headline Win page is built and measured against the mock.
+///
+.j-tiles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.j-tiles--lg {
+  gap: du(58.978);
+}
+
+.j-tiles--sm {
+  gap: du(20.356);
+}
+
+.j-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: clip;
+  border-style: solid;
+  border-color: $accent;
+  // backdrop-filter is safe here: a leaf below the preserve-3d chain. If it
+  // ever costs frames on an SE-class device, a flat rgba fill is visually
+  // indistinguishable behind a 0.68-scaled rotated page.
+  backdrop-filter: blur(du(7.735));
+}
+
+.j-tiles--lg .j-tile {
+  height: du(350);
+  border-width: du(13.536);
+  border-radius: du(24.171);
+  padding: du(15.47);
+}
+
+.j-tiles--sm .j-tile {
+  height: du(120.8);
+  border-width: du(4.67);
+  border-radius: du(8.34);
+  padding: du(5.34);
+}
+
+/// Gap-only cell for separators (space, comma, dot) so a grouped number keeps
+/// its rhythm without drawing a bordered box around a comma.
+.j-tile--sep {
+  border-color: transparent;
+  backdrop-filter: none;
+  padding: 0;
+}
+
+.j-tile__digit {
+  font-family: $font-stack;
+  font-weight: 800;
+  line-height: 0.94;
+  text-align: center;
+  white-space: nowrap;
+  // Gradient text. `color: transparent` + background-clip is the only way to
+  // fill glyphs with a gradient.
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+.j-tiles--lg .j-tile__digit {
+  font-size: calc(#{du(386.108)} * var(--tile-fit, 1));
+}
+
+.j-tiles--sm .j-tile__digit {
+  font-size: calc(#{du(133.2)} * var(--tile-fit, 1));
+}
+
+.j-tile--sep .j-tile__digit {
+  width: du(28);
+}
+
+/// Currency label — a separate node in the mock (21811:3479), never inside the
+/// tiles.
+.j-currency {
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: calc(#{du(96)} * var(--fit, 1));
+  line-height: 1;
+  text-transform: uppercase;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+///
+/// Days in the Spotlight — page-specific art placement. Figma 21770:2946.
+///
+.days__planets {
+  left: du(213);
+  top: du(-285);
+  width: du(2230.908);
+  height: du(1961.63);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    flex: none;
+    width: du(1897.069);
+    height: du(1176.886);
+    object-fit: cover;
+    transform: rotate(-150.33deg);
+  }
+}
+
+.days__rocket {
+  left: du(186);
+  top: du(1245);
+  width: du(752);
+  height: du(956);
+  object-fit: cover;
+}
