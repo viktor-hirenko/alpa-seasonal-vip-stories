@@ -1,0 +1,6 @@
+dist
+node_modules
+_refs
+_context
+public/video
+src/assets

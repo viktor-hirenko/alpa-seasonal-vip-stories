@@ -1,0 +1,134 @@
+@use 'sass:list';
+@use 'units' as *;
+@use 'tokens' as *;
+
+////
+/// JOURNAL VOLUME — six faces of a W x H x T box. ADR-0005.
+///
+/// Every face is centred on the box centre with negative margins, then pushed
+/// out by a static CSS transform. GSAP never touches these transforms (opacity
+/// only), so there is no ownership conflict.
+///
+/// Anti-z-fighting, three measures, zero runtime JS:
+///  1. `backface-visibility: hidden` on all six. As rotationY sweeps through
+///     +/-90deg the front cover disappears and the back appears at exactly the
+///     crossing, with no bookkeeping and no frame where both paint.
+///  2. Edge quads are inset by --jseam design px along their long axis, so they
+///     can never be coplanar with a face. Coplanar quads are the actual cause of
+///     the shimmering seam on WebKit.
+///  3. NO `z-index` on any face. Let preserve-3d depth-sort. A z-index inside a
+///     preserve-3d context creates a stacking context that overrides the depth
+///     sort — that is the classic "spine renders in front of the page" bug that
+///     looks like a browser defect and isn't.
+////
+
+@mixin j-face($w, $h) {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(#{$w} * var(--u));
+  height: calc(#{$h} * var(--u));
+  // Percentage margins resolve against the containing block WIDTH for top too,
+  // so both axes must be calc'd explicitly.
+  margin-left: calc(#{$w} * -0.5 * var(--u));
+  margin-top: calc(#{$h} * -0.5 * var(--u));
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  // Do NOT add will-change here: six always-promoted layers cost more on a
+  // mid-range phone than they buy, and these transforms are static.
+}
+
+.jface,
+.jedge {
+  @include j-face(var(--jw), var(--jh));
+}
+
+/// Front — the page slot plus the "shadow season" glow.
+.jface--front {
+  transform: translateZ(calc(var(--jd) * 0.5 * var(--u)));
+  background: $page-bg;
+  box-shadow:
+    calc(#{list.nth($shadow-season-1, 1)} * var(--u)) calc(#{list.nth($shadow-season-1, 2)} * var(--u))
+      calc(#{list.nth($shadow-season-1, 3)} * var(--u)) list.nth($shadow-season-1, 4),
+    calc(#{list.nth($shadow-season-2, 1)} * var(--u)) calc(#{list.nth($shadow-season-2, 2)} * var(--u))
+      calc(#{list.nth($shadow-season-2, 3)} * var(--u)) list.nth($shadow-season-2, 4);
+}
+
+/// Back — the closed cover with the rocket logo. Visible for the first ~1.4 s of
+/// the entrance while the journal lies flat on the floor at rotationX ~= -80deg,
+/// so this is a real surface, not decoration.
+.jface--back {
+  transform: translateZ(calc(var(--jd) * -0.5 * var(--u))) rotateY(180deg);
+  background:
+    radial-gradient(120% 90% at 50% 40%, #1b1030 0%, #0a0713 60%, #06040c 100%);
+}
+
+/// Spine (left edge) — THE money shot. This thin glowing magenta bar is the
+/// entire visual proof of real 3D volume at t=3.93, where the journal passes
+/// exactly edge-on. The bloom deliberately spills past the 34-px silhouette so
+/// it still reads when the stage is only ~400 CSS px wide.
+.jedge--spine {
+  @include j-face(var(--jd), calc(var(--jh) - var(--jseam)));
+  transform: translateX(calc(var(--jw) * -0.5 * var(--u))) rotateY(-90deg);
+  background: linear-gradient(
+    180deg,
+    #7a1f56 0%,
+    $magenta 12%,
+    #ffa6de 28%,
+    $magenta 55%,
+    #a52a72 88%,
+    #4b1236 100%
+  );
+  box-shadow:
+    0 0 du(40) rgba(255, 118, 204, 0.7),
+    0 0 du(110) rgba(255, 118, 204, 0.35);
+}
+
+/// Fore-edge (right) — the paper stack. The Figma ramp rotated 90deg and tiled
+/// across the depth so it reads as individual pages rather than a slab.
+.jedge--fore {
+  @include j-face(var(--jd), calc(var(--jh) - var(--jseam)));
+  transform: translateX(calc(var(--jw) * 0.5 * var(--u))) rotateY(90deg);
+  background-image: linear-gradient(180deg, #b26c3b 0%, #2c2c2c 45%, #562c26 100%);
+  background-size: 100% du(9);
+  background-repeat: repeat-y;
+}
+
+/// Top / bottom — a flat two-stop version of the same ramp. Only genuinely
+/// visible during the entrance (rotationX -80deg -> +10deg), but they cost
+/// nothing and their absence there is glaring.
+.jedge--top {
+  @include j-face(calc(var(--jw) - var(--jseam)), var(--jd));
+  transform: translateY(calc(var(--jh) * -0.5 * var(--u))) rotateX(90deg);
+  background: linear-gradient(90deg, #6b4426 0%, #2c2c2c 60%, #1a1218 100%);
+}
+
+.jedge--bottom {
+  @include j-face(calc(var(--jw) - var(--jseam)), var(--jd));
+  transform: translateY(calc(var(--jh) * 0.5 * var(--u))) rotateX(-90deg);
+  background: linear-gradient(90deg, #4a2f1b 0%, #211b1f 60%, #14101a 100%);
+}
+
+/// Page stack inside the front face. `overflow: clip` is safe here: it sits
+/// BELOW the last preserve-3d element, so it cannot flatten the scene.
+.journal-pages {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+}
+
+.journal-page {
+  position: absolute;
+  inset: 0;
+  // Inactive pages use `visibility`, never `display: none`: a display:none page
+  // is unmeasurable, and the font fitter needs every page measurable in one
+  // boot-time sweep (ADR-0004, ADR-0008).
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.journal-page--active {
+  visibility: visible;
+  pointer-events: auto;
+}

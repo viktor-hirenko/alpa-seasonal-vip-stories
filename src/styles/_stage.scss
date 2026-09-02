@@ -1,0 +1,205 @@
+@use 'units' as *;
+@use 'tokens' as *;
+
+////
+/// THE 3D STAGE — read ADR-0002 before touching anything here.
+///
+/// TRANSFORM OWNERSHIP CONTRACT
+/// Every element below has EXACTLY ONE author of its `transform`. Elements that
+/// GSAP animates carry NO CSS `transform` at all — not even percentage
+/// centring, which is done with negative margins instead. Break this and you
+/// reproduce the Thor bug where GSAP's transform cache froze `translateX(-50%)`
+/// into stale pixels.
+///
+///   .story-root     CSS, static
+///   .stage          CSS, static   (owns --u; desktop card lives here)
+///   .stage-3d       owns `perspective`; GSAP may animate --persp ONLY
+///   .journal-pos    >> GSAP owns xPercent / yPercent <<
+///   .journal-hover  >> GSAP owns rotationX/Y/Z, yPercent, scale (idle drift) <<
+///   .journal-box    >> GSAP owns rotationX/Y/Z, scale, z (pose) <<
+///   .jface--* .jedge--*   CSS static; GSAP may touch `opacity` only
+///   .fly-obj        >> GSAP owns xPercent/yPercent/z/rotation*/scale <<
+///
+/// 3D-FLATTENING CHECKLIST — none of these may appear on an element BETWEEN
+/// .stage-3d and a face, or the browser flattens the scene and the side faces
+/// vanish:
+///   overflow: hidden|clip|auto|scroll, filter, backdrop-filter, opacity < 1,
+///   mask, clip-path, mix-blend-mode, isolation, contain: paint|content|strict,
+///   content-visibility, will-change: opacity|filter
+/// Clipping ABOVE .stage-3d is fine, which is why the desktop card's
+/// `overflow: hidden` sits on .stage.
+////
+
+.story-root {
+  position: relative;
+  width: 100%;
+  // svh anchors to the small viewport so --u never jumps with the iOS Safari
+  // address bar. Inside the production iframe this is a no-op.
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  background: $stage-bg;
+  color: #fff;
+  font-family: $font-stack;
+  -webkit-font-smoothing: antialiased;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+
+  // container-type: size enables cqw/cqh, which is what makes --u JS-free.
+  container-type: size;
+
+  // CONTAIN fit into the 1080x1920 design canvas.
+  --u: min(100cqw / 1080, 100cqh / 1920);
+
+  // Camera distance in DESIGN px, not real px. "1000px" from the brief is a
+  // real-pixel figure, but the stage is ~400 CSS px wide on a phone and ~600 on
+  // the desktop card, so a fixed px perspective would give a different FOV per
+  // device. 1800 design px ~= 1.67x canvas width.
+  --persp: 1800;
+
+  // Journal geometry, overwritten per slide by JournalStage (cover 1465x1868,
+  // data page 1564x1911).
+  --jw: 1564;
+  --jh: 1911;
+  --jd: 34; // spine thickness, design px — calibrated against the edge-on frame at t=3.93
+  --jseam: 1; // half-pixel-ish inset so edge quads are never coplanar with the faces
+
+  @include desktop {
+    // Frame the story as a rounded card, exactly as Thor does. Centring uses
+    // margin-left, not translate(-50%), to keep transforms out of the 3D chain's
+    // ancestry.
+    width: 58.2vh;
+    margin-left: -29.1vh;
+    left: 50%;
+    top: 5%;
+    height: 90%;
+    border-radius: 3vh;
+  }
+}
+
+.stage__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.stage-3d {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+
+  perspective: calc(var(--persp) * var(--u));
+  perspective-origin: 50% 50%;
+  transform-style: preserve-3d;
+  // NO transform, ever. GSAP animates --persp here (dolly zoom on the entrance).
+}
+
+///
+/// Journal transform chain.
+///
+/// Four layers, because each one is the sole owner of a GSAP property that
+/// another layer also wants at the same time:
+///   pos   vs box   — pos is 100%x100% of the stage, so xPercent/yPercent are
+///                    percentages OF THE STAGE and the cx%/cy% numbers from
+///                    32-poses.md drop in verbatim, viewport-independent.
+///   hover vs box   — the idle drift and the per-slide re-pose both animate
+///                    rotationZ/rotationY/scale. On one element they would
+///                    clobber each other every frame. Nested, they compose.
+///
+/// `transform-origin: 0 0` on pos and hover is load-bearing: their box is the
+/// whole stage, so a 50% origin would rotate the journal around the STAGE
+/// centre instead of its own.
+///
+.journal-pos,
+.journal-hover {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+  transform-style: preserve-3d;
+}
+
+.journal-box {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--jw) * var(--u));
+  height: calc(var(--jh) * var(--u));
+  // Centre the box on its parent's origin without touching `transform`.
+  margin-left: calc(var(--jw) * -0.5 * var(--u));
+  margin-top: calc(var(--jh) * -0.5 * var(--u));
+
+  transform-origin: 50% 50%;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
+
+  // Custom-property-driven transforms are not composited on WebKit; a real
+  // transform is, but only if the layer is promoted.
+  will-change: transform;
+
+  // NEVER put `opacity` here — it would flatten the faces mid-flight and the
+  // volume would pop out of existence. The story's exit is a white flash, not a
+  // fade, so it is never needed. Fade `.journal-pos` if you ever must.
+}
+
+///
+/// Flying objects share the journal's 3D context, so the browser depth-sorts
+/// them against it for free: an object nearer the camera passes in FRONT of the
+/// journal, a farther one behind. No z-index bookkeeping, correct under any
+/// seek. See ADR-0006.
+///
+.fly-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+/// Overlays sit ABOVE the 3D scene and are deliberately outside it.
+.stage__flash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage__speed {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage__ui {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  // No perspective ancestor here on purpose: chrome must not inherit the
+  // journal's camera or its rotation.
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  pointer-events: none;
+
+  > * {
+    pointer-events: auto;
+  }
+}

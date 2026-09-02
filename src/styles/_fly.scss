@@ -1,0 +1,41 @@
+@use 'units' as *;
+
+////
+/// Flying 3D objects. ADR-0006.
+///
+/// The exported assets carry NO rim glow — in the Figma file the magenta halo
+/// was a separate image fill stacked together with the opaque navy backdrop we
+/// had to discard (see _context/33-fly-objects.md). So the glow is CSS.
+///
+/// It goes on the inner <img>, NOT on `.fly-obj`: `filter` is a grouping
+/// property, it forces `transform-style: flat` and creates a containing block,
+/// which would pull the object out of the shared 3D scene and break depth
+/// sorting against the journal.
+////
+
+.fly-obj {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(var(--fo-size, 500) * var(--u));
+  height: calc(var(--fo-size, 500) * var(--u));
+  margin-left: calc(var(--fo-size, 500) * -0.5 * var(--u));
+  margin-top: calc(var(--fo-size, 500) * -0.5 * var(--u));
+  transform-origin: 50% 50%;
+  transform-style: preserve-3d;
+  visibility: hidden;
+  // No filter, no opacity < 1, no overflow here.
+}
+
+.fly-obj--live {
+  visibility: visible;
+}
+
+.fly-obj__art {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 du(18) rgba(255, 118, 204, 0.55))
+    drop-shadow(0 0 du(46) rgba(255, 118, 204, 0.3));
+}

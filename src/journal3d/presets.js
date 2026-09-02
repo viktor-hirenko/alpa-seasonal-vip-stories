@@ -1,0 +1,289 @@
+import { gsap } from 'gsap'
+import { EASE } from '@/story/easing.js'
+import { TIMING, HOVER_AMP } from '@/story/timing.js'
+import { DEPTH } from '@/story/journalGeometry.js'
+import { posVars, boxVars } from './poseTween.js'
+
+/**
+ * THE REUSABLE 3D LIBRARY (ticket item 4).
+ *
+ * Every preset is a PURE FACTORY: (targets, params) => paused gsap.timeline().
+ * No DOM queries inside, no reference to the master timeline, no side effects.
+ * That is what makes the module reusable and lets the lab just call
+ * `preset(targets, params).play()`.
+ *
+ * Every preset exposes `PARAM_SCHEMA` so the lab can generate its own sliders:
+ * add a param, get a slider for free.
+ *
+ * No preset contains a bare duration or an inline ease string — they all come
+ * from timing.js / easing.js (ADR-0009).
+ */
+
+const tl = () => gsap.timeline({ paused: true })
+
+/** Merge caller params over defaults, one level deep. */
+const P = (defaults, params) => ({ ...defaults, ...(params || {}) })
+
+// ---------------------------------------------------------------------------
+// Video-accurate presets — these drive the real story.
+// ---------------------------------------------------------------------------
+
+/**
+ * ENTRANCE, part 1. The journal lies flat on the floor bottom-left, back cover
+ * and rocket logo facing the camera, then swings up.
+ *
+ * `floorRotX` MUST be past +/-90deg. Verified in the lab: with
+ * `backface-visibility: hidden`, rotationX in (-90, 90) shows the FRONT face,
+ * and only beyond +/-90 does the back cover appear. The reference shows the back
+ * cover with the rocket logo for the first ~1.4 s, so -105 is the floor pose and
+ * -80 (the obvious guess) is wrong — it would show the page, not the cover.
+ *
+ * Note the edge-on instant at t=3.93 is NOT this rotation: it is a vertical
+ * spine, i.e. a rotationY = -90 crossing, and it belongs to `swingOpen`.
+ *
+ * Also dips `--persp` so the entrance keystones hard, the way the reference
+ * does — a dolly zoom. Only possible because `.stage-3d` has no animated
+ * transform of its own.
+ */
+export function flyInFromFloor(t, params) {
+  const p = P(
+    {
+      floorRotX: -105,
+      liftToRotX: -20,
+      floorRotZ: 34,
+      fromCx: 22,
+      fromCy: 118,
+      fromScale: 1.05,
+      dur: TIMING.entrance.floorLift,
+      perspDip: TIMING.persp.entranceDip,
+      ease: EASE.entrance,
+    },
+    params,
+  )
+  const s = tl()
+  s.set(t.pos, { xPercent: p.fromCx, yPercent: p.fromCy })
+  s.set(t.box, { rotationX: p.floorRotX, rotationY: 0, rotationZ: p.floorRotZ, scale: p.fromScale, z: 0 })
+  s.set(t.stage, { '--persp': p.perspDip }, 0)
+  s.to(t.box, { rotationX: p.liftToRotX, duration: p.dur, ease: p.ease }, 0)
+  s.to(t.pos, { xPercent: 46, yPercent: 96, duration: p.dur, ease: p.ease }, 0)
+  return s
+}
+flyInFromFloor.PARAM_SCHEMA = {
+  floorRotX: { min: -180, max: -90, step: 1 },
+  liftToRotX: { min: -90, max: 20, step: 1 },
+  floorRotZ: { min: -60, max: 60, step: 1 },
+  fromCx: { min: -50, max: 150, step: 1 },
+  fromCy: { min: 50, max: 200, step: 1 },
+  fromScale: { min: 0.2, max: 2, step: 0.01 },
+  dur: { min: 0.2, max: 4, step: 0.05 },
+  perspDip: { min: 600, max: 3000, step: 50 },
+}
+
+/**
+ * ENTRANCE, part 2. The swing-open: rotationY sweeps from edge-on towards
+ * frontal while the journal shrinks from 1.291 to its settled cover scale, and
+ * `--persp` recovers to base.
+ *
+ * `edgeOnAt` is when rotationY passes exactly 90deg — that is the frame where
+ * only the glowing spine is visible, and it is the visual proof of real 3D
+ * volume. In the reference it lands at t=3.93, i.e. 1.43 s after the entrance
+ * starts.
+ */
+export function swingOpen(t, params) {
+  const p = P(
+    {
+      edgeOnAt: TIMING.entrance.edgeOnAt,
+      settleAt: TIMING.entrance.settleAt,
+      perspBase: TIMING.persp.base,
+      ease: EASE.swing,
+      keys: [
+        // [time offset, rotationY, rotationZ, scale, cx, cy]
+        [0.0, -90, 30, 1.291, 46, 96],
+        [0.55, -60, 26, 1.15, 60, 78],
+        [1.05, -35, 23, 0.9, 68, 62],
+        [1.5, -18, 12, 0.75, 67.5, 52],
+        [2.1, -4, 3.1, 0.746, 57.7, 48.7],
+      ],
+    },
+    params,
+  )
+  const s = tl()
+  const base = p.keys[0]
+  s.set(t.box, { rotationX: -20, rotationY: base[1], rotationZ: base[2], scale: base[3] })
+  s.set(t.pos, { xPercent: base[4], yPercent: base[5] })
+  s.to(t.box, { rotationX: 6, duration: p.edgeOnAt, ease: p.ease }, 0)
+
+  p.keys.slice(1).forEach((k, i) => {
+    const prev = p.keys[i]
+    const dur = k[0] - prev[0]
+    s.to(t.box, { rotationY: k[1], rotationZ: k[2], scale: k[3], duration: dur, ease: p.ease }, prev[0])
+    s.to(t.pos, { xPercent: k[4], yPercent: k[5], duration: dur, ease: p.ease }, prev[0])
+  })
+
+  s.to(t.stage, { '--persp': p.perspBase, duration: TIMING.persp.recover, ease: p.ease }, p.edgeOnAt * 0.5)
+  s.to(t.box, { rotationX: 0, duration: 0.6, ease: p.ease }, p.settleAt - 0.6)
+  return s
+}
+swingOpen.PARAM_SCHEMA = {
+  edgeOnAt: { min: 0.3, max: 3, step: 0.01 },
+  settleAt: { min: 1, max: 6, step: 0.05 },
+  perspBase: { min: 800, max: 4000, step: 50 },
+}
+
+/**
+ * IDLE DRIFT. Runs on `.journal-hover`, on its OWN standalone infinite
+ * timeline — never on the master. `repeat: -1` on the master would make
+ * `tl.duration()` infinite and destroy the whole video-sync and progress model.
+ *
+ * Per-property periods differ and are offset so the loop never reads as
+ * periodic, which is the thing that makes a hover look mechanical.
+ */
+export function hover(t, params) {
+  const p = P({ amp: HOVER_AMP, period: TIMING.hover, ease: EASE.hoverDrift }, params)
+  const s = gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: p.ease } })
+  s.fromTo(t.hover, { rotationZ: -p.amp.rotZ }, { rotationZ: p.amp.rotZ, duration: p.period.rotZ }, 0)
+  s.fromTo(t.hover, { rotationY: -p.amp.rotY }, { rotationY: p.amp.rotY, duration: p.period.rotY }, p.period.stagger * 0)
+  s.fromTo(t.hover, { rotationX: -p.amp.rotX }, { rotationX: p.amp.rotX, duration: p.period.rotX }, p.period.stagger * 1)
+  s.fromTo(t.hover, { yPercent: -p.amp.y }, { yPercent: p.amp.y, duration: p.period.y }, p.period.stagger * 2)
+  s.fromTo(t.hover, { scale: 1 - p.amp.scale }, { scale: 1 + p.amp.scale, duration: p.period.scale }, p.period.stagger * 3)
+  return s
+}
+hover.PARAM_SCHEMA = {}
+
+/** Per-slide re-pose. The page content cut is clock-driven (ADR-0008); this
+ *  only moves the journal. */
+export function rePose(t, from, to, params) {
+  const p = P({ dur: TIMING.rePose, ease: EASE.rePose }, params)
+  const s = tl()
+  if (from) {
+    s.set(t.pos, posVars(from))
+    s.set(t.box, boxVars(from))
+  }
+  s.to(t.pos, { ...posVars(to), duration: p.dur, ease: p.ease }, 0)
+  s.to(t.box, { ...boxVars(to), duration: p.dur, ease: p.ease }, 0)
+  return s
+}
+rePose.PARAM_SCHEMA = { dur: { min: 0.1, max: 2, step: 0.05 } }
+
+/** The journal draws back and tilts before the flash (frames 23 -> 24). */
+export function recede(t, from, to, params) {
+  const p = P({ dur: TIMING.recede.dur, ease: EASE.recede }, params)
+  return rePose(t, from, to, { dur: p.dur, ease: p.ease })
+}
+recede.PARAM_SCHEMA = { dur: { min: 1, max: 10, step: 0.1 } }
+
+/**
+ * EXIT. A white flash covers the screen and the journal is simply gone — it is
+ * hidden INSIDE the flash, never faded. Do not "improve" this into a fade:
+ * fading would need `opacity` on `.journal-box`, which flattens the faces and
+ * makes the volume pop out of existence mid-flight.
+ */
+export function whiteFlashExit(t, params) {
+  const p = P({ ...TIMING.flash }, params)
+  const s = tl()
+  if (!t.flash) return s
+  s.set(t.flash, { opacity: 0 })
+  s.to(t.flash, { opacity: 1, duration: p.in, ease: EASE.flashIn }, 0)
+  s.set(t.pos, { autoAlpha: 0 }, p.in + p.hold * 0.5)
+  s.to(t.flash, { opacity: 0, duration: p.out, ease: EASE.flashOut }, p.in + p.hold)
+  return s
+}
+whiteFlashExit.PARAM_SCHEMA = {
+  in: { min: 0.02, max: 0.4, step: 0.01 },
+  hold: { min: 0, max: 0.6, step: 0.01 },
+  out: { min: 0.1, max: 1.5, step: 0.05 },
+}
+
+/** Hyperspace burst: the `Speed` overlay scales 1080 -> 2338 px. */
+export function hyperspaceBurst(t, params) {
+  const p = P({ dur: TIMING.speed.dur, scale: TIMING.speed.scale, ease: EASE.zoom }, params)
+  const s = tl()
+  if (!t.speed) return s
+  s.set(t.speed, { opacity: 0, scale: 1 })
+  s.to(t.speed, { opacity: 1, duration: p.dur * 0.3 }, 0)
+  s.to(t.speed, { scale: p.scale, duration: p.dur, ease: p.ease }, 0)
+  s.to(t.speed, { opacity: 0, duration: p.dur * 0.4 }, p.dur * 0.6)
+  return s
+}
+hyperspaceBurst.PARAM_SCHEMA = {
+  dur: { min: 0.3, max: 3, step: 0.05 },
+  scale: { min: 1, max: 4, step: 0.05 },
+}
+
+// ---------------------------------------------------------------------------
+// The brief's simple presets. Kept, exported, and used by the lab and future
+// stories even though the real story follows the reference choreography.
+// ---------------------------------------------------------------------------
+
+/** Exactly the brief: y 100vh, z -500, rotationX -45 -> 0/0/10, back.out(1.5). */
+export function flyInFromBelow(t, params) {
+  const p = P({ fromY: 100, fromZ: -500, fromRotX: -45, toRotX: 10, dur: 1.2, ease: EASE.backOut }, params)
+  const s = tl()
+  s.set(t.pos, { xPercent: 50, yPercent: 50 })
+  s.set(t.box, { yPercent: p.fromY, z: p.fromZ, rotationX: p.fromRotX, rotationY: 0, rotationZ: 0, scale: 1 })
+  s.to(t.box, { yPercent: 0, z: 0, rotationX: p.toRotX, duration: p.dur, ease: p.ease }, 0)
+  return s
+}
+flyInFromBelow.PARAM_SCHEMA = {
+  fromY: { min: 0, max: 200, step: 5 },
+  fromZ: { min: -3000, max: 0, step: 50 },
+  fromRotX: { min: -90, max: 90, step: 1 },
+  toRotX: { min: -45, max: 45, step: 1 },
+  dur: { min: 0.2, max: 4, step: 0.05 },
+}
+
+/**
+ * Fly into the camera and vanish.
+ *
+ * `opacity` deliberately goes on `.journal-pos`, NOT `.journal-box`: animating
+ * opacity on the box flattens its faces mid-flight and the volume disappears.
+ * That is encoded here so a caller cannot get it wrong.
+ */
+export function zoomToCamera(t, params) {
+  const p = P({ scale: 3, dur: 0.9, ease: EASE.zoom }, params)
+  const s = tl()
+  s.to(t.box, { scale: p.scale, duration: p.dur, ease: p.ease }, 0)
+  s.to(t.pos, { opacity: 0, duration: p.dur * 0.6, ease: p.ease }, p.dur * 0.4)
+  return s
+}
+zoomToCamera.PARAM_SCHEMA = {
+  scale: { min: 1, max: 8, step: 0.1 },
+  dur: { min: 0.2, max: 3, step: 0.05 },
+}
+
+/** A real 3D page turn. Not used by the story (the reference always hard-cuts),
+ *  but it is the obvious "base 3D animation" for the library. */
+export function pageFlip3D(t, params) {
+  const p = P({ dur: 0.8, ease: EASE.swing }, params)
+  const s = tl()
+  s.fromTo(t.front, { rotationY: 0 }, { rotationY: -180, duration: p.dur, ease: p.ease }, 0)
+  return s
+}
+pageFlip3D.PARAM_SCHEMA = { dur: { min: 0.2, max: 3, step: 0.05 } }
+
+/** Continuous orbit around the shared vanishing point. */
+export function orbit(t, params) {
+  const p = P({ dur: 8 }, params)
+  return gsap.timeline({ repeat: -1, paused: true }).to(t.box, {
+    rotationY: 360,
+    duration: p.dur,
+    ease: 'none',
+  })
+}
+orbit.PARAM_SCHEMA = { dur: { min: 2, max: 30, step: 0.5 } }
+
+/** Park the journal edge-on. The acceptance test for the faux volume: this must
+ *  show a glowing magenta spine, not a hairline. */
+export function edgeOnPose(t, params) {
+  const p = P({ rotationY: 90, scale: 0.7 }, params)
+  const s = tl()
+  s.set(t.pos, { xPercent: 50, yPercent: 50 })
+  s.set(t.box, { rotationX: 0, rotationZ: 0, rotationY: p.rotationY, scale: p.scale, z: 0 })
+  return s
+}
+edgeOnPose.PARAM_SCHEMA = {
+  rotationY: { min: 0, max: 180, step: 1 },
+  scale: { min: 0.2, max: 2, step: 0.01 },
+}
+
+export const DEFAULT_DEPTH = DEPTH

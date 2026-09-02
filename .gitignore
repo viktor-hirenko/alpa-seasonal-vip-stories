@@ -1,0 +1,23 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.log
+
+# claude-flow session droppings
+.claude-flow/
+.swarm/
+
+# Internal documentation: tickets, Figma links, translation source, decision log.
+# Canonical copy lives with the project in DevHubVault.
+_context/
+
+# Raw motion-designer deliverables (187 MB each) and extracted reference frames.
+_refs/
+
+# Dev-only video proxies of the reference clips (derived from _refs/).
+public/video/ref-*.mp4

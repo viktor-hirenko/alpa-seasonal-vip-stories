@@ -1,0 +1,28 @@
+{
+  "name": "alpa-seasonal-vip-stories",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "lab": "vite --host 0.0.0.0 --open /lab.html",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "video:dev": "bash scripts/encode-video.sh dev",
+    "video:prod": "bash scripts/encode-video.sh prod",
+    "frames": "bash scripts/extract-frames.sh",
+    "pose:check": "node scripts/probe.mjs --all",
+    "fmt": "prettier -w .",
+    "probe": "node scripts/probe.mjs"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "gsap": "^3.13.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "prettier": "^3.4.2",
+    "sass": "^1.83.0",
+    "vite": "^6.0.7"
+  }
+}

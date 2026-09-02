@@ -1,0 +1,65 @@
+////
+/// Design-pixel unit system.
+///
+/// Everything in this project is authored in Figma design pixels. `--u` is the
+/// scale factor from one design pixel to one CSS pixel, derived with container
+/// queries so it needs no JS and no resize listener.
+///
+/// ONE unit, deliberately. The scene is 1080x1920 and a journal page is
+/// 1564x1911 in its own Figma coordinate system, but `.journal-box` is laid out
+/// at its BASE component size expressed in scene units (--jw/--jh), and GSAP's
+/// `scale` shrinks it to the on-screen 0.681. So inside the journal one page
+/// design px is exactly one scene design px, and `du()` covers both.
+/// `duPage()` exists only to record WHICH Figma system a number came from —
+/// it is numerically identical on purpose. See ADR-0010.
+///
+/// NEVER use clamp()/vw/vh for anything inside the design canvas: they fight
+/// `--u` and break 1:1 fidelity with the mock. Chrome outside the canvas
+/// (header, tap zones, safe-area padding) may use vh/svh.
+////
+
+@use 'sass:math';
+
+@function strip-unit($n) {
+  @if math.is-unitless($n) {
+    @return $n;
+  }
+  @return math.div($n, ($n * 0 + 1));
+}
+
+/// A length in scene design pixels (1080x1920 system).
+@function du($n) {
+  @return calc(#{strip-unit($n)} * var(--u));
+}
+
+/// A length in journal-page design pixels (1564x1911 system).
+/// Numerically identical to du() — see the note above.
+@function duPage($n) {
+  @return calc(#{strip-unit($n)} * var(--u));
+}
+
+/// Absolute placement from a Figma x/y pair, scene system.
+@mixin at($x, $y) {
+  position: absolute;
+  left: du($x);
+  top: du($y);
+}
+
+/// Centre-anchored placement: Figma gives a top offset and a box width, the
+/// element is centred on the canvas axis. Centring stays in `left`/`margin-left`
+/// and NOT in `transform`, so GSAP can own `transform` outright (ADR-0002).
+@mixin atCx($top, $width) {
+  position: absolute;
+  top: du($top);
+  left: 50%;
+  width: du($width);
+  margin-left: calc(#{strip-unit($width)} * -0.5 * var(--u));
+}
+
+$bp-desktop: 768px;
+
+@mixin desktop {
+  @media (min-width: $bp-desktop) {
+    @content;
+  }
+}

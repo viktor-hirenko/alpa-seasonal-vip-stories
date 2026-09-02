@@ -1,0 +1,43 @@
+////
+/// Figma tokens. Every value here cites the node it came from so a design
+/// change is one grep away.
+////
+
+// Page body / shell — 21770:2948
+$page-bg: #000a12;
+
+// Stage / outside the journal
+$stage-bg: #05060c;
+
+// Accent — digit tile border and gradient text, 21770:2954 / 21770:2955
+$accent: #ffa000;
+$accent-grad: linear-gradient(90deg, #ffa000 0%, #ffff7b 100%);
+
+// Chip ("Tabs") — 21770:2962
+$chip-bg: rgba(182, 189, 204, 0.1);
+
+// Magenta family — the season's key colour (spine glow, object rim light)
+$magenta: #ff76cc;
+$magenta-deep: #bd3c8d;
+
+// Right-hand paper-edge ramp of a journal page — 21770:2947
+$paper-edge-ramp: (
+  #b26c3b 0%,
+  #2c2c2c 0.577%,
+  #b26c3b 1.2906%,
+  #2c2c2c 2.1141%,
+  #b26c3b 2.9926%,
+  #2c2c2c 3.871%,
+  #562c26 5.573%
+);
+
+// Variable "shadow season" — two offset drop shadows on the journal.
+// Expressed as box-shadow (NOT filter: drop-shadow) because `filter` is a
+// grouping property and would flatten the 3D faces. See ADR-0005.
+// Offsets/radii are design px, so they scale with --u.
+$shadow-season-1: (7.294, 23.965, 68.976, rgba(255, 118, 204, 0.54));
+$shadow-season-2: (-2.987, 4.481, 27.184, rgba(189, 60, 141, 0.58));
+
+// Type — 21770:2955 / 21770:2960 / 21770:2964
+$font-stack: 'Rubik', system-ui, 'Segoe UI', Roboto, sans-serif;
+$heading-shadow: rgba(0, 0, 0, 0.37);

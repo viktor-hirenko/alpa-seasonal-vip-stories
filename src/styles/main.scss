@@ -1,0 +1,37 @@
+@use 'units';
+@use 'tokens';
+@use 'stage';
+@use 'journal';
+@use 'fly';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100vh;
+  height: 100svh;
+}
+
+body {
+  margin: 0;
+  overflow: clip;
+  background: #05060c;
+}
+
+// Localised strings must break like the designer's line breaks without any
+// hardcoded <br>. `balance` on headings, `manual` hyphens because
+// auto-hyphenation in ExtraBold uppercase German looks broken.
+h1,
+h2,
+h3,
+p,
+.j-heading {
+  margin: 0;
+  text-wrap: balance;
+  hyphens: manual;
+}

@@ -1,0 +1,148 @@
+.lab {
+  display: flex;
+  height: 100%;
+  background: #05060c;
+  color: #e8e6f0;
+  font: 400 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.lab__viewport {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lab__panel {
+  flex: 0 0 320px;
+  overflow-y: auto;
+  padding: 14px 16px 40px;
+  background: #0b0c16;
+  border-left: 1px solid #1e2030;
+}
+
+.lab__h {
+  margin: 18px 0 8px;
+  color: #ff76cc;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.lab__h:first-child {
+  margin-top: 0;
+}
+
+.lab__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.lab__row label {
+  flex: 0 0 96px;
+  color: #9c9ab4;
+  font-size: 11px;
+}
+.lab__row input[type='range'] {
+  flex: 1 1 auto;
+  min-width: 0;
+  accent-color: #ff76cc;
+}
+.lab__row output {
+  flex: 0 0 56px;
+  text-align: right;
+  color: #ffd84d;
+  font-variant-numeric: tabular-nums;
+}
+
+.lab__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lab__btn {
+  padding: 6px 9px;
+  border: 1px solid #2b2d42;
+  border-radius: 6px;
+  background: #14162a;
+  color: #e8e6f0;
+  font: inherit;
+  cursor: pointer;
+}
+.lab__btn:hover {
+  border-color: #ff76cc;
+}
+.lab__btn--on {
+  border-color: #ff76cc;
+  background: #2a1230;
+}
+
+.lab__slides {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.lab__slides .lab__btn {
+  padding: 5px 0;
+  text-align: center;
+}
+
+.lab__readout {
+  margin-top: 6px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #07080f;
+  color: #7ee0b8;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.lab__note {
+  margin-top: 10px;
+  color: #6f6d86;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* Placeholder page so the volume is judged against something page-shaped. */
+.lab-page {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(120% 80% at 50% 25%, #2a0f3d 0%, #000a12 62%, #000a12 100%);
+  color: #fff;
+  text-align: center;
+}
+.lab-page__label {
+  font: 800 calc(96 * var(--u)) / 1.08 'Rubik', sans-serif;
+  text-transform: uppercase;
+  text-shadow: 0 calc(8.359 * var(--u)) calc(27.865 * var(--u)) rgba(0, 0, 0, 0.37);
+}
+.lab-page__sub {
+  margin-top: calc(30 * var(--u));
+  font: 400 calc(56.479 * var(--u)) / 1.1 'Rubik', sans-serif;
+  color: #ff9edb;
+}
+
+/* Grid backdrop for judging perspective without a video. */
+.lab__grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(#1a1c2c 1px, transparent 1px) 0 0 / 100% calc(120 * var(--u)),
+    linear-gradient(90deg, #1a1c2c 1px, transparent 1px) 0 0 / calc(120 * var(--u)) 100%,
+    #06070e;
+}
+
+.lab-back {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #ffd84d;
+  font: 800 calc(110 * var(--u)) / 1 'Rubik', sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
