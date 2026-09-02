@@ -28,6 +28,8 @@ const props = defineProps({
   imgWidth: { type: Number, default: 0 },
   imgHeight: { type: Number, default: 0 },
   rotate: { type: Number, default: 0 },
+  /** The mock mirrors some art with -scale-x-100. */
+  mirror: { type: Boolean, default: false },
 })
 
 const d = n => `calc(${+n.toFixed(3)} * var(--u))`
@@ -39,9 +41,14 @@ const slotStyle = computed(() => ({
   height: d(props.height),
 }))
 
-const imgStyle = computed(() => ({
-  width: d(props.imgWidth || props.width),
-  height: d(props.imgHeight || props.height),
-  transform: props.rotate ? `rotate(${props.rotate}deg)` : undefined,
-}))
+const imgStyle = computed(() => {
+  const parts = []
+  if (props.mirror) parts.push('scaleX(-1)')
+  if (props.rotate) parts.push(`rotate(${props.rotate}deg)`)
+  return {
+    width: d(props.imgWidth || props.width),
+    height: d(props.imgHeight || props.height),
+    ...(parts.length ? { transform: parts.join(' ') } : {}),
+  }
+})
 </script>

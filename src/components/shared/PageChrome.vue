@@ -15,7 +15,7 @@
       <!-- Left-edge fade (21770:3190). NOT an image: a 1868x395 vertical
            gradient rotated 90deg, i.e. #000a12 at the spine fading out to the
            right, 395 wide at left:-19. -->
-      <div class="page__spine-fade" />
+      <div class="page__spine-fade" :style="{ '--spine-fade-to': spineFadeTo }" />
 
       <!-- Specular sheen (21770:3191), mix-blend-mode: screen, inset slightly
            beyond its box. -->
@@ -29,6 +29,14 @@
 </template>
 
 <script setup>
+defineProps({
+  /**
+   * End colour of the left-edge fade (21770:3190). Most pages fade to the page
+   * colour; Bonus Report stops at rgba(0,10,18,0.8).
+   */
+  spineFadeTo: { type: String, default: '#000a12' },
+})
+
 import spine from '@/assets/pages/spine.svg'
 import sheen from '@/assets/pages/page-sheen.svg'
 import edge from '@/assets/pages/page-edge.svg'

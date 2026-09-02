@@ -18,9 +18,18 @@ export const artBox = (left, top, width, height) => ({
   height: d(height),
 })
 
-/** Inner image: intrinsic box plus rotation in degrees. */
-export const artImg = (width, height, rotate = 0) => ({
-  width: d(width),
-  height: d(height),
-  ...(rotate ? { transform: `rotate(${rotate}deg)` } : {}),
-})
+/**
+ * Inner image: intrinsic box, rotation in degrees, and an optional transform
+ * applied BEFORE the rotation — the mock mirrors some art with -scale-y-100 /
+ * -scale-x-100 and then rotates it, and the order matters.
+ */
+export const artImg = (width, height, rotate = 0, pre = '') => {
+  const parts = []
+  if (pre) parts.push(pre)
+  if (rotate) parts.push(`rotate(${rotate}deg)`)
+  return {
+    width: d(width),
+    height: d(height),
+    ...(parts.length ? { transform: parts.join(' ') } : {}),
+  }
+}
