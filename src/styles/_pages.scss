@@ -442,11 +442,27 @@
   pointer-events: none;
 }
 
-/// VIP Status starfield (21770:3107): 4096 x 2295, page-centred, top -144.
-.vip__starfield {
+/// Shared starfield (21770:3107 / 21770:3991): 4096 x 2295, page-centred at
+/// top -144. Used by VIP Status and Top Sport Signal.
+.page__starfield {
   left: calc(50% - #{du(2049.5)});
   top: du(-144);
   width: du(4096);
   height: du(2295);
   object-fit: cover;
+}
+
+/// Comboboost icon: the mock nests an offset image inside a rotated box.
+.combo {
+  position: relative;
+
+  img {
+    position: absolute;
+    left: du(-20.42);
+    top: du(4.89);
+    width: du(579.414);
+    height: du(579.414);
+    max-width: none;
+    object-fit: cover;
+  }
 }

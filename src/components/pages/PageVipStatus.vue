@@ -13,7 +13,7 @@
   -->
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
-      <img class="page__art vip__starfield" :src="starfield" alt="" />
+      <img class="page__art page__starfield" :src="starfield" alt="" />
     </template>
 
     <template #art>
