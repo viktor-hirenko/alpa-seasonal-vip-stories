@@ -21,7 +21,16 @@ const ORIGIN = process.env.PROBE_ORIGIN || 'http://localhost:5173'
 
 const args = process.argv.slice(2)
 const all = args.includes('--all')
-const target = args.find(a => !a.startsWith('--')) || 'lab.html?frame=11'
+const flag = (name, fallback) => {
+  const i = args.indexOf(name)
+  return i >= 0 && args[i + 1] ? args[i + 1] : fallback
+}
+const shotPath = flag('--shot', null)
+// Real milliseconds, not Chrome's --virtual-time-budget: virtual time
+// fast-forwards timers but does NOT advance media decoding, so a page gated on
+// a video buffer never gets past its preloader under virtual time.
+const waitMs = Number(flag('--wait', 1400))
+const target = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--shot' && args[i - 1] !== '--wait') || 'lab.html?frame=11'
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -141,10 +150,32 @@ await cdp.send('Emulation.setDeviceMetricsOverride', {
   width: 420, height: 747, deviceScaleFactor: 2, mobile: true,
 })
 
+const consoleLines = []
+await cdp.send('Log.enable').catch(() => {})
+ws.addEventListener('message', e => {
+  const m = JSON.parse(e.data)
+  if (m.method === 'Runtime.consoleAPICalled') {
+    consoleLines.push(`[${m.params.type}] ` + m.params.args.map(a => a.value ?? a.description ?? a.type).join(' '))
+  }
+  if (m.method === 'Runtime.exceptionThrown') {
+    consoleLines.push('[uncaught] ' + (m.params.exceptionDetails?.exception?.description || m.params.exceptionDetails?.text))
+  }
+  if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error') {
+    consoleLines.push('[network] ' + m.params.entry.text + ' ' + (m.params.entry.url || ''))
+  }
+})
+
 async function probeOne(url) {
+  consoleLines.length = 0
   await cdp.send('Page.navigate', { url })
-  await sleep(1400)
+  await sleep(waitMs)
   return cdp.eval(MEASURE)
+}
+
+async function shoot(file) {
+  const r = await cdp.send('Page.captureScreenshot', { format: 'png' })
+  const { writeFileSync } = await import('node:fs')
+  writeFileSync(file, Buffer.from(r.data, 'base64'))
 }
 
 const fmt = n => (n >= 0 ? '+' : '') + n.toFixed(1)
@@ -165,6 +196,15 @@ if (all) {
   }
 } else {
   const m = await probeOne(`${ORIGIN}/${target}`)
+  if (shotPath) {
+    await shoot(shotPath)
+    console.log('screenshot ->', shotPath)
+  }
+  if (consoleLines.length) {
+    console.log('--- console ---')
+    consoleLines.slice(0, 25).forEach(l => console.log(l))
+    console.log('---------------')
+  }
   console.log(JSON.stringify(m, null, 2))
   const frame = Number(new URL(`http://x/${target}`).searchParams.get('frame'))
   const s = SLIDES.find(x => x.frame === frame)

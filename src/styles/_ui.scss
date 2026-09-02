@@ -1,0 +1,261 @@
+@use 'units' as *;
+@use 'tokens' as *;
+
+////
+/// Story chrome. Lives in `.stage__ui`, which is deliberately OUTSIDE the 3D
+/// scene: the header must not inherit the journal's camera or its rotation.
+///
+/// Geometry is the header component 21770:2682 — 976x90 at (52, 36) inside the
+/// 1080x1920 canvas — so it scales with `--u` like everything else.
+////
+
+.story-header {
+  position: absolute;
+  left: du(52);
+  top: calc(du(36) + env(safe-area-inset-top, 0px));
+  width: du(976);
+  display: flex;
+  flex-direction: column;
+  gap: du(20);
+  z-index: 2;
+}
+
+.steps {
+  display: flex;
+  gap: du(10);
+  width: 100%;
+}
+
+.steps__track {
+  flex: 1 1 0;
+  min-width: 1px;
+  height: du(10);
+  border-radius: du(100);
+  background: rgba(255, 255, 255, 0.28);
+  overflow: hidden;
+}
+
+.steps__fill {
+  height: 100%;
+  border-radius: du(100);
+  background: #fdd835;
+  // No transition: the width is driven from the rAF clock, so a CSS transition
+  // would lag the video by its own duration and desync the bar from the story.
+  will-change: width;
+}
+
+.story-header__row {
+  display: flex;
+  align-items: center;
+  width: du(946);
+  gap: du(16);
+}
+
+.story-header__spacer {
+  flex: 1 1 auto;
+}
+
+.story-header__btn {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  img,
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  &:active {
+    transform: scale(0.94);
+  }
+}
+
+.story-header__btn--sound {
+  width: du(71.4);
+  height: du(60);
+
+  // The exported icon is the "sound on" glyph; the off state is the same glyph
+  // dimmed with a slash, so it reads at a glance without a second asset.
+  &.is-off {
+    opacity: 0.55;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 6%;
+      top: 50%;
+      width: 88%;
+      height: du(5);
+      border-radius: du(5);
+      background: #fff;
+      transform: rotate(-32deg);
+      transform-origin: center;
+    }
+  }
+}
+
+.story-header__btn--close {
+  width: du(60);
+  height: du(60);
+}
+
+.story-header__btn--pause {
+  display: none;
+  width: du(60);
+  height: du(60);
+
+  @include desktop {
+    display: grid;
+  }
+}
+
+/// Tap zones — Thor's mobileControlArea. Two invisible halves; a tap navigates,
+/// a >250 ms press pauses. Desktop uses the arrows instead.
+.tap-zone {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 50%;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 1;
+
+  @include desktop {
+    display: none;
+  }
+}
+
+.tap-zone--back {
+  left: 0;
+}
+
+.tap-zone--forward {
+  left: 50%;
+}
+
+/// Desktop arrows, outside the story card.
+.story-arrow {
+  display: none;
+
+  @include desktop {
+    position: absolute;
+    top: 50%;
+    margin-top: -2.5vh;
+    display: grid;
+    place-items: center;
+    width: 5vh;
+    height: 5vh;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s linear;
+    z-index: 3;
+
+    &:hover {
+      background: rgba(255, 118, 204, 0.5);
+    }
+
+    svg {
+      width: 60%;
+      height: 60%;
+    }
+  }
+}
+
+.story-arrow--back {
+  left: 2vh;
+}
+
+.story-arrow--forward {
+  right: 2vh;
+
+  svg {
+    transform: rotate(180deg);
+  }
+}
+
+/// Tap-to-start overlay, shown only when autoplay is refused.
+.story-start {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  gap: du(40);
+  background: rgba(5, 6, 12, 0.72);
+  text-align: center;
+  cursor: pointer;
+}
+
+.story-start__inner {
+  display: grid;
+  justify-items: center;
+  gap: du(48);
+}
+
+.story-start__label {
+  font: 800 du(72) / 1.1 $font-stack;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.story-start__play {
+  width: du(180);
+  height: du(180);
+  border-radius: 50%;
+  border: du(6) solid $magenta;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(255, 118, 204, 0.16);
+
+  svg {
+    width: 40%;
+    height: 40%;
+  }
+}
+
+/// Placeholder page body, until phase 2 builds the real pages.
+.page-stub {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: du(120) du(90);
+  background: radial-gradient(120% 80% at 50% 22%, #24103a 0%, #000a12 62%, #000a12 100%);
+  text-align: center;
+}
+
+.page-stub__chip {
+  display: inline-block;
+  padding: du(49.908) du(99.817);
+  border-radius: du(25);
+  background: $chip-bg;
+  font: 400 du(56.479) / 0.88 $font-stack;
+  text-transform: uppercase;
+}
+
+.page-stub__title {
+  margin-top: du(70);
+  font: 800 du(96) / 1.08 $font-stack;
+  text-transform: uppercase;
+  text-shadow: 0 du(8.359) du(27.865) $heading-shadow;
+}
+
+.page-stub__meta {
+  margin-top: du(40);
+  font: 400 du(52) / 1.2 $font-stack;
+  color: #ff9edb;
+}

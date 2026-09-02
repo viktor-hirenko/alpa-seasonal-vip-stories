@@ -55,6 +55,9 @@ const RAW = [
   { frame: 24, at: 85.0, page: 'final', face: 'page', pose: { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 } },
 ]
 
+/** The white flash: past this the journal is gone and the outro owns the screen. */
+export const STORY_END = 88.1
+
 /** Timecodes snapped to the 30 fps grid on read (ADR-0009). */
 export const SLIDES = RAW.map(s => ({ ...s, at: snap(s.at) }))
 
@@ -66,3 +69,31 @@ export const PAGE_ORDER = SLIDES.reduce(
 
 /** Pose of the recede target, by frame number, for the presets. */
 export const slideByFrame = n => SLIDES.find(s => s.frame === n)
+
+/**
+ * The progress bar and prev/next navigation work in PAGES, not slides: frames
+ * 4-7 are all the cover's entrance and 23/24 are both the Final page, so 21
+ * slides collapse into 17 navigable segments.
+ *
+ * @typedef {{ page: string, index: number, start: number, end: number,
+ *             dur: number, firstFrame: number, skip?: string }} Segment
+ */
+export const STORY_SEGMENTS = PAGE_ORDER.map((page, index) => {
+  const own = SLIDES.filter(s => s.page === page)
+  const first = own[0]
+  const nextPage = PAGE_ORDER[index + 1]
+  const end = nextPage
+    ? SLIDES.find(s => s.page === nextPage).at
+    : STORY_END
+  return {
+    page,
+    index,
+    start: first.at,
+    end,
+    dur: end - first.at,
+    firstFrame: first.frame,
+    skip: first.skip,
+  }
+})
+
+
