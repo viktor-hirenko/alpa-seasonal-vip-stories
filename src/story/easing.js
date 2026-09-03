@@ -57,11 +57,10 @@ export const EASE = {
    * FLYING OBJECTS. One ease, and it is `none` on purpose.
    *
    * Each flight in flyObjects.js is a polyline of rows measured off the clip,
-   * kept exactly where a straight line between neighbours stops reproducing the
-   * reference. The acceleration is therefore already IN the rows — the recede
-   * at the end of a flight is a run of rows that get further apart, not a curve
-   * applied to two anchors. Easing each segment on top of that would ripple the
-   * speed and stop the object dead at every row.
+   * and flyingObject.js reads them through a Hermite spline whose velocity is
+   * continuous. The playhead therefore has to advance at a CONSTANT rate — the
+   * shape of the motion lives in the rows and in the curve through them, and an
+   * ease on top would re-time the clip's own acceleration into something else.
    */
   flyPath: 'none',
 

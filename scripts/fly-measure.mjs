@@ -819,6 +819,13 @@ function stageTable(fit) {
     sm.forEach((k, i) => {
       k.rot = fd.g[i]
     })
+    // Angle keeps a 5-frame median; POSITION IS LEFT ALONE. The tracker's
+    // centroid wanders a pixel or two between frames, and an earlier cut of
+    // this script smoothed it — but the runtime reads these rows through a
+    // spline (flyingObject.js), and measured at 60 Hz through that spline the
+    // path already turns by less than 60 deg on every frame of every flight and
+    // changes speed by at most 5 % of the stage per second. Smoothing the rows
+    // as well would move the table away from the measurement for nothing.
     const sm2 = sm.map((k, i) => ({
       ...k,
       rot: +med(sm.slice(Math.max(0, i - 2), i + 3).map(q => q.rot)).toFixed(1),

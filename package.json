@@ -12,6 +12,7 @@
     "video:prod": "bash scripts/encode-video.sh prod",
     "frames": "bash scripts/extract-frames.sh",
     "pose:check": "node scripts/probe.mjs --all",
+    "fit:check": "node scripts/probe.mjs --fit",
     "fly:check": "node scripts/probe.mjs --fly",
     "fly:measure": "node scripts/fly-measure.mjs",
     "fly:sprites": "node scripts/fly-sprites.mjs",

@@ -56,8 +56,27 @@
   // container-type: size enables cqw/cqh, which is what makes --u JS-free.
   container-type: size;
 
-  // CONTAIN fit into the 1080x1920 design canvas.
-  --u: min(100cqw / 1080, 100cqh / 1920);
+  // COVER fit onto the 1080x1920 design canvas — `max`, not `min`, and that one
+  // word is load-bearing.
+  //
+  // The backdrop is a 1080x1920 video drawn with `object-fit: cover`: it fills
+  // the stage and spills over the short axis. The scene has to be laid out on
+  // the SAME canvas or the two cannot stay registered — and with `min` they did
+  // not. The two scales are equal only where the viewport is exactly 9:16, and
+  // 420x747 (what the probe runs at) is 9:16 to three decimals, so every gate
+  // and every screenshot agreed while real devices did not:
+  //
+  //   viewport            scene / video      drift at 10 % from an edge
+  //   420x747 (probe)         0.999                    0 px
+  //   430x932 (iPhone 14 PM)  0.821                   38 px
+  //   393x852 (iPhone 15 Pro) 0.820                   35 px
+  //   desktop card            0.870                   51 px
+  //
+  // The design agrees that the canvas is meant to be cropped rather than
+  // letterboxed: on every storyboard frame the `interior` art is 1340 px wide
+  // inside a 1080 px frame, and the journal itself is wider than the frame on
+  // several slides.
+  --u: max(100cqw / 1080, 100cqh / 1920);
 
   // Camera distance in DESIGN px, not real px. "1000px" from the brief is a
   // real-pixel figure, but the stage is ~400 CSS px wide on a phone and ~600 on
@@ -97,12 +116,38 @@
   user-select: none;
 }
 
+///
+/// THE DESIGN CANVAS. Exactly 1080 x 1920 design px, centred on the stage and
+/// deliberately allowed to overflow it — the same rectangle `object-fit: cover`
+/// gives the backdrop video, cropped by the stage's own `overflow: hidden`.
+///
+/// This element exists so that A PERCENTAGE MEANS A PERCENTAGE OF THE FRAME.
+/// Everything below it is `width: 100%; height: 100%` and positions itself in
+/// percentages — journal poses, flying-object anchors, the lot. While this box
+/// was `inset: 0` those percentages were percentages OF THE VIEWPORT, so the
+/// scene stretched and squashed against a backdrop that did not: on a
+/// 430 x 932 phone an anchor at 10 % of the frame landed 38 px away from the
+/// same point in the video, and at 50 % it landed exactly right, which is why
+/// the journal looked nearly correct while the objects around the edges did
+/// not.
+///
+/// Centring is `left/top` plus a negative margin, never `translate(-50%)`:
+/// this element is an ancestor of the 3D chain and must carry no transform of
+/// its own (ADR-0002).
+///
 .stage-3d {
   position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 50%;
+  width: calc(1080 * var(--u));
+  height: calc(1920 * var(--u));
+  margin-left: calc(-540 * var(--u));
+  margin-top: calc(-960 * var(--u));
   z-index: 1;
 
   perspective: calc(var(--persp) * var(--u));
+  // Now the centre of the FRAME rather than the centre of the viewport, which
+  // is where the reference's camera actually sits.
   perspective-origin: 50% 50%;
   transform-style: preserve-3d;
   // NO transform, ever. GSAP animates --persp here (dolly zoom on the entrance).
