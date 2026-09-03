@@ -24,6 +24,7 @@
       align="left"
       :left="108"
       :line-height="1.15"
+      v-bind="L.headline"
     />
 
     <!-- Digits sit to the right of the heading, centred on 984.46. -->
@@ -36,7 +37,15 @@
          (21770:3331), which is the budget useJournalFit shrinks into. Stating
          the width changes nothing while the name fits: the box is
          right-anchored either way. -->
-    <JValue :value="gameName" :top="787" :size="96" align="right" :right="1334.38" :width="1230" />
+    <JValue
+      :value="gameName"
+      :top="787"
+      :size="96"
+      align="right"
+      :right="1334.38"
+      :width="1230"
+      v-bind="L.game"
+    />
 
     <img class="page__art hw__coins" :src="coins" alt="" />
     <JGameThumb :src="gameImage" :name="gameName" :top="947" />
@@ -62,19 +71,19 @@ import JValue from '@/components/shared/JValue.vue'
 import JGlow from '@/components/shared/JGlow.vue'
 import JGameThumb from '@/components/shared/JGameThumb.vue'
 import { artBox, artImg } from '@/components/shared/artBox.js'
+import { useStory } from '@/composables/useStoryData.js'
 import bg from '@/assets/pages/bg-headline-win.webp'
 import rocket from '@/assets/pages/rocket.webp'
 import coins from '@/assets/pages/coins-3.webp'
 import placeholder from '@/assets/pages/game-thumb-placeholder.webp'
 
-const props = defineProps({
-  amount: { type: [String, Number], default: '222257' },
-  currency: { type: String, default: 'USD' },
-  gameName: { type: String, default: 'Dragon Coins Jackpot' },
-  gameImage: { type: String, default: '' },
-})
-
-const gameImage = props.gameImage || placeholder
-
-const copy = { chip: 'Headline Win', headline: ['Your', 'biggest', 'win:'] }
+const story = useStory()
+const L = story.layout('headline_win')
+const copy = story.t('pages.headline_win')
+const amount = story.data.biggestWin
+const currency = story.data.currency
+const gameName = story.data.biggestWinGame
+// The URL comes off the link and its domain may be blocked for a given player,
+// so JGameThumb also degrades to a name card on a load error.
+const gameImage = story.data.biggestWinGameImage || placeholder
 </script>

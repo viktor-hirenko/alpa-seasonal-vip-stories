@@ -13,11 +13,9 @@
       </div>
     </template>
 
-    <JHeading :text="['And now… a word', 'from our sponsor.']" :top="119" :size="96" />
-    <p class="sp__subhead">
-      <span>We have</span>
-      <span>a special gift</span>
-      <span>for you</span>
+    <JHeading :text="copy.headline" :top="119" :size="96" v-bind="L.headline" />
+    <p class="sp__subhead" data-fit-role="display" :data-fit-lines="L.subhead.lines">
+      <span v-for="(line, i) in copy.subhead" :key="i">{{ line }}</span>
     </p>
   </PageChrome>
 </template>
@@ -34,6 +32,14 @@ import PageChrome from '@/components/shared/PageChrome.vue'
 import JHeading from '@/components/shared/JHeading.vue'
 import JGlow from '@/components/shared/JGlow.vue'
 import { artBox, artImg } from '@/components/shared/artBox.js'
+import { useStory } from '@/composables/useStoryData.js'
 import planets from '@/assets/pages/planets-4.webp'
 import cow from '@/assets/pages/sponsor-cow.webp'
+
+const story = useStory()
+const L = story.layout('sponsor')
+// The mock's Italian headline is three lines tall (312) while the subhead below
+// stays on 379 in all four variants — i.e. the mock collides with itself there.
+// The copy is authored as two lines, which is the room that actually exists.
+const copy = story.t('pages.sponsor')
 </script>

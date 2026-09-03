@@ -13,10 +13,10 @@
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="389" :max-width="917" />
+    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
     <!-- The mock's value box is centred on 700, not the body's 720.6, so it is
          placed explicitly rather than auto-centred. -->
-    <JValue :value="points" :top="1485" :size="188" :left="190" :width="1020" />
+    <JValue :value="points" :top="1485" :size="188" :left="190" :width="1020" v-bind="L.value" />
   </PageChrome>
 </template>
 
@@ -28,14 +28,17 @@ import JValue from '@/components/shared/JValue.vue'
 import JHero from '@/components/shared/JHero.vue'
 import JHeroIcon from '@/components/shared/JHeroIcon.vue'
 import PageBackdrop from '@/components/shared/PageBackdrop.vue'
+import { useStory } from '@/composables/useStoryData.js'
 import icon from '@/assets/pages/hero-seasonal-power.webp'
 
-defineProps({ points: { type: [String, Number], default: '1 200 000' } })
-
+const story = useStory()
+const L = story.layout('seasonal_power')
 // The mock's heading is "COLLECTED SEASONAL POINTS" with the number below,
 // while the EN translation reads "You collected [X] Seasonal Points during the
-// season." FR/DE/IT are already shortened to just "Seasonal points collected".
-// The mock wins: the number lives in its own slot. This is the documented
-// placeholder-parity exception (see _context/31-pages.md).
-const copy = { chip: 'Seasonal Power', headline: 'Collected Seasonal Points' }
+// season." FR/DE/IT are already shortened to just "Seasonal points collected",
+// which is what the mock shows in all four variants. The mock wins: the number
+// lives in its own slot, and the copy files carry the shortened form.
+const copy = story.t('pages.seasonal_power')
+/** The one number in the deck the mock GROUPS — "1 200 000" (21770:3046). */
+const points = story.data.points
 </script>

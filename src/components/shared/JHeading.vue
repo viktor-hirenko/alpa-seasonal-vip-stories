@@ -1,7 +1,7 @@
 <template>
-  <div class="j-slot" :style="slotStyle">
+  <div class="j-slot" :style="slotStyle" :data-fit-lines="lines || null">
     <h2 class="j-heading" data-fit-role="display">
-      <span v-for="(line, i) in lines" :key="i" class="j-heading__line">{{ line }}</span>
+      <span v-for="(line, i) in textLines" :key="i" class="j-heading__line">{{ line }}</span>
     </h2>
   </div>
 </template>
@@ -17,11 +17,27 @@
  */
 import { computed } from 'vue'
 import { alignStyle } from './slotAlign.js'
+import { BODY } from '@/story/pageLayouts.js'
 
 const props = defineProps({
   text: { type: [String, Array], default: '' },
   /** Design-px offset from the page body's top edge. */
-  top: { type: Number, required: true },
+  top: { type: Number, default: 0 },
+  /**
+   * Design-px offset from the body's top edge to the slot's fixed BOTTOM edge,
+   * for a slot that grows UPWARDS (ADR-0007 `grow: 'up'`). Measured on exactly
+   * one slot in the deck: Joke's headline, whose top moves 674.24 -> 576.87
+   * between languages while its bottom stays on 771.2 (21770:4318 / 4330).
+   * Takes precedence over `top` when set.
+   */
+  bottom: { type: Number, default: 0 },
+  /**
+   * Vertical budget in line boxes, from pageLayouts.js. Written to the slot as
+   * `data-fit-lines`, which useJournalFit reads as an optional cap: a language
+   * whose line wraps past it is shrunk rather than allowed to collide with
+   * whatever the mock put underneath.
+   */
+  lines: { type: Number, default: 0 },
   /** Design-px cap on the text box, from the mock. */
   maxWidth: { type: Number, default: 0 },
   /**
@@ -39,12 +55,21 @@ const props = defineProps({
   right: { type: Number, default: 0 },
   /** Mock line-height; 1.08 on most pages, 1.15 on Headline Win (21770:3317). */
   lineHeight: { type: Number, default: 1.08 },
+  /**
+   * ADR-0007 growth direction. Declared so a `v-bind` of a pageLayouts record
+   * lands as a prop: an undeclared key falls through as a bare HTML attribute
+   * and silently does nothing, which is exactly how JValue lost `width` and
+   * JCurrency lost `align` (see the 2026-09-03 log entry).
+   */
+  grow: { type: String, default: 'down' },
 })
 
-const lines = computed(() => (Array.isArray(props.text) ? props.text : [props.text]))
+const textLines = computed(() => (Array.isArray(props.text) ? props.text : [props.text]))
 
 const slotStyle = computed(() => ({
-  top: `calc(${props.top} * var(--u))`,
+  ...(props.grow === 'up' && props.bottom
+    ? { top: 'auto', bottom: `calc(${BODY.h - props.bottom} * var(--u))` }
+    : { top: `calc(${props.top} * var(--u))` }),
   '--heading-font': `calc(${props.size} * var(--u))`,
   '--heading-lh': props.lineHeight,
   ...(props.maxWidth ? { maxWidth: `calc(${props.maxWidth} * var(--u))` } : {}),

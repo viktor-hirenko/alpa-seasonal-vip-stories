@@ -711,7 +711,7 @@
   width: du(774);
   font-family: $font-stack;
   font-weight: 800;
-  font-size: du(117.824);
+  font-size: calc(#{du(117.824)} * var(--fit, 1));
   line-height: 0.8263;
   color: #ed58bf;
   text-shadow: 0 0 du(20) rgba(219, 125, 188, 0.26);
@@ -728,10 +728,13 @@
   position: absolute;
   left: du(77);
   top: du(632);
-  width: du(463);
+  // The mock's boxes are 463 / 466 / 544 / 531 (EN / FR / DE / IT). The widest
+  // is the budget useJournalFit measures against; it cannot change where a line
+  // breaks, because the lines are authored one <span> each.
+  width: du(544);
   font-family: $font-stack;
   font-weight: 500;
-  font-size: du(71.048);
+  font-size: calc(#{du(71.048)} * var(--fit, 1));
   line-height: 1.2;
   color: #fff;
   text-shadow: 0 du(31.942) du(106.473) rgba(0, 0, 0, 0.37);
@@ -784,10 +787,21 @@
 ///
 /// Editor's Note. Figma 21770:2821.
 ///
+/// ⚠️ The chip (21770:2849) and the headline (21770:2848) are the only two text
+/// nodes in the deck that are NOT children of the page body frame — in Figma
+/// they are siblings of it, inside the symbol. Their metadata x/y are therefore
+/// in SYMBOL coordinates and have to be shifted by the body's own offset,
+/// (98.875, 16), to become the body-relative numbers every slot here uses:
+///   chip     108 / 145  ->    9.125 / 129
+///   headline 161 / 409  ->   62.125 / 393
+/// Taken verbatim, the headline's box ran to 161 + 1344 = 1505 in a 1443-wide
+/// body and the last line was clipped by the body's `overflow: clip` in all four
+/// languages. y=129 for the chip is also what every other page in the deck uses,
+/// which is the corroboration that the shift is right.
 .en__chip {
   position: absolute;
-  left: du(396.8);
-  top: du(145);
+  left: du(9.125);
+  top: du(129);
   display: flex;
   align-items: center;
   gap: du(49.908);
@@ -815,12 +829,13 @@
 
 .en__headline {
   position: absolute;
-  left: du(161);
-  top: du(409);
+  // Symbol coordinates (161, 409) shifted by the body offset — see .en__chip.
+  left: du(62.125);
+  top: du(393);
   width: du(1344);
   font-family: $font-stack;
   font-weight: 800;
-  font-size: du(120);
+  font-size: calc(#{du(120)} * var(--fit, 1));
   line-height: 0.94;
   text-shadow: 0 du(14.799) du(49.329) rgba(0, 0, 0, 0.37);
   text-transform: uppercase;
@@ -829,6 +844,12 @@
   -webkit-background-clip: text;
   color: transparent;
   pointer-events: none;
+
+  /// One block per sentence — the mock breaks between them and wraps inside
+  /// them, which is exactly what a block-per-sentence does.
+  span {
+    display: block;
+  }
 }
 
 /// Mini cover card (21770:2827): outer box centres the rotated 555.752x707.665
@@ -1048,9 +1069,14 @@
   left: 50%;
   top: du(931.5);
   transform: translateX(-50%);
+  // Explicit box = the widest the mock draws for this slot across the four
+  // language variants, which is what useJournalFit measures against. The
+  // lines are authored one <span> each, so a wider box cannot re-wrap them;
+  // it only decides when the fitter starts shrinking.
+  width: du(1339);
   font-family: $font-stack;
   font-weight: 800;
-  font-size: du(128);
+  font-size: calc(#{du(128)} * var(--fit, 1));
   line-height: 0.94;
   text-align: center;
   text-shadow: 0 du(33.72) du(112.401) rgba(0, 0, 0, 0.37);
@@ -1098,9 +1124,14 @@
   left: 50%;
   top: du(379);
   transform: translateX(-50%);
+  // Explicit box = the widest the mock draws for this slot across the four
+  // language variants, which is what useJournalFit measures against. The
+  // lines are authored one <span> each, so a wider box cannot re-wrap them;
+  // it only decides when the fitter starts shrinking.
+  width: du(1224);
   font-family: $font-stack;
   font-weight: 800;
-  font-size: du(96);
+  font-size: calc(#{du(96)} * var(--fit, 1));
   line-height: 0.94;
   text-align: center;
   text-shadow: 0 du(33.72) du(112.401) rgba(0, 0, 0, 0.37);
@@ -1189,7 +1220,7 @@
   width: du(661);
   font-family: $font-stack;
   font-weight: 800;
-  font-size: du(250);
+  font-size: calc(#{du(250)} * var(--fit, 1));
   line-height: 0.94;
   text-align: center;
   text-transform: uppercase;
@@ -1205,9 +1236,14 @@
   position: absolute;
   right: du(1443 - 658);
   top: du(343);
+  // Explicit box = the widest the mock draws for this slot across the four
+  // language variants, which is what useJournalFit measures against. The
+  // lines are authored one <span> each, so a wider box cannot re-wrap them;
+  // it only decides when the fitter starts shrinking.
+  width: du(658);
   font-family: $font-stack;
   font-weight: 800;
-  font-size: du(80);
+  font-size: calc(#{du(80)} * var(--fit, 1));
   line-height: 1.4169;
   text-align: right;
   text-shadow: 0 du(10.497) du(34.989) rgba(0, 0, 0, 0.37);
@@ -1233,9 +1269,14 @@
   left: 50%;
   top: du(830.34);
   transform: translateX(-50%);
+  // Explicit box = the widest the mock draws for this slot across the four
+  // language variants, which is what useJournalFit measures against. The
+  // lines are authored one <span> each, so a wider box cannot re-wrap them;
+  // it only decides when the fitter starts shrinking.
+  width: du(1253);
   font-family: $font-stack;
   font-weight: 800;
-  font-size: du(128);
+  font-size: calc(#{du(128)} * var(--fit, 1));
   line-height: 0.94;
   text-align: center;
   text-shadow: 0 du(33.72) du(112.401) rgba(0, 0, 0, 0.37);
@@ -1278,9 +1319,14 @@
   left: 50%;
   top: du(183.21);
   transform: translateX(-50%);
+  // Explicit box = the widest the mock draws for this slot across the four
+  // language variants, which is what useJournalFit measures against. The
+  // lines are authored one <span> each, so a wider box cannot re-wrap them;
+  // it only decides when the fitter starts shrinking.
+  width: du(1162);
   font-family: $font-stack;
   font-weight: 800;
-  font-size: du(112);
+  font-size: calc(#{du(112)} * var(--fit, 1));
   line-height: 0.94;
   text-align: center;
   text-shadow: 0 du(33.72) du(112.401) rgba(0, 0, 0, 0.37);

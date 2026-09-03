@@ -64,18 +64,13 @@
       </div>
       <p class="lab__note">
         The <b>preview</b> backdrop has the journal baked in — if the pose is right, the DOM journal
-        lands exactly on it and the composite reads as one object. Any error shows as a doubled edge,
-        and both its size and its direction are readable. That is the primary fidelity check.
+        lands exactly on it and the composite reads as one object. Any error shows as a doubled
+        edge, and both its size and its direction are readable. That is the primary fidelity check.
       </p>
 
       <div class="lab__h">Presets</div>
       <div class="lab__btns">
-        <button
-          v-for="name in PRESET_NAMES"
-          :key="name"
-          class="lab__btn"
-          @click="firePreset(name)"
-        >
+        <button v-for="name in PRESET_NAMES" :key="name" class="lab__btn" @click="firePreset(name)">
           {{ name }}
         </button>
       </div>
@@ -84,7 +79,11 @@
           hover {{ hoverOn ? 'on' : 'off' }}
         </button>
         <button class="lab__btn" @click="resetPose">reset</button>
-        <button class="lab__btn" :class="{ 'lab__btn--on': !journalVisible }" @click="toggleJournal">
+        <button
+          class="lab__btn"
+          :class="{ 'lab__btn--on': !journalVisible }"
+          @click="toggleJournal"
+        >
           journal {{ journalVisible ? 'on' : 'off' }}
         </button>
       </div>
@@ -161,8 +160,8 @@
       </div>
       <p class="lab__note">
         “copy as data” emits a paste-ready object literal for
-        <code>src/story/slides.js</code>, so pose authoring is drag → look → copy instead of
-        edit → save → reload → guess.
+        <code>src/story/slides.js</code>, so pose authoring is drag → look → copy instead of edit →
+        save → reload → guess.
       </p>
     </aside>
   </div>
@@ -175,6 +174,7 @@ import JournalStage from '@/components/Journal/JournalStage.vue'
 import { resolvePage } from '@/components/pages/index.js'
 import { resolveTargets, setPose } from '@/journal3d'
 import { useJournalFit } from '@/composables/useJournalFit.js'
+import { provideStoryData } from '@/composables/useStoryData.js'
 import * as presets from '@/journal3d/presets.js'
 import { SLIDES } from '@/story/slides.js'
 import { DEPTH, PAGE_SCALE } from '@/story/journalGeometry.js'
@@ -210,6 +210,12 @@ const POSE_ROWS = [
   { key: 'cx', min: -50, max: 200, step: 0.1 },
   { key: 'cy', min: -50, max: 200, step: 0.1 },
 ]
+
+// The lab reads the SAME link contract the player does, so a page can be
+// inspected in any language with `?lang=de` on top of the pose parameters
+// below — German is the longest copy in the deck and is where an overflow
+// shows up first.
+provideStoryData()
 
 const stageRef = ref(null)
 const videoRef = ref(null)
@@ -305,7 +311,10 @@ function resetPose() {
     cx: slide.value?.pose.cx ?? 50,
     cy: slide.value?.pose.cy ?? 50,
   })
-  if (targets) gsap.set([targets.pos, targets.flash, targets.speed].filter(Boolean), { clearProps: 'opacity,visibility' })
+  if (targets)
+    gsap.set([targets.pos, targets.flash, targets.speed].filter(Boolean), {
+      clearProps: 'opacity,visibility',
+    })
   applyManualPose()
 }
 
@@ -325,7 +334,9 @@ function firePreset(name) {
     Object.keys(schema).forEach(k => {
       const fromTimeline = probe && probe.vars && probe.vars[k]
       params[k] =
-        fn.PARAM_DEFAULTS?.[k] ?? fromTimeline ?? schema[k].min + (schema[k].max - schema[k].min) / 2
+        fn.PARAM_DEFAULTS?.[k] ??
+        fromTimeline ??
+        schema[k].min + (schema[k].max - schema[k].min) / 2
     })
     if (probe) probe.kill()
   }

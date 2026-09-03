@@ -19,7 +19,7 @@
 
     <JChip :top="129">{{ copy.chip }}</JChip>
     <!-- The mock breaks the headline explicitly over two lines. -->
-    <JHeading :text="copy.headline" :top="389" />
+    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
     <JDigitTiles :value="amount" :height="172" :top="1380.031" />
     <JCurrency :top="1593" :size="160">{{ currency }}</JCurrency>
   </PageChrome>
@@ -41,15 +41,12 @@ import JCurrency from '@/components/shared/JCurrency.vue'
 import JHero from '@/components/shared/JHero.vue'
 import JHeroIcon from '@/components/shared/JHeroIcon.vue'
 import PageBackdrop from '@/components/shared/PageBackdrop.vue'
+import { useStory } from '@/composables/useStoryData.js'
 import icon from '@/assets/pages/hero-money-talks.webp'
 
-defineProps({
-  amount: { type: [String, Number], default: '2222577' },
-  currency: { type: String, default: 'USD' },
-})
-
-const copy = {
-  chip: 'Money Talks',
-  headline: ['Your total wins', 'this season:'],
-}
+const story = useStory()
+const L = story.layout('money_talks')
+const copy = story.t('pages.money_talks')
+const amount = story.data.totalWins
+const currency = story.data.currency
 </script>

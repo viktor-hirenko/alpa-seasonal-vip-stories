@@ -10,9 +10,9 @@
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="536" :max-width="1269" />
+    <JHeading :text="copy.headline" :top="536" v-bind="L.headline" />
     <JDigitTiles :value="days" :height="350" :top="767.5" />
-    <JHeading :text="copy.footer" :top="1245" :max-width="1269" />
+    <JHeading :text="copy.footer" :top="1245" v-bind="L.footer" />
   </PageChrome>
 </template>
 
@@ -28,20 +28,13 @@ import PageChrome from '@/components/shared/PageChrome.vue'
 import JChip from '@/components/shared/JChip.vue'
 import JHeading from '@/components/shared/JHeading.vue'
 import JDigitTiles from '@/components/shared/JDigitTiles.vue'
+import { useStory } from '@/composables/useStoryData.js'
 import planets from '@/assets/pages/planets-4.webp'
 import rocket from '@/assets/pages/rocket.webp'
 
-defineProps({
-  /** Formatted day count. Real data wiring lands with useStoryData (task C). */
-  days: { type: [String, Number], default: '2257' },
-})
-
-// Copy is inlined until the i18n layer lands (task C). Strings are the current
-// authority from _context/source/translations-en-fr-de-it.md — note they differ
-// from the reference VIDEO, which carries an older revision.
-const copy = {
-  chip: 'Days in the Spotlight',
-  headline: 'You reached',
-  footer: ['days in the rocketplay', 'universe'],
-}
+const story = useStory()
+const L = story.layout('days_in_spotlight')
+const copy = story.t('pages.days_in_spotlight')
+/** `days`, ungrouped: the mock's tile rows have one cell per digit. */
+const days = story.data.days
 </script>

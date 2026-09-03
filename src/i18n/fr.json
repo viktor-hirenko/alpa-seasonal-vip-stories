@@ -1,0 +1,90 @@
+{
+  "$locale": "fr",
+  "$name": "Français",
+  "levels": {
+    "iron": "Iron",
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum",
+    "diamond": "Diamond"
+  },
+  "pages": {
+    "cover": {
+      "vip_club": "VIP Club",
+      "journal": "Journal",
+      "issue": ["Édition", "Andromède"],
+      "intro": ["Votre histoire", "de la saison", "est prête"],
+      "featuring": "Avec :"
+    },
+    "editors_note": {
+      "chip": "Note de la rédaction",
+      "headline": [
+        "L’édition Andromède est presque prête.",
+        "Et votre histoire VIP fait la couverture."
+      ],
+      "cta": ["Voyons ça !"]
+    },
+    "days_in_spotlight": {
+      "chip": "Jours sous les projecteurs",
+      "headline": ["Vous avez atteint"],
+      "footer": ["jours dans l’univers", "rocketplay"]
+    },
+    "seasonal_power": {
+      "chip": "Puissance saisonnière",
+      "headline": ["Points saisonniers", "gagnés"]
+    },
+    "vip_status": {
+      "chip": "Statut VIP",
+      "headline": ["Votre rang", "de la saison :"]
+    },
+    "money_talks": {
+      "chip": "Parlons gains",
+      "headline": ["Vos gains totaux", "cette saison :"]
+    },
+    "headline_win": {
+      "chip": "Gain à la une",
+      "headline": ["Votre", "plus gros", "gain :"]
+    },
+    "multiplier_moment": {
+      "chip": "Moment multiplicateur",
+      "headline": ["Votre multiplicateur", "le plus élevé :"]
+    },
+    "players_pick": {
+      "chip": "Choix du joueur",
+      "headline": ["Votre jeu le plus", "joué cette saison :"]
+    },
+    "bonus_report": {
+      "chip": "Rapport des bonus",
+      "headline": "Vous avez récupéré",
+      "footer": "en bonus cette saison."
+    },
+    "sports_desk": {
+      "chip": "Page Sports",
+      "headline": ["Vos gains sportifs", "cette saison :"]
+    },
+    "top_sport_signal": {
+      "chip": "Meilleur signal sportif",
+      "headline": ["Votre multiplicateur", "sport max :"]
+    },
+    "sponsor": {
+      "headline": ["Et maintenant… un mot", "de notre sponsor."],
+      "subhead": ["Nous avons un cadeau", "spécial pour vous"]
+    },
+    "space_milk": {
+      "packs_of": "Packs de",
+      "footer": ["Un pour chaque jour", "passé dans RocketPlay."]
+    },
+    "joke": {
+      "headline": ["Blague comprise,", "on espère."],
+      "subhead": ["Mais le vrai cadeau,", "c’est vous."]
+    },
+    "gift": {
+      "headline": ["Vous avez fait", "de ce parcours", "VIP un vol", "en première", "classe."]
+    },
+    "final": {
+      "headline": ["Gardez le cap."],
+      "subhead": ["D’autres escales", "vous attendent."]
+    }
+  }
+}

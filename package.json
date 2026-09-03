@@ -12,6 +12,7 @@
     "video:prod": "bash scripts/encode-video.sh prod",
     "frames": "bash scripts/extract-frames.sh",
     "pose:check": "node scripts/probe.mjs --all",
+    "check-locales": "node scripts/check-locales.mjs",
     "fmt": "prettier -w .",
     "probe": "node scripts/probe.mjs"
   },

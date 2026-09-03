@@ -87,6 +87,7 @@ import { installStoryDebugHook } from '@/animations/installStoryDebugHook.js'
 import { useStoryPlayback } from '@/composables/useStoryPlayback.js'
 import { useStoryBridge } from '@/composables/useStoryBridge.js'
 import { useJournalFit } from '@/composables/useJournalFit.js'
+import { provideStoryData } from '@/composables/useStoryData.js'
 import { STORY_SEGMENTS } from '@/story/slides.js'
 
 const segments = STORY_SEGMENTS
@@ -109,6 +110,15 @@ const soundOn = ref(false)
 const longPress = ref(false)
 const pressTimer = ref(null)
 const endLink = ref('')
+
+// Parse the link and publish the data layer BEFORE anything renders: the 17
+// pages read it through `useStory()` rather than through props, because they
+// are mounted by one `<component :is>` and forwarding every field of every page
+// through it twice (here and in the lab) is exactly the kind of plumbing
+// provide/inject exists to avoid. See useStoryData.js.
+const story = provideStoryData()
+// `final_link` is where the story sends the player on close / "reach end".
+endLink.value = story.data.finalLink
 
 const tlRef = shallowRef(null)
 const hoverTlRef = shallowRef(null)

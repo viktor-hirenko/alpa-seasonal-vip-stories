@@ -1,0 +1,90 @@
+{
+  "$locale": "de",
+  "$name": "Deutsch",
+  "levels": {
+    "iron": "Iron",
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum",
+    "diamond": "Diamond"
+  },
+  "pages": {
+    "cover": {
+      "vip_club": "VIP Club",
+      "journal": "Journal",
+      "issue": ["Andromeda", "-Ausgabe"],
+      "intro": ["Deine Saison-", "Story ist bereit"],
+      "featuring": "Mit:"
+    },
+    "editors_note": {
+      "chip": "Redaktion",
+      "headline": [
+        "Die Andromeda-Ausgabe ist fast fertig.",
+        "Und deine VIP-Story ist auf dem Cover."
+      ],
+      "cta": ["Schau mal", "rein!"]
+    },
+    "days_in_spotlight": {
+      "chip": "Tage im Rampenlicht",
+      "headline": ["Du bist seit"],
+      "footer": ["Tagen im", "rocketplay-universum"]
+    },
+    "seasonal_power": {
+      "chip": "Saison-Power",
+      "headline": ["Saisonpunkte", "gesammelt"]
+    },
+    "vip_status": {
+      "chip": "VIP-Status",
+      "headline": ["Dein", "Saisonrang:"]
+    },
+    "money_talks": {
+      "chip": "Geld spricht",
+      "headline": ["Deine Gesamtgewinne", "in dieser Saison:"]
+    },
+    "headline_win": {
+      "chip": "Top-Gewinn",
+      "headline": ["Dein", "größter", "Gewinn:"]
+    },
+    "multiplier_moment": {
+      "chip": "Multiplikator-Moment",
+      "headline": ["Dein höchster", "Multiplikator:"]
+    },
+    "players_pick": {
+      "chip": "Spieler-Favorit",
+      "headline": ["Dein Top-Spiel", "dieser Saison:"]
+    },
+    "bonus_report": {
+      "chip": "Bonusbericht",
+      "headline": "Du hast",
+      "footer": "diese Saison an Boni gesichert!"
+    },
+    "sports_desk": {
+      "chip": "Sport-Ressort",
+      "headline": ["Deine Sportgewinne", "diese Saison:"]
+    },
+    "top_sport_signal": {
+      "chip": "Top-Sportsignal",
+      "headline": ["Dein höchster", "Sport-Multiplikator:"]
+    },
+    "sponsor": {
+      "headline": ["Und jetzt… ein Wort", "von unserem Sponsor."],
+      "subhead": ["Wir haben ein", "besonderes Geschenk", "für dich"]
+    },
+    "space_milk": {
+      "packs_of": "Packungen",
+      "footer": ["Eine für jeden Tag", "bei RocketPlay."]
+    },
+    "joke": {
+      "headline": ["Witz verstanden?"],
+      "subhead": ["Du bist", "das wahre Geschenk."]
+    },
+    "gift": {
+      "headline": ["Du hast die", "VIP-Reise zum", "First-Class-Flug", "gemacht."]
+    },
+    "final": {
+      "headline": ["Bleib auf Kurs."],
+      "subhead": ["Mehr galaktische", "Stops warten."]
+    }
+  }
+}

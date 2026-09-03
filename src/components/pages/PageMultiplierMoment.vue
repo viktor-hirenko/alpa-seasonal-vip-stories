@@ -14,10 +14,16 @@
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="325.32" :size="82" :line-height="1.15" />
+    <JHeading
+      :text="copy.headline"
+      :top="325.32"
+      :size="82"
+      :line-height="1.15"
+      v-bind="L.headline"
+    />
     <JDigitTiles :value="multiplier" :height="120.805" :top="558.598" />
     <div class="mm__divider" />
-    <JValue :value="gameName" :top="787" :size="96" />
+    <JValue :value="gameName" :top="787" :size="96" v-bind="L.game" />
     <JGameThumb :src="gameImage" :name="gameName" :top="946" />
   </PageChrome>
 </template>
@@ -42,17 +48,15 @@ import JValue from '@/components/shared/JValue.vue'
 import JGlow from '@/components/shared/JGlow.vue'
 import JGameThumb from '@/components/shared/JGameThumb.vue'
 import { artBox, artImg } from '@/components/shared/artBox.js'
+import { useStory } from '@/composables/useStoryData.js'
 import bg from '@/assets/pages/bg-multiplier-moment.webp'
 import rocket from '@/assets/pages/rocket.webp'
 import placeholder from '@/assets/pages/game-thumb-placeholder.webp'
 
-const props = defineProps({
-  multiplier: { type: [String, Number], default: '22257' },
-  gameName: { type: String, default: 'Tiger Jackpots' },
-  gameImage: { type: String, default: '' },
-})
-
-const gameImage = props.gameImage || placeholder
-
-const copy = { chip: 'Multiplier Moment', headline: ['Your highest', 'multiplier:'] }
+const story = useStory()
+const L = story.layout('multiplier_moment')
+const copy = story.t('pages.multiplier_moment')
+const multiplier = story.data.topMultiplier
+const gameName = story.data.topMultiplierGame
+const gameImage = story.data.topMultiplierGameImage || placeholder
 </script>

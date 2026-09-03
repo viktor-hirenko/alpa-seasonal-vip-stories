@@ -15,12 +15,26 @@
 
     <div class="en__chip">
       <img class="en__chip-dot" :src="dot" alt="" />
-      <span>Editor&rsquo;s Note</span>
+      <span>{{ copy.chip }}</span>
     </div>
 
-    <p class="en__headline">The Andromeda issue is ready.<br />And your VIP story made the cover.</p>
+    <!-- The one display slot in the deck that really wraps: 1344 wide, no
+         authored breaks, one block per sentence. English lands on 4 lines and
+         the other three on 7 (mock 452 vs 791 at a 112.8 px line), which is why
+         it carries a line budget — 7 lines would run into the mini cover. -->
+    <p class="en__headline" data-fit-role="display" :data-fit-lines="L.headline.lines">
+      <span v-for="(line, i) in copy.headline" :key="i">{{ line }}</span>
+    </p>
 
-    <JHeading :text="['Ready', 'to take', 'a look?']" :top="1223" :size="96" align="left" :left="65.39" :line-height="1.0417" />
+    <JHeading
+      :text="copy.cta"
+      :top="1223"
+      :size="96"
+      align="left"
+      :left="65.39"
+      :line-height="1.0417"
+      v-bind="L.cta"
+    />
 
     <!-- Mini cover card (21770:2827): the same Cover face at ~0.38 scale, with
          its own layout (no "Your season story is ready" line — cut for space)
@@ -33,19 +47,25 @@
         <div class="en__mini-edge" />
         <div class="en__mini-body">
           <div class="en__mini-fade1" />
-          <p class="en__mini-vip-club">VIP Club</p>
+          <p class="en__mini-vip-club">{{ cover.vip_club }}</p>
           <div class="en__mini-glow-blob" />
           <div class="en__mini-astronaut" />
           <div class="page__art art-box" :style="artBox(135.97, 107.99, 294.695, 409.049)">
-            <img class="en__mini-screen" :src="ellipse" alt="" :style="artImg(251.733, 382.24, 6.71)" />
+            <img
+              class="en__mini-screen"
+              :src="ellipse"
+              alt=""
+              :style="artImg(251.733, 382.24, 6.71)"
+            />
           </div>
           <div class="en__mini-fade2" />
-          <div class="en__mini-journal"><span>Journal</span></div>
+          <div class="en__mini-journal">
+            <span>{{ cover.journal }}</span>
+          </div>
           <p class="en__mini-issue">
-            <span>Andromeda</span>
-            <span>Issue</span>
+            <span v-for="(line, i) in cover.issue" :key="i">{{ line }}</span>
           </p>
-          <p class="en__mini-featuring">Featuring:</p>
+          <p class="en__mini-featuring">{{ cover.featuring }}</p>
           <p class="en__mini-name">{{ playerName }}</p>
         </div>
       </div>
@@ -65,14 +85,18 @@
 import PageChrome from '@/components/shared/PageChrome.vue'
 import JHeading from '@/components/shared/JHeading.vue'
 import { artBox, artImg } from '@/components/shared/artBox.js'
+import { useStory } from '@/composables/useStoryData.js'
 import galaxy from '@/assets/pages/galaxy-3.webp'
 import planets from '@/assets/pages/planets-4.webp'
 import dot from '@/assets/pages/editors-note-dot.svg'
 import ellipse from '@/assets/pages/cover-ellipse.svg'
 
-defineProps({
-  playerName: { type: String, default: 'Mariannaa!' },
-})
+const story = useStory()
+const L = story.layout('editors_note')
+const copy = story.t('pages.editors_note')
+// The mini card is the cover at 0.38, so it reads the COVER's copy.
+const cover = story.t('pages.cover')
+const playerName = story.data.name
 
 const du = n => `calc(${+n.toFixed(3)} * var(--u))`
 </script>

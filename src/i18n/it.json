@@ -1,0 +1,90 @@
+{
+  "$locale": "it",
+  "$name": "Italiano",
+  "levels": {
+    "iron": "Iron",
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum",
+    "diamond": "Diamond"
+  },
+  "pages": {
+    "cover": {
+      "vip_club": "VIP Club",
+      "journal": "Journal",
+      "issue": ["Edizione", "Andromeda"],
+      "intro": ["La vostra storia", "della stagione", "è pronta"],
+      "featuring": "Con:"
+    },
+    "editors_note": {
+      "chip": "Nota dell’editore",
+      "headline": [
+        "L’edizione Andromeda è quasi pronta.",
+        "E la vostra storia VIP è finita in copertina."
+      ],
+      "cta": ["Diamo", "un’occhiata!"]
+    },
+    "days_in_spotlight": {
+      "chip": "Giorni sotto i riflettori",
+      "headline": ["Avete raggiunto"],
+      "footer": ["giorni nell’universo", "rocketplay"]
+    },
+    "seasonal_power": {
+      "chip": "Potere stagionale",
+      "headline": ["Punti stagionali", "raccolti"]
+    },
+    "vip_status": {
+      "chip": "Status VIP",
+      "headline": ["Livello", "stagionale:"]
+    },
+    "money_talks": {
+      "chip": "Parliamo di vincite",
+      "headline": ["Le vostre vincite totali", "di questa stagione:"]
+    },
+    "headline_win": {
+      "chip": "Vincita top",
+      "headline": ["La vostra", "vincita", "più alta:"]
+    },
+    "multiplier_moment": {
+      "chip": "Momento moltiplicatore",
+      "headline": ["Il vostro moltiplicatore", "più alto:"]
+    },
+    "players_pick": {
+      "chip": "Scelta del giocatore",
+      "headline": ["Gioco più giocato", "della stagione:"]
+    },
+    "bonus_report": {
+      "chip": "Bonus Report",
+      "headline": "Avete richiesto",
+      "footer": "in bonus questa stagione."
+    },
+    "sports_desk": {
+      "chip": "Sports Desk",
+      "headline": ["Le vostre vincite", "sportive:"]
+    },
+    "top_sport_signal": {
+      "chip": "Top Sport Signal",
+      "headline": ["Il vostro moltiplicatore", "sportivo più alto:"]
+    },
+    "sponsor": {
+      "headline": ["E ora… una parola", "dal nostro sponsor."],
+      "subhead": ["Abbiamo un regalo", "speciale per voi"]
+    },
+    "space_milk": {
+      "packs_of": "Confezioni di",
+      "footer": ["Una per ogni giorno", "trascorso su RocketPlay."]
+    },
+    "joke": {
+      "headline": ["Speriamo abbiate", "colto la battuta."],
+      "subhead": ["Ma il vero", "regalo sei tu."]
+    },
+    "gift": {
+      "headline": ["Avete reso", "questo viaggio", "VIP un volo", "di prima", "classe."]
+    },
+    "final": {
+      "headline": ["Mantieni", "la rotta."],
+      "subhead": ["Altre tappe", "stellari ti", "aspettano."]
+    }
+  }
+}

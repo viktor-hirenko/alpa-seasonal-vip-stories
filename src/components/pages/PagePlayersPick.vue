@@ -17,11 +17,11 @@
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="389" />
+    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
     <!-- Game name: 96 px accent gradient, same treatment as the value labels.
          The mock's box is 848 wide at x=297 — page-centred, so a max-width
          states it exactly, and it is the budget useJournalFit fits into. -->
-    <JValue :value="gameName" :top="620" :size="96" :max-width="848" />
+    <JValue :value="gameName" :top="620" :size="96" v-bind="L.game" />
     <JGameThumb :src="gameImage" :name="gameName" :top="841" />
   </PageChrome>
 </template>
@@ -39,17 +39,14 @@ import JValue from '@/components/shared/JValue.vue'
 import JGlow from '@/components/shared/JGlow.vue'
 import JGameThumb from '@/components/shared/JGameThumb.vue'
 import { artBox, artImg } from '@/components/shared/artBox.js'
+import { useStory } from '@/composables/useStoryData.js'
 import galaxy from '@/assets/pages/galaxy-3.webp'
 import planets from '@/assets/pages/planets-4.webp'
 import placeholder from '@/assets/pages/game-thumb-placeholder.webp'
 
-const props = defineProps({
-  gameName: { type: String, default: 'Tiger Jackpots' },
-  /** Empty in production until the query param is wired (task C). */
-  gameImage: { type: String, default: '' },
-})
-
-const gameImage = props.gameImage || placeholder
-
-const copy = { chip: "Player's Pick", headline: ['Your most-played', 'game this season:'] }
+const story = useStory()
+const L = story.layout('players_pick')
+const copy = story.t('pages.players_pick')
+const gameName = story.data.favoriteGame
+const gameImage = story.data.favoriteGameImage || placeholder
 </script>

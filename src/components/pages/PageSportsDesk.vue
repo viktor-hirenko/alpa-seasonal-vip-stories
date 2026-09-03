@@ -14,26 +14,55 @@
 
         <!-- Ball `Sport_icon_512x512`: inset -2.94% 17.23% 41.61% 21.44%
              of the group -> 160.82, -24.23, 460.0 x 505.5; rotate 6.12deg -->
-        <JHeroIcon :src="ball" :left="197.48" :top="-65.62" :width="460" :height="505.5" :rotate="6.12" />
+        <JHeroIcon
+          :src="ball"
+          :left="197.48"
+          :top="-65.62"
+          :width="460"
+          :height="505.5"
+          :rotate="6.12"
+        />
 
         <!-- Trophy `21770:3858`: group-relative (197, 219.23), 563.636 sq,
              inner image 512 sq rotated 6.12deg -->
-        <JHeroIcon :src="trophy" :left="233.66" :top="177.84" :width="563.636" :height="563.636"
-                   :img-width="512" :img-height="512" :rotate="6.12" />
+        <JHeroIcon
+          :src="trophy"
+          :left="233.66"
+          :top="177.84"
+          :width="563.636"
+          :height="563.636"
+          :img-width="512"
+          :img-height="512"
+          :rotate="6.12"
+        />
 
         <!-- `coins 5`: inset 54.52% 78.62% 26.74% 6.09% of the group
              -> 45.68, 449.4, 114.7 x 154.4; rotate -17deg, mirrored -->
-        <JHeroIcon :src="coins5" :left="82.34" :top="408.01" :width="114.7" :height="154.4"
-                   :rotate="-17" mirror />
+        <JHeroIcon
+          :src="coins5"
+          :left="82.34"
+          :top="408.01"
+          :width="114.7"
+          :height="154.4"
+          :rotate="-17"
+          mirror
+        />
 
         <!-- `coins 1`: inset 43.53% -7.02% 28.34% 75.3% of the 919 frame
              -> 692.0, 400.0, 291.5 x 258.5; rotate -8.53deg -->
-        <JHeroIcon :src="coins1" :left="692" :top="400.01" :width="291.5" :height="258.5" :rotate="-8.53" />
+        <JHeroIcon
+          :src="coins1"
+          :left="692"
+          :top="400.01"
+          :width="291.5"
+          :height="258.5"
+          :rotate="-8.53"
+        />
       </JHero>
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="389" :max-width="956" />
+    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
     <JDigitTiles :value="amount" :height="200" :top="1371.031" />
     <JCurrency :top="1603.031" :size="200">{{ currency }}</JCurrency>
   </PageChrome>
@@ -63,11 +92,11 @@ import ball from '@/assets/pages/hero-sports-ball.webp'
 import coins1 from '@/assets/pages/coins-1.webp'
 import coins5 from '@/assets/pages/coins-5.webp'
 import rays from '@/assets/pages/rays.webp'
+import { useStory } from '@/composables/useStoryData.js'
 
-defineProps({
-  amount: { type: [String, Number], default: '2572257' },
-  currency: { type: String, default: 'USD' },
-})
-
-const copy = { chip: 'Sports Desk', headline: 'Your sports wins this season:' }
+const story = useStory()
+const L = story.layout('sports_desk')
+const copy = story.t('pages.sports_desk')
+const amount = story.data.sportsWins
+const currency = story.data.currency
 </script>

@@ -21,16 +21,29 @@
         </div>
 
         <!-- `coins 5`: inset 48.42% 80.48% 33.95% 6.31% -> 58.0, 445.0, 121.4 x 162.0 -->
-        <JHeroIcon :src="coins5" :left="58" :top="445" :width="121.4" :height="162"
-                   :rotate="8.13" mirror />
+        <JHeroIcon
+          :src="coins5"
+          :left="58"
+          :top="445"
+          :width="121.4"
+          :height="162"
+          :rotate="8.13"
+          mirror
+        />
         <!-- `coins 1`: inset 45.05% -17.9% 26.81% 86.18% -> 792.0, 414.0, 291.5 x 258.6 -->
-        <JHeroIcon :src="coins1" :left="792" :top="414.01" :width="291.5" :height="258.6"
-                   :rotate="-8.53" />
+        <JHeroIcon
+          :src="coins1"
+          :left="792"
+          :top="414.01"
+          :width="291.5"
+          :height="258.6"
+          :rotate="-8.53"
+        />
       </JHero>
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="389" />
+    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
     <JDigitTiles :value="multiplier" :height="286" :top="1258" />
   </PageChrome>
 </template>
@@ -56,8 +69,10 @@ import rays from '@/assets/pages/rays.webp'
 import combo from '@/assets/pages/hero-comboboost.webp'
 import coins1 from '@/assets/pages/coins-1.webp'
 import coins5 from '@/assets/pages/coins-5.webp'
+import { useStory } from '@/composables/useStoryData.js'
 
-defineProps({ multiplier: { type: [String, Number], default: '257' } })
-
-const copy = { chip: 'Top Sport Signal', headline: ['Your highest', 'sports multiplier:'] }
+const story = useStory()
+const L = story.layout('top_sport_signal')
+const copy = story.t('pages.top_sport_signal')
+const multiplier = story.data.sportsMultiplier
 </script>

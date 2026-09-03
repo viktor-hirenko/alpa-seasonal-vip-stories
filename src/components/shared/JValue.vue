@@ -1,5 +1,5 @@
 <template>
-  <div class="j-slot" :style="slotStyle">
+  <div class="j-slot" :style="slotStyle" :data-fit-lines="lines || null">
     <span class="j-value" data-fit-role="value">{{ value }}</span>
   </div>
 </template>
@@ -31,6 +31,11 @@ const props = defineProps({
    * shrink-to-fit rather than grow (31-pages.md: 1020 / 1230 / 848).
    */
   width: { type: Number, default: 0 },
+  /** Vertical budget in line boxes (`data-fit-lines`); see JHeading. These
+   *  slots are `white-space: nowrap`, so it is a tripwire rather than a rule. */
+  lines: { type: Number, default: 0 },
+  /** Declared so a pageLayouts `v-bind` cannot fall through as an attribute. */
+  grow: { type: String, default: 'down' },
 })
 
 const slotStyle = computed(() => ({

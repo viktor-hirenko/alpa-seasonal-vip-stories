@@ -7,10 +7,12 @@
       <img class="page__art joke__rocket" :src="rocket" alt="" />
     </template>
 
-    <JHeading text="Hope you got the joke." :top="674.24" :size="90" />
-    <p class="joke__subhead">
-      <span>But the</span>
-      <span>real gift is you.</span>
+    <!-- The only slot in the deck that grows UPWARDS: FR and IT take a second
+         line and the top edge moves 674.24 -> 576.87 while the bottom stays on
+         771.2. So it is anchored by its bottom, not its top (ADR-0007). -->
+    <JHeading :text="copy.headline" :size="90" v-bind="L.headline" />
+    <p class="joke__subhead" data-fit-role="display" :data-fit-lines="L.subhead.lines">
+      <span v-for="(line, i) in copy.subhead" :key="i">{{ line }}</span>
     </p>
   </PageChrome>
 </template>
@@ -26,6 +28,11 @@
 import PageChrome from '@/components/shared/PageChrome.vue'
 import JHeading from '@/components/shared/JHeading.vue'
 import { artBox, artImg } from '@/components/shared/artBox.js'
+import { useStory } from '@/composables/useStoryData.js'
 import planets from '@/assets/pages/planets-4.webp'
 import rocket from '@/assets/pages/rocket.webp'
+
+const story = useStory()
+const L = story.layout('joke')
+const copy = story.t('pages.joke')
 </script>

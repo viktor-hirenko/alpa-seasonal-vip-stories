@@ -22,11 +22,10 @@
       </div>
     </template>
 
-    <p class="gift__headline">
-      <span>You turned</span>
-      <span>this VIP journey</span>
-      <span>into a first-class</span>
-      <span>flight.</span>
+    <!-- Fixed 1162-wide box at (140, 183.21) in all four variants, 420 tall in
+         EN/DE and 525 in FR/IT — four lines against five, growing down. -->
+    <p class="gift__headline" data-fit-role="display" :data-fit-lines="L.headline.lines">
+      <span v-for="(line, i) in copy.headline" :key="i">{{ line }}</span>
     </p>
   </PageChrome>
 </template>
@@ -65,4 +64,9 @@ import planets from '@/assets/pages/planets-4.webp'
 import bloom from '@/assets/pages/bloom-tight.svg'
 import ring from '@/assets/pages/cover-ellipse.svg'
 import helmet from '@/assets/pages/gift-helmet.webp'
+import { useStory } from '@/composables/useStoryData.js'
+
+const story = useStory()
+const L = story.layout('gift')
+const copy = story.t('pages.gift')
 </script>

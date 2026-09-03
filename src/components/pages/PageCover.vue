@@ -8,7 +8,7 @@
 
       <div class="cover__fade-mid" />
 
-      <p class="cover__vip-club">VIP Club</p>
+      <p class="cover__vip-club">{{ copy.vip_club }}</p>
 
       <div class="cover__glow-blob" />
       <div class="cover__astronaut" />
@@ -21,22 +21,25 @@
 
       <div class="cover__fade-bottom" />
 
-      <div class="cover__journal-label"><span>Journal</span></div>
+      <div class="cover__journal-label">
+        <span>{{ copy.journal }}</span>
+      </div>
 
-      <p class="cover__issue">
-        <span>Andromeda</span>
-        <span>Issue</span>
+      <p class="cover__issue" data-fit-role="display" :data-fit-lines="L.issue.lines">
+        <span v-for="(line, i) in copy.issue" :key="i">{{ line }}</span>
       </p>
 
-      <p class="cover__intro">
-        <span>Your season</span>
-        <span>story is ready</span>
+      <!-- French and Italian take a third line here (the mock's box grows from
+           168 to 252 at a 84 px line) while "Featuring:" at 1517 stays put —
+           ADR-0007's grow rule, measured. -->
+      <p class="cover__intro" data-fit-role="display" :data-fit-lines="L.intro.lines">
+        <span v-for="(line, i) in copy.intro" :key="i">{{ line }}</span>
       </p>
 
-      <p class="cover__featuring">Featuring:</p>
+      <p class="cover__featuring">{{ copy.featuring }}</p>
       <!-- The one text on this page that takes arbitrary player input, so it
            is the one that carries a fit role (see useJournalFit). -->
-      <p class="cover__name" data-fit-role="value">{{ playerName }}</p>
+      <p class="cover__name" data-fit-role="value" data-fit-lines="1">{{ playerName }}</p>
     </div>
   </div>
 </template>
@@ -61,10 +64,12 @@
  * per-layer fills instead (get_design_context direct URLs, alpha-checked).
  */
 import { artBox, artImg } from '@/components/shared/artBox.js'
+import { useStory } from '@/composables/useStoryData.js'
 import slots from '@/assets/pages/cover-slots.webp'
 import ellipse from '@/assets/pages/cover-ellipse.svg'
 
-defineProps({
-  playerName: { type: String, default: 'Mariannaa!' },
-})
+const story = useStory()
+const L = story.layout('cover')
+const copy = story.t('pages.cover')
+const playerName = story.data.name
 </script>

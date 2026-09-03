@@ -4,10 +4,9 @@
       <img class="page__art pf__warp" :src="warp" alt="" />
     </template>
 
-    <JHeading text="Keep your course." :top="737.5" :size="90" />
-    <p class="pf__subhead">
-      <span>More stellar</span>
-      <span>stops await.</span>
+    <JHeading :text="copy.headline" :top="737.5" :size="90" v-bind="L.headline" />
+    <p class="pf__subhead" data-fit-role="display" :data-fit-lines="L.subhead.lines">
+      <span v-for="(line, i) in copy.subhead" :key="i">{{ line }}</span>
     </p>
   </PageChrome>
 </template>
@@ -25,5 +24,10 @@
  */
 import PageChrome from '@/components/shared/PageChrome.vue'
 import JHeading from '@/components/shared/JHeading.vue'
+import { useStory } from '@/composables/useStoryData.js'
 import warp from '@/assets/pages/final-warp.webp'
+
+const story = useStory()
+const L = story.layout('final')
+const copy = story.t('pages.final')
 </script>

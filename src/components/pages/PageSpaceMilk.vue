@@ -20,10 +20,12 @@
       </div>
     </template>
 
-    <p class="sm__count">{{ packs }}</p>
-    <p class="sm__packs-of">Packs of</p>
+    <p class="sm__count" data-fit-role="value" data-fit-lines="1">{{ packs }}</p>
+    <!-- 399 / 401 / 508 / 605 wide across the four variants — and every one of
+         them ends on x=658. The right edge is the anchor; the box grows left. -->
+    <p class="sm__packs-of" data-fit-role="display" data-fit-lines="1">{{ copy.packs_of }}</p>
 
-    <JHeading :text="['One for every day you', 'spent in RocketPlay.']" :top="1573" :size="92" />
+    <JHeading :text="copy.footer" :top="1573" :size="92" v-bind="L.footer" />
   </PageChrome>
 </template>
 
@@ -53,8 +55,13 @@ import bloomTight from '@/assets/pages/bloom-tight.svg'
 import bloomWide from '@/assets/pages/bloom-wide.svg'
 import cow from '@/assets/pages/space-milk-cow.webp'
 import logo from '@/assets/pages/space-milk-logo.webp'
+import { useStory } from '@/composables/useStoryData.js'
 
-defineProps({
-  packs: { type: [String, Number], default: '2570' },
-})
+const story = useStory()
+const L = story.layout('space_milk')
+const copy = story.t('pages.space_milk')
+// The same `days` value the Days page shows, re-used as a pack count
+// (31-pages.md: "[X] packs"). "SPACE MILK" itself is baked into the logo image
+// and stays English in every variant, so only the "Packs of" half translates.
+const packs = story.data.packs
 </script>

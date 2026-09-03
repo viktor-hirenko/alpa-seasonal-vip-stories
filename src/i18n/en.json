@@ -1,0 +1,87 @@
+{
+  "$locale": "en",
+  "$name": "English",
+  "levels": {
+    "iron": "Iron",
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum",
+    "diamond": "Diamond"
+  },
+  "pages": {
+    "cover": {
+      "vip_club": "VIP Club",
+      "journal": "Journal",
+      "issue": ["Andromeda", "Issue"],
+      "intro": ["Your season", "story is ready"],
+      "featuring": "Featuring:"
+    },
+    "editors_note": {
+      "chip": "Editor’s Note",
+      "headline": ["The Andromeda issue is ready.", "And your VIP story made the cover."],
+      "cta": ["Ready", "to take", "a look?"]
+    },
+    "days_in_spotlight": {
+      "chip": "Days in the Spotlight",
+      "headline": ["You reached"],
+      "footer": ["days in the rocketplay", "universe"]
+    },
+    "seasonal_power": {
+      "chip": "Seasonal Power",
+      "headline": ["Collected", "Seasonal Points"]
+    },
+    "vip_status": {
+      "chip": "VIP Status",
+      "headline": ["Your season", "rank:"]
+    },
+    "money_talks": {
+      "chip": "Money Talks",
+      "headline": ["Your total wins", "this season:"]
+    },
+    "headline_win": {
+      "chip": "Headline Win",
+      "headline": ["Your", "biggest", "win:"]
+    },
+    "multiplier_moment": {
+      "chip": "Multiplier Moment",
+      "headline": ["Your highest", "multiplier:"]
+    },
+    "players_pick": {
+      "chip": "Player’s Pick",
+      "headline": ["Your most-played", "game this season:"]
+    },
+    "bonus_report": {
+      "chip": "Bonus Report",
+      "headline": "You claimed",
+      "footer": "in bonuses this season."
+    },
+    "sports_desk": {
+      "chip": "Sports Desk",
+      "headline": ["Your sports wins", "this season:"]
+    },
+    "top_sport_signal": {
+      "chip": "Top Sport Signal",
+      "headline": ["Your highest", "sports multiplier:"]
+    },
+    "sponsor": {
+      "headline": ["And now… a word", "from our sponsor."],
+      "subhead": ["We have", "a special gift", "for you"]
+    },
+    "space_milk": {
+      "packs_of": "Packs of",
+      "footer": ["One for every day you", "spent in RocketPlay."]
+    },
+    "joke": {
+      "headline": ["Hope you got the joke."],
+      "subhead": ["But the", "real gift is you."]
+    },
+    "gift": {
+      "headline": ["You turned", "this VIP journey", "into a first-class", "flight."]
+    },
+    "final": {
+      "headline": ["Keep your course."],
+      "subhead": ["More stellar", "stops await."]
+    }
+  }
+}

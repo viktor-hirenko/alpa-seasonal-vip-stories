@@ -32,19 +32,32 @@
         <!-- `Live_HERO 6` gift: inset 5.52% 6.92% 0 9.29% -> 85.4, 45.0, 770 sq -->
         <JHeroIcon :src="gift" :left="85.4" :top="45" :width="770" :height="770" :rotate="9.12" />
         <!-- `coins 4`: inset 50.5% 75.98% 27.79% 7.51% -> 69.0, 411.6, 151.7 x 176.9 -->
-        <JHeroIcon :src="coins4" :left="69" :top="411.6" :width="151.7" :height="176.9"
-                   :rotate="-23.11" mirror />
+        <JHeroIcon
+          :src="coins4"
+          :left="69"
+          :top="411.6"
+          :width="151.7"
+          :height="176.9"
+          :rotate="-23.11"
+          mirror
+        />
         <!-- `coins 1`: inset 61.38% 3.34% 6.9% 64.94% -> 596.8, 500.2, 291.5 x 258.5 -->
-        <JHeroIcon :src="coins1" :left="596.8" :top="500.2" :width="291.5" :height="258.5"
-                   :rotate="-8.53" />
+        <JHeroIcon
+          :src="coins1"
+          :left="596.8"
+          :top="500.2"
+          :width="291.5"
+          :height="258.5"
+          :rotate="-8.53"
+        />
       </JHero>
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="373" :size="78" />
+    <JHeading :text="copy.headline" :top="373" :size="78" v-bind="L.headline" />
     <JDigitTiles :value="amount" :height="200" :top="560" />
     <JCurrency :top="791.5" :size="200">{{ currency }}</JCurrency>
-    <JHeading :text="copy.footer" :top="1693" :size="78" />
+    <JHeading :text="copy.footer" :top="1693" :size="78" v-bind="L.footer" />
   </PageChrome>
 </template>
 
@@ -74,15 +87,11 @@ import gift from '@/assets/pages/hero-bonus-report.webp'
 import coins1 from '@/assets/pages/coins-1.webp'
 import coins4 from '@/assets/pages/coins-4.webp'
 import rays from '@/assets/pages/rays.webp'
+import { useStory } from '@/composables/useStoryData.js'
 
-defineProps({
-  amount: { type: [String, Number], default: '2572257' },
-  currency: { type: String, default: 'USD' },
-})
-
-const copy = {
-  chip: 'Bonus Report',
-  headline: 'You claimed',
-  footer: 'in bonuses this season.',
-}
+const story = useStory()
+const L = story.layout('bonus_report')
+const copy = story.t('pages.bonus_report')
+const amount = story.data.bonuses
+const currency = story.data.currency
 </script>
