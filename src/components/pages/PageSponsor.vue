@@ -1,0 +1,39 @@
+<template>
+  <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
+    <template #backdrop>
+      <div class="page__art art-box" :style="artBox(-637, -136, 1501.563, 1258.608)">
+        <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
+      </div>
+    </template>
+
+    <template #art>
+      <JGlow :left="-435.2" :top="1070.59" :width="2272.4" :height="1136.2" />
+      <div class="sp__mascot">
+        <img :src="cow" alt="" />
+      </div>
+    </template>
+
+    <JHeading :text="['And now… a word', 'from our sponsor.']" :top="119" :size="96" />
+    <p class="sp__subhead">
+      <span>We have</span>
+      <span>a special gift</span>
+      <span>for you</span>
+    </p>
+  </PageChrome>
+</template>
+
+<script setup>
+/**
+ * Sponsor. Figma set 21770:4139, EN body 21770:4140 (its own Figma component
+ * is internally named "Joke" — a stale label from duplication; trust the
+ * node-id mapping in 31-pages.md, which is cross-referenced against the
+ * timecode table, not the component's own name).
+ * Slide frame 19, cut at 61.10 s. Static — no dynamic fields.
+ */
+import PageChrome from '@/components/shared/PageChrome.vue'
+import JHeading from '@/components/shared/JHeading.vue'
+import JGlow from '@/components/shared/JGlow.vue'
+import { artBox, artImg } from '@/components/shared/artBox.js'
+import planets from '@/assets/pages/planets-4.webp'
+import cow from '@/assets/pages/sponsor-cow.webp'
+</script>

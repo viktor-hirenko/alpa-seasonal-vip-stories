@@ -345,6 +345,7 @@
 
 
 
+
 ///
 /// Days in the Spotlight — page-specific art placement. Figma 21770:2946.
 ///
@@ -532,4 +533,774 @@
   width: du(1098);
   height: du(770);
   object-fit: cover;
+}
+
+///
+/// Cover. Figma 21770:2744. NOT built on .page/.page__body — its own smaller
+/// skeleton (1465x1868 vs a data page's 1564x1911), a flat CSS gradient right
+/// edge instead of the data pages' SVG, and no spine/tint/sheen.
+///
+.cover {
+  position: absolute;
+  inset: 0;
+}
+
+/// Right-edge ramp (21770:2745). On the cover this really IS a flat 7-stop
+/// CSS gradient — unlike a data page's page__edge, which get_design_context
+/// proved is an SVG despite metadata suggesting a gradient. Trust each
+/// face's own design-context pass; don't assume they share an implementation.
+.cover__edge {
+  position: absolute;
+  left: du(895.773);
+  top: 0;
+  width: du(569.223);
+  height: du(1868);
+  background: linear-gradient(
+    270deg,
+    #b26c3b 0%,
+    #2c2c2c 0.577%,
+    #b26c3b 1.2906%,
+    #2c2c2c 2.1141%,
+    #b26c3b 2.9926%,
+    #2c2c2c 3.871%,
+    #562c26 5.573%
+  );
+  pointer-events: none;
+}
+
+.cover__body {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: du(1441.033);
+  height: du(1867.924);
+  background: $page-bg;
+  overflow: clip;
+}
+
+/// Background texture (21770:2747, "slots_id-1"). The mock sizes and rotates
+/// it via a `hypot(cqw, cqh)` trick to cover its container at -5.3deg without
+/// distorting the image's own aspect (1296:576, matched almost exactly by
+/// the solved box 4122.3x1835.5) — solved by hand from the container's own
+/// inset percentages since get_metadata's frame box is the CLIPPING frame,
+/// not the rotated image underneath it.
+.cover__slots {
+  pointer-events: none;
+}
+
+/// Mid fade (21770:2748): unlike page__fade's flat 0-100%, this one holds
+/// fully transparent until 20.714% down before fading to page colour.
+.cover__fade-mid {
+  position: absolute;
+  left: du(-175);
+  top: du(958);
+  width: du(2081);
+  height: du(910);
+  background: linear-gradient(180deg, rgba(0, 10, 18, 0) 20.714%, #{$page-bg} 63.626%);
+  pointer-events: none;
+}
+
+/// Bottom fade (21770:2756): plain 0-100%, sits under the name/featuring text.
+.cover__fade-bottom {
+  position: absolute;
+  left: du(-175);
+  top: du(1389.26);
+  width: du(2081);
+  height: du(479);
+  background: linear-gradient(180deg, rgba(0, 10, 18, 0) 0%, #{$page-bg} 100%);
+  pointer-events: none;
+}
+
+.cover__vip-club {
+  position: absolute;
+  left: du(70);
+  top: du(104.26);
+  width: du(1203.573);
+  font-family: $font-stack;
+  font-weight: 900;
+  font-size: du(250.836);
+  line-height: 0.88;
+  color: #fff;
+  text-shadow: 0 du(15.254) du(50.845) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/// Pink glow blob behind the astronaut (21770:2753): a SOLID rectangle
+/// clipped into a soft shape by the mock's own blob mask — this one NEEDS
+/// the mask (unlike the astronaut photo below it, which already has a clean
+/// alpha edge from its source and is left unmasked).
+.cover__glow-blob {
+  position: absolute;
+  left: du(124.008);
+  top: du(247);
+  width: du(1458);
+  height: du(1670);
+  background: #ff7eda;
+  mask-image: url('@/assets/pages/cover-mask.webp');
+  mask-size: du(1715.689) du(1715.691);
+  mask-position: du(-4.569) du(-52.301);
+  mask-repeat: no-repeat;
+  -webkit-mask-image: url('@/assets/pages/cover-mask.webp');
+  -webkit-mask-size: du(1715.689) du(1715.691);
+  -webkit-mask-position: du(-4.569) du(-52.301);
+  -webkit-mask-repeat: no-repeat;
+  pointer-events: none;
+}
+
+/// Astronaut photo (21770:2754). Mirrored (the mock's rotate(180deg) +
+/// scaleY(-1) nets out to a plain horizontal flip).
+.cover__astronaut {
+  position: absolute;
+  left: du(139.7385);
+  top: du(215);
+  width: du(1661.09);
+  height: du(1661.09);
+  background-image: url('@/assets/pages/cover-astronaut.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scaleX(-1);
+  pointer-events: none;
+}
+
+.cover__ellipse {
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+/// "Journal", rotated -90deg, right edge pinned at 129/1385 (21770:2757).
+/// The OUTER box (56x302) is a plain, unrotated flex viewport — the mock
+/// rotates the TEXT, not the box, which matters because a 56-wide box is far
+/// narrower than the unrotated text: rotating the box itself (an earlier
+/// version of this rule) span the text off past the clipped body and it
+/// vanished from the render entirely.
+.cover__journal-label {
+  position: absolute;
+  left: du(1329);
+  top: du(129);
+  width: du(56);
+  height: du(302);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  pointer-events: none;
+
+  span {
+    display: block;
+    font-family: $font-stack;
+    font-weight: 500;
+    font-size: du(64);
+    line-height: 0.88;
+    color: #fff;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transform: rotate(-90deg);
+  }
+}
+
+.cover__issue {
+  position: absolute;
+  left: du(77);
+  top: du(382);
+  width: du(774);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(117.824);
+  line-height: 0.8263;
+  color: #ed58bf;
+  text-shadow: 0 0 du(20) rgba(219, 125, 188, 0.26);
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+
+  span {
+    display: block;
+  }
+}
+
+.cover__intro {
+  position: absolute;
+  left: du(77);
+  top: du(632);
+  width: du(463);
+  font-family: $font-stack;
+  font-weight: 500;
+  font-size: du(71.048);
+  line-height: 1.2;
+  color: #fff;
+  text-shadow: 0 du(31.942) du(106.473) rgba(0, 0, 0, 0.37);
+  white-space: nowrap;
+  pointer-events: none;
+
+  span {
+    display: block;
+  }
+}
+
+.cover__featuring {
+  position: absolute;
+  left: du(77);
+  top: du(1517);
+  font-family: $font-stack;
+  font-weight: 500;
+  font-size: du(64);
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 du(21.58) du(71.933) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/// Player name (21770:2761): fixed 1058-wide shrink-to-fit box (task 2,
+/// useJournalFit, not wired yet — rendered at fixed size for now).
+.cover__name {
+  position: absolute;
+  left: du(77);
+  top: du(1570);
+  width: du(1058);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(160);
+  line-height: 1.3;
+  text-shadow: 0 du(6.024) du(20.081) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  pointer-events: none;
+}
+
+///
+/// Editor's Note. Figma 21770:2821.
+///
+.en__chip {
+  position: absolute;
+  left: du(396.8);
+  top: du(145);
+  display: flex;
+  align-items: center;
+  gap: du(49.908);
+  padding: du(49.908) du(99.817);
+  border-radius: 0 du(25) du(25) 0;
+  background: $chip-bg;
+  pointer-events: none;
+
+  span {
+    font-family: $font-stack;
+    font-weight: 400;
+    font-size: du(56.479);
+    line-height: 0.88;
+    text-transform: uppercase;
+    color: #fff;
+    white-space: nowrap;
+  }
+}
+
+.en__chip-dot {
+  width: du(49.908);
+  height: du(49.908);
+  flex: none;
+}
+
+.en__headline {
+  position: absolute;
+  left: du(161);
+  top: du(409);
+  width: du(1344);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(120);
+  line-height: 0.94;
+  text-shadow: 0 du(14.799) du(49.329) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  pointer-events: none;
+}
+
+/// Mini cover card (21770:2827): outer box centres the rotated 555.752x707.665
+/// card, matching the artBox/artImg "outer positions, inner rotates" shape —
+/// just with a whole subtree standing in for a single image.
+.en__mini {
+  pointer-events: none;
+}
+
+.en__mini-card {
+  width: du(555.752);
+  height: du(707.665);
+  flex: none;
+  position: relative;
+  transform: rotate(6.18deg);
+  box-shadow:
+    du(4.048) du(13.3) du(38.282) rgba(255, 118, 204, 0.54),
+    du(-1.658) du(2.487) du(15.087) rgba(189, 60, 141, 0.58);
+}
+
+.en__mini-edge {
+  position: absolute;
+  left: du(339.393);
+  top: 0;
+  width: du(216.359);
+  height: du(707.665);
+  background: linear-gradient(
+    270deg,
+    #b26c3b 0%,
+    #2c2c2c 0.577%,
+    #b26c3b 1.2906%,
+    #2c2c2c 2.1141%,
+    #b26c3b 2.9926%,
+    #2c2c2c 3.871%,
+    #562c26 5.573%
+  );
+}
+
+.en__mini-body {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: du(546.63);
+  height: du(707.665);
+  background: $page-bg;
+  overflow: clip;
+}
+
+.en__mini-fade1 {
+  position: absolute;
+  left: du(-66.47);
+  top: du(360.75);
+  width: du(788.399);
+  height: du(346.883);
+  background: linear-gradient(179.365deg, rgba(0, 10, 18, 0) 66.741%, #{$page-bg} 98.77%);
+}
+
+.en__mini-vip-club {
+  position: absolute;
+  left: du(26.425);
+  top: du(39.5);
+  width: du(455.956);
+  font-family: $font-stack;
+  font-weight: 900;
+  font-size: du(95.026);
+  line-height: 0.88;
+  color: #fff;
+  text-shadow: 0 du(5.779) du(19.262) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.en__mini-glow-blob {
+  position: absolute;
+  left: du(46.98);
+  top: du(93.58);
+  width: du(552.342);
+  height: du(632.655);
+  background: #ff7eda;
+  mask-image: url('@/assets/pages/cover-mask.webp');
+  mask-size: du(714.047) du(714.047);
+  mask-position: du(-0.208) du(-18.859);
+  mask-repeat: no-repeat;
+  -webkit-mask-image: url('@/assets/pages/cover-mask.webp');
+  -webkit-mask-size: du(714.047) du(714.047);
+  -webkit-mask-position: du(-0.208) du(-18.859);
+  -webkit-mask-repeat: no-repeat;
+}
+
+.en__mini-astronaut {
+  position: absolute;
+  left: du(52.835);
+  top: du(81.72);
+  width: du(629.28);
+  height: du(629.28);
+  background-image: url('@/assets/pages/cover-astronaut.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scaleX(-1);
+}
+
+.en__mini-screen {
+  mix-blend-mode: screen;
+}
+
+.en__mini-fade2 {
+  position: absolute;
+  left: du(-66.3);
+  top: du(574.47);
+  width: du(788.357);
+  height: du(133.289);
+  background: linear-gradient(180deg, rgba(0, 10, 18, 0) 0%, #{$page-bg} 100%);
+}
+
+.en__mini-journal {
+  position: absolute;
+  left: du(503.385);
+  top: du(48.28);
+  width: du(21);
+  height: du(115);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+
+  span {
+    display: block;
+    font-family: $font-stack;
+    font-weight: 500;
+    font-size: du(24.245);
+    line-height: 0.88;
+    color: #fff;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transform: rotate(-90deg);
+  }
+}
+
+.en__mini-issue {
+  position: absolute;
+  left: du(29.18);
+  top: du(127.77);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(36.368);
+  line-height: 0.8263;
+  color: #ed58bf;
+  text-shadow: 0 du(12.315) du(41.05) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  span {
+    display: block;
+  }
+}
+
+.en__mini-featuring {
+  position: absolute;
+  left: du(29.17);
+  top: du(574.7);
+  font-family: $font-stack;
+  font-weight: 500;
+  font-size: du(24.245);
+  line-height: 0.979;
+  color: #fff;
+  text-shadow: 0 du(8.175) du(27.251) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.en__mini-name {
+  position: absolute;
+  left: du(29.18);
+  top: du(594.77);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(62);
+  line-height: 1.3;
+  text-shadow: 0 du(2.282) du(7.607) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+///
+/// Final. Figma 21770:4465.
+///
+/// Reuses page-edge.svg but as a full mirrored border frame, not the usual
+/// right-only sliver — override, scoped to this page via the `.pf` class
+/// PageChrome falls through onto its root (Vue attribute fallthrough).
+.pf .page__edge {
+  left: 32.09%;
+  right: 32.09%;
+  top: 1.13%;
+  bottom: 1.13%;
+  width: auto;
+  height: auto;
+  transform: scaleX(-1);
+}
+
+.pf__warp {
+  left: du(-317.5);
+  top: du(-445);
+  width: du(2078);
+  height: du(2758);
+  object-fit: cover;
+  opacity: 0.35;
+  mix-blend-mode: plus-lighter;
+}
+
+.pf__subhead {
+  position: absolute;
+  left: 50%;
+  top: du(931.5);
+  transform: translateX(-50%);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(128);
+  line-height: 0.94;
+  text-align: center;
+  text-shadow: 0 du(33.72) du(112.401) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  pointer-events: none;
+
+  span {
+    display: block;
+  }
+}
+
+///
+/// Sponsor. Figma 21770:4140.
+///
+.sp__mascot {
+  position: absolute;
+  left: du(234);
+  top: du(667);
+  width: du(890);
+  height: du(1748);
+  overflow: hidden;
+  box-shadow:
+    0 du(15) du(22.3) rgba(255, 0, 212, 0.27),
+    inset du(12) du(40) du(20.9) rgba(255, 0, 212, 0.52);
+  pointer-events: none;
+
+  img {
+    position: absolute;
+    left: 0;
+    top: -28.38%;
+    width: 141.91%;
+    height: 128.38%;
+    max-width: none;
+    object-fit: cover;
+  }
+}
+
+.sp__subhead {
+  position: absolute;
+  left: 50%;
+  top: du(379);
+  transform: translateX(-50%);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(96);
+  line-height: 0.94;
+  text-align: center;
+  text-shadow: 0 du(33.72) du(112.401) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  pointer-events: none;
+
+  span {
+    display: block;
+  }
+}
+
+///
+/// Space Milk. Figma 21770:4217.
+///
+.sm__ellipse {
+  position: absolute;
+  pointer-events: none;
+  mix-blend-mode: hard-light;
+}
+
+.sm__ellipse--a {
+  left: du(-208);
+  top: du(433);
+  width: du(1040);
+  height: du(1040);
+}
+
+.sm__ellipse--b {
+  left: du(113);
+  top: du(537);
+  width: du(644);
+  height: du(644);
+}
+
+.sm__ellipse--c {
+  left: du(480);
+  top: du(94);
+  width: du(554);
+  height: du(644);
+}
+
+.sm__cow {
+  position: absolute;
+  left: du(119);
+  top: du(670);
+  width: du(1349);
+  height: du(1777);
+  overflow: hidden;
+  pointer-events: none;
+  box-shadow:
+    0 du(21) du(81.2) rgba(255, 0, 212, 0.56),
+    0 du(15) du(22.3) rgba(255, 0, 212, 0.27),
+    inset du(30) du(44) du(26.4) rgba(255, 0, 212, 0.36);
+
+  img {
+    position: absolute;
+    left: 0;
+    top: -34.84%;
+    width: 100%;
+    height: 134.84%;
+    max-width: none;
+    object-fit: cover;
+  }
+}
+
+.sm__logo {
+  pointer-events: none;
+
+  img {
+    box-shadow:
+      0 du(21) du(81.5) rgba(255, 199, 246, 0.33),
+      0 du(4) du(26.6) rgba(255, 0, 212, 0.46),
+      inset du(15) du(15) du(17.9) rgba(255, 204, 246, 0.77);
+  }
+}
+
+.sm__count {
+  position: absolute;
+  left: du(46);
+  top: du(100);
+  width: du(661);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(250);
+  line-height: 0.94;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  pointer-events: none;
+}
+
+.sm__packs-of {
+  position: absolute;
+  right: du(1443 - 658);
+  top: du(343);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(80);
+  line-height: 1.4169;
+  text-align: right;
+  text-shadow: 0 du(10.497) du(34.989) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+///
+/// Joke. Figma 21770:4318.
+///
+.joke__rocket {
+  left: du(311);
+  top: du(1026);
+  width: du(863.699);
+  height: du(1098);
+  object-fit: cover;
+}
+
+.joke__subhead {
+  position: absolute;
+  left: 50%;
+  top: du(830.34);
+  transform: translateX(-50%);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(128);
+  line-height: 0.94;
+  text-align: center;
+  text-shadow: 0 du(33.72) du(112.401) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  pointer-events: none;
+
+  span {
+    display: block;
+  }
+}
+
+///
+/// Gift. Figma 21770:4367.
+///
+/// Radial bloom behind the helmet (21945:3037, Ellipse 3277): 1852.189 square
+/// centred on the "image" frame, hard-light. Shares bloom-tight.svg with
+/// Space Milk — same gradient, different box.
+.gift__bloom {
+  position: absolute;
+  left: du(-206.77);
+  top: du(240.91);
+  width: du(1852.189);
+  height: du(1852.189);
+  mix-blend-mode: hard-light;
+  pointer-events: none;
+}
+
+/// Ring halo over the helmet (21945:3211, Ellipse 3274).
+.gift__ring {
+  mix-blend-mode: screen;
+}
+
+.gift__headline {
+  position: absolute;
+  left: 50%;
+  top: du(183.21);
+  transform: translateX(-50%);
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(112);
+  line-height: 0.94;
+  text-align: center;
+  text-shadow: 0 du(33.72) du(112.401) rgba(0, 0, 0, 0.37);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  pointer-events: none;
+
+  span {
+    display: block;
+  }
+}
+
+/// Multiplier Moment: gradient rule under the amount (21811:3563 area). Same
+/// box as Headline Win's divider but the mock reverses the stops — fades IN
+/// left to right instead of out, since the content below is centred rather
+/// than right-aligned.
+.mm__divider {
+  position: absolute;
+  left: du(108);
+  top: du(729);
+  width: du(1227);
+  height: du(9);
+  background: linear-gradient(90deg, rgba(255, 255, 123, 0) 0%, #{$accent} 100%);
 }

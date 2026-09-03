@@ -8,6 +8,14 @@ import PageVipStatus from './PageVipStatus.vue'
 import PageTopSportSignal from './PageTopSportSignal.vue'
 import PagePlayersPick from './PagePlayersPick.vue'
 import PageHeadlineWin from './PageHeadlineWin.vue'
+import PageMultiplierMoment from './PageMultiplierMoment.vue'
+import PageCover from './PageCover.vue'
+import PageEditorsNote from './PageEditorsNote.vue'
+import PageFinal from './PageFinal.vue'
+import PageSponsor from './PageSponsor.vue'
+import PageSpaceMilk from './PageSpaceMilk.vue'
+import PageJoke from './PageJoke.vue'
+import PageGift from './PageGift.vue'
 
 /**
  * Page registry. The player and the lab both resolve through this, so a page
@@ -26,6 +34,14 @@ export const PAGE_COMPONENTS = {
   top_sport_signal: PageTopSportSignal,
   players_pick: PagePlayersPick,
   headline_win: PageHeadlineWin,
+  multiplier_moment: PageMultiplierMoment,
+  cover: PageCover,
+  editors_note: PageEditorsNote,
+  final: PageFinal,
+  sponsor: PageSponsor,
+  space_milk: PageSpaceMilk,
+  joke: PageJoke,
+  gift: PageGift,
 }
 
 /** @param {string} page page id from slides.js */

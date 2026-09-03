@@ -259,3 +259,65 @@
   font: 400 du(52) / 1.2 $font-stack;
   color: #ff9edb;
 }
+
+///
+/// Promo code (no Figma reference — see JPromoCode.vue's doc comment).
+/// PROVISIONAL: not measured from a mock, just the project's existing chip
+/// and tile tokens reused. Replace when real artwork lands.
+///
+.j-promo {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: du(12);
+  padding: du(28) du(56);
+  border: du(3) dashed $accent;
+  border-radius: du(24);
+  background: $chip-bg;
+}
+
+.j-promo__label {
+  font-family: $font-stack;
+  font-weight: 400;
+  font-size: du(32);
+  line-height: 1;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.j-promo__code {
+  font-family: $font-stack;
+  font-weight: 800;
+  font-size: du(56);
+  line-height: 1;
+  letter-spacing: du(4);
+  text-transform: uppercase;
+  background-image: $accent-grad;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+///
+/// Scene CTA (21770:4456). Not mounted by any page — see JCta.vue's doc
+/// comment. Styled now so the component is ready once the stage wiring for
+/// frames 22-25 lands.
+///
+.j-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: du(40.137) du(80.274);
+  border: 0;
+  border-radius: du(64.858);
+  background: $accent-grad;
+  font-family: $font-stack;
+  font-weight: 900;
+  font-size: du(58);
+  letter-spacing: du(1.74);
+  line-height: 1;
+  text-transform: uppercase;
+  color: #000a12;
+  white-space: nowrap;
+  cursor: pointer;
+}
