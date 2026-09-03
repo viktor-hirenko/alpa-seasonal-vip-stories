@@ -3,39 +3,114 @@
 ////
 /// Flying 3D objects. ADR-0006.
 ///
+/// TWO nested elements per object, for the same reason the journal has
+/// `.journal-pos` inside `.journal-hover`:
+///   .fly-obj       100% x 100% of the stage, transform-origin 0 0, so the
+///                  anchors from flyObjects.js drop in verbatim at any viewport.
+///   .fly-obj__box  the object's own box, centred on the parent's origin with
+///                  negative margins (never `translate(-50%)` — GSAP owns the
+///                  transform here, for the rotation and the size).
+///
+/// THE TABLE IS IN SCREEN SPACE, AND DEPTH IS DIVIDED BACK OUT.
+/// Every number in flyObjects.js was measured off the reference clip as a
+/// position and a size ON SCREEN. Under a perspective camera an object at depth
+/// `z` is drawn k = P / (P - z) times larger and k times further from the
+/// centre, so to land it exactly where the reference has it both its anchor and
+/// its box are divided by k first:
+///
+///   --fo-ik = 1/k = (P - z) / P
+///   screen x = 50 + (--fo-x - 50) * --fo-ik * k = --fo-x     <- identity
+///
+/// That leaves `--fo-z` doing exactly ONE job: telling the compositor which
+/// side of the journal the object is on. Which is the job we actually need it
+/// for — see FLY_Z in flyObjects.js — and it is why the earlier version of this
+/// file went wrong. There, `z` set the apparent size as well, so every object
+/// was as big as its depth happened to make it, and matching the reference's
+/// sizes and its occlusion at the same time was not possible.
+///
+/// `--fo-z` and `--fo-size` are therefore STATIC per object (set by FlyObject),
+/// and `--fo-ik` with them. GSAP animates `--fo-x` / `--fo-y` here and
+/// `rotationZ` / `scale` on the box, so nothing on this element relayouts per
+/// frame.
+///
+/// WHY THE POSITION STILL GOES THROUGH CUSTOM PROPERTIES rather than GSAP's own
+/// x/y: `--fo-z` is in DESIGN px and GSAP's `z` is in REAL px. Hand GSAP
+/// `z: -600` and it means 600 real px against a camera that is 1800 DESIGN px
+/// away, which is a different depth on every viewport. Routing the whole
+/// transform through variables that CSS multiplies by `--u` is the only version
+/// that is correct at every size — and CSS cannot own only part of a transform,
+/// so it owns all of it.
+///
+/// The cost is that this transform is not composited on WebKit (custom
+/// properties never are). It is paid on an empty full-stage div whose subtree is
+/// one image, and the image already has a `filter` on it, so it was never going
+/// to be a cheap layer anyway.
+///
 /// The exported assets carry NO rim glow — in the Figma file the magenta halo
 /// was a separate image fill stacked together with the opaque navy backdrop we
 /// had to discard (see _context/33-fly-objects.md). So the glow is CSS.
 ///
-/// It goes on the inner <img>, NOT on `.fly-obj`: `filter` is a grouping
-/// property, it forces `transform-style: flat` and creates a containing block,
-/// which would pull the object out of the shared 3D scene and break depth
-/// sorting against the journal.
+/// It goes on the inner <img>, NOT on either transform layer: `filter` is a
+/// grouping property, it forces `transform-style: flat` and creates a
+/// containing block, which would pull the object out of the shared 3D scene and
+/// break depth sorting against the journal.
 ////
 
 .fly-obj {
   position: absolute;
   left: 0;
   top: 0;
-  width: calc(var(--fo-size, 500) * var(--u));
-  height: calc(var(--fo-size, 500) * var(--u));
-  margin-left: calc(var(--fo-size, 500) * -0.5 * var(--u));
-  margin-top: calc(var(--fo-size, 500) * -0.5 * var(--u));
-  transform-origin: 50% 50%;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
   transform-style: preserve-3d;
+
+  // Screen position, percent of the STAGE (this element is 100% x 100% of it).
+  // GSAP owns these two numbers and nothing else here.
+  --fo-x: 50;
+  --fo-y: 50;
+  // Depth, design px towards the camera. Static; set by FlyObject from FLY_Z.
+  --fo-z: 0;
+  // 1/k — see the note above. Static, because --fo-z is.
+  --fo-ik: calc((var(--persp) - var(--fo-z)) / var(--persp));
+
+  transform: translate3d(
+    calc((50 + (var(--fo-x) - 50) * var(--fo-ik)) * 1%),
+    calc((50 + (var(--fo-y) - 50) * var(--fo-ik)) * 1%),
+    calc(var(--fo-z) * var(--u))
+  );
+
+  // Switched from the tick by buildFlyLayer, not by the timeline — see the note
+  // there. Hidden is the correct resting state: an object is off screen for
+  // most of the story.
   visibility: hidden;
-  // No filter, no opacity < 1, no overflow here.
+  // No filter, no opacity < 1, no overflow on this element or the box.
 }
 
-.fly-obj--live {
-  visibility: visible;
+.fly-obj__box {
+  position: absolute;
+  left: 0;
+  top: 0;
+  // Laid out ONCE at the flight's largest size; GSAP scales down from there, so
+  // the per-frame work is a transform and never a layout.
+  width: calc(var(--fo-base, 400) * var(--fo-ik) * var(--u));
+  height: calc(var(--fo-base, 400) * var(--fo-ik) * var(--u));
+  margin-left: calc(var(--fo-base, 400) * var(--fo-ik) * -0.5 * var(--u));
+  margin-top: calc(var(--fo-base, 400) * var(--fo-ik) * -0.5 * var(--u));
+  transform-origin: 50% 50%;
+  transform-style: preserve-3d;
 }
 
 .fly-obj__art {
+  display: block;
   width: 100%;
   height: 100%;
+  // The sprites are cropped square around their own alpha by
+  // scripts/fly-sprites.mjs, so `contain` and `fill` agree and `--fo-base` IS
+  // the object's extent on screen. Before that crop the art floated inside a
+  // 700 px frame at anything from 48 % to 88 % of it, which is most of why the
+  // first pass came out at roughly half the reference's sizes.
   object-fit: contain;
-  filter:
-    drop-shadow(0 0 du(18) rgba(255, 118, 204, 0.55))
-    drop-shadow(0 0 du(46) rgba(255, 118, 204, 0.3));
+  filter: drop-shadow(0 0 du(14) rgba(255, 118, 204, 0.5))
+    drop-shadow(0 0 du(38) rgba(255, 118, 204, 0.28));
 }

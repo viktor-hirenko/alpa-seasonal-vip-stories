@@ -40,7 +40,7 @@
                 />
               </div>
             </JournalStage>
-            <div class="fly-layer" />
+            <FlyLayer />
           </div>
 
           <div class="stage__flash" />
@@ -85,6 +85,13 @@
           @click="toggleJournal"
         >
           journal {{ journalVisible ? 'on' : 'off' }}
+        </button>
+        <button
+          class="lab__btn"
+          :class="{ 'lab__btn--on': !objectsVisible }"
+          @click="toggleObjects"
+        >
+          objects {{ objectsVisible ? 'on' : 'off' }}
         </button>
       </div>
 
@@ -171,8 +178,10 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { gsap } from 'gsap'
 import JournalStage from '@/components/Journal/JournalStage.vue'
+import FlyLayer from '@/components/Journal/FlyLayer.vue'
 import { resolvePage } from '@/components/pages/index.js'
-import { resolveTargets, setPose } from '@/journal3d'
+import { buildFlyLayer, resolveTargets, setPose } from '@/journal3d'
+import { FLIGHTS } from '@/story/flyAssets.js'
 import { useJournalFit } from '@/composables/useJournalFit.js'
 import { provideStoryData } from '@/composables/useStoryData.js'
 import * as presets from '@/journal3d/presets.js'
@@ -241,6 +250,18 @@ const showPanel = ref(qStr('panel', '1') !== '0')
 const livePlay = qStr('play', '0') === '1'
 const hoverOn = ref(false)
 const journalVisible = ref(qStr('journal', '1') !== '0')
+// The reference clips have the objects BAKED IN, so with a video underlay they
+// double: one baked, one from the DOM. That is the point — a correct flight
+// reads as one object, an error as two — but the toggle is needed to read the
+// baked ones on their own. `?objects=0` for that.
+const objectsVisible = ref(qStr('objects', '1') !== '0')
+/**
+ * Park everything at an ABSOLUTE video second, overriding the slide/lead pair.
+ * The slide parking is the right tool for a pose (it knows where the cut is);
+ * a flight is not tied to a cut, so `?t=14` is the addressable unit for one.
+ * `fly:check` drives this: it is the only parameter it needs.
+ */
+const AT_TIME = Q.has('t') ? qNum('t', 0) : null
 const activePreset = ref('')
 const params = reactive({})
 const pose = reactive({
@@ -262,6 +283,8 @@ const bgSrc = computed(() =>
 let targets = null
 let current = null
 let hoverTl = null
+let fly = null
+let flyFrame = null
 
 const readout = computed(() => {
   const u = targets ? getComputedStyle(targets.stage).getPropertyValue('--u').trim() : '?'
@@ -398,6 +421,39 @@ function toggleJournal() {
   if (targets) gsap.set(targets.pos, { autoAlpha: journalVisible.value ? 1 : 0 })
 }
 
+function toggleObjects() {
+  objectsVisible.value = !objectsVisible.value
+  if (targets?.flyLayer) targets.flyLayer.style.display = objectsVisible.value ? '' : 'none'
+}
+
+/**
+ * FLYING OBJECTS, driven straight off the backdrop's clock.
+ *
+ * The lab has no master timeline, so the flight timeline is seeked directly to
+ * `video.currentTime` every frame. That makes `?bg=clean&play=1` the fidelity
+ * check for MOTION: the clean-bg clip has the objects baked in and no journal,
+ * so a correct flight and its baked twin read as one object and any error shows
+ * up as a doubled silhouette, the same way `bg=preview` reads a pose.
+ *
+ * With `play=0` (the default) the video is parked at `slide.at + lead` and so is
+ * the flight timeline, which is what makes a probe screenshot reproducible.
+ */
+function syncFly() {
+  if (!fly) return
+  const t = AT_TIME ?? videoRef.value?.currentTime ?? (slide.value?.at ?? 0) + SEEK_LEAD
+  fly.tl.time(t)
+  fly.applyAt(t)
+}
+
+function startFlySync() {
+  if (flyFrame != null) return
+  const loop = () => {
+    syncFly()
+    flyFrame = requestAnimationFrame(loop)
+  }
+  flyFrame = requestAnimationFrame(loop)
+}
+
 /**
  * Park the backdrop just after the current slide's cut and HOLD it.
  *
@@ -460,7 +516,7 @@ function setBg(id) {
     const v = videoRef.value
     if (!v) return
     const seek = () => {
-      v.currentTime = (slide.value?.at ?? 0) + SEEK_LEAD
+      v.currentTime = AT_TIME ?? (slide.value?.at ?? 0) + SEEK_LEAD
       if (livePlay) v.play().catch(() => {})
       else v.pause()
     }
@@ -498,6 +554,11 @@ onMounted(() => {
   if (!journalVisible.value) gsap.set(targets.pos, { autoAlpha: 0 })
   if (bg.value !== 'grid') setBg(bg.value)
 
+  fly = buildFlyLayer(targets.flyLayer, FLIGHTS)
+  if (!objectsVisible.value) targets.flyLayer.style.display = 'none'
+  syncFly()
+  startFlySync()
+
   // Debug hook — DEV only, same shape as the story's own.
   if (import.meta.env.DEV) {
     window.__lab = {
@@ -517,6 +578,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   killCurrent()
   if (hoverTl) hoverTl.kill()
+  if (flyFrame != null) cancelAnimationFrame(flyFrame)
+  fly?.tl.kill()
   if (window.__lab) delete window.__lab
 })
 </script>

@@ -12,6 +12,9 @@
     "video:prod": "bash scripts/encode-video.sh prod",
     "frames": "bash scripts/extract-frames.sh",
     "pose:check": "node scripts/probe.mjs --all",
+    "fly:check": "node scripts/probe.mjs --fly",
+    "fly:measure": "node scripts/fly-measure.mjs",
+    "fly:sprites": "node scripts/fly-sprites.mjs",
     "check-locales": "node scripts/check-locales.mjs",
     "fmt": "prettier -w .",
     "probe": "node scripts/probe.mjs"

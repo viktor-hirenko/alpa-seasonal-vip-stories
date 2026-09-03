@@ -35,7 +35,7 @@
           </div>
         </JournalStage>
 
-        <div class="fly-layer" />
+        <FlyLayer />
       </div>
 
       <div class="stage__flash" />
@@ -77,6 +77,7 @@
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import JournalStage from '@/components/Journal/JournalStage.vue'
+import FlyLayer from '@/components/Journal/FlyLayer.vue'
 import StoryHeader from '@/components/UI/StoryHeader.vue'
 import StoryArrow from '@/components/UI/StoryArrow.vue'
 import TapZones from '@/components/UI/TapZones.vue'

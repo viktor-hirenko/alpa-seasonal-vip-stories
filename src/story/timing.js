@@ -78,6 +78,7 @@ export const TIMING = {
     stagger: 0.8,
   },
 
+
   /** Journal recedes before the flash. */
   recede: { at: 83.03, dur: 5 },
 

@@ -12,6 +12,8 @@ import {
   hover,
 } from '@/journal3d/presets.js'
 import { setPose } from '@/journal3d/poseTween.js'
+import { buildFlyLayer } from '@/journal3d/flyLayer.js'
+import { FLIGHTS } from '@/story/flyAssets.js'
 
 /**
  * Every preset returns a PAUSED timeline so the lab can fire it standalone.
@@ -36,9 +38,18 @@ const nest = (parent, child, at) => parent.add(child.paused(false), at)
 export function buildStoryTimeline(targets, ctx) {
   const { onUpdate } = ctx
 
+  // The 30 flights of flyObjects.js, already positioned at absolute timecodes.
+  // Their visibility is a pure function of the clock and is applied from this
+  // timeline's onUpdate, which fires on every render including a seek — see
+  // flyLayer.js for why it cannot live on the timeline itself.
+  const fly = buildFlyLayer(targets.flyLayer, FLIGHTS)
+
   const tl = gsap.timeline({
     paused: true,
-    onUpdate,
+    onUpdate: () => {
+      fly.applyAt(tl.time())
+      onUpdate?.()
+    },
   })
 
   // Face geometry changes at the cover -> data-page handover. It is a layout
@@ -72,6 +83,9 @@ export function buildStoryTimeline(targets, ctx) {
     nest(tl, rePose(targets, from, slide.pose, { flip: true }), at)
   })
 
+  // Nested at 0 because the flight timeline is already in absolute video time.
+  nest(tl, fly.tl, 0)
+
   const f23 = SLIDES.find(s => s.frame === 23)
   const f24 = SLIDES.find(s => s.frame === 24)
   nest(tl, recede(targets, f23.pose, f24.pose), snap(TIMING.recede.at))
@@ -85,5 +99,5 @@ export function buildStoryTimeline(targets, ctx) {
   const hoverTl = hover(targets)
   hoverTl.pause()
 
-  return { tl, hoverTl }
+  return { tl, hoverTl, fly }
 }

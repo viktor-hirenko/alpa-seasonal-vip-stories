@@ -13,6 +13,7 @@
 export { resolveTargets } from './resolveTargets.js'
 export { posVars, boxVars, setPose, setFace } from './poseTween.js'
 export { flyingObject } from './flyingObject.js'
+export { buildFlyLayer } from './flyLayer.js'
 export * from './presets.js'
 export { EASE } from '@/story/easing.js'
 export { TIMING, HOVER_AMP, FPS, snap, SYNC_EPSILON } from '@/story/timing.js'

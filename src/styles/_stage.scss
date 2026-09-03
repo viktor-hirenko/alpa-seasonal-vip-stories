@@ -18,7 +18,11 @@
 ///   .journal-hover  >> GSAP owns rotationX/Y/Z, yPercent, scale (idle drift) <<
 ///   .journal-box    >> GSAP owns rotationX/Y/Z, scale, z (pose) <<
 ///   .jface--* .jedge--*   CSS static; GSAP may touch `opacity` only
-///   .fly-obj        >> GSAP owns xPercent/yPercent/z/rotation*/scale <<
+///   .fly-obj        CSS owns `transform`; GSAP owns --fo-x / --fo-y ONLY
+///   .fly-obj__box   >> GSAP owns rotationZ and scale <<
+///                   NEVER rotationX/rotationY here: the objects are flat
+///                   billboards and a 3D tilt foreshortens them, which is the
+///                   "squashed" the first pass shipped. See _fly.scss.
 ///
 /// 3D-FLATTENING CHECKLIST — none of these may appear on an element BETWEEN
 /// .stage-3d and a face, or the browser flattens the scene and the side faces
@@ -159,6 +163,12 @@
 /// them against it for free: an object nearer the camera passes in FRONT of the
 /// journal, a farther one behind. No z-index bookkeeping, correct under any
 /// seek. See ADR-0006.
+///
+/// NOTHING here may create a stacking context — not `z-index`, not `opacity`,
+/// not `isolation`. The layer is a plain sibling of `.journal-pos` and must
+/// stay one: give either of them a z-index and the browser stops sorting them
+/// against each other by depth and starts sorting them by paint order, which
+/// is precisely the bookkeeping ADR-0006 exists to avoid.
 ///
 .fly-layer {
   position: absolute;

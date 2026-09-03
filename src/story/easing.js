@@ -53,8 +53,17 @@ export const EASE = {
   /** Camera-ward zoom for the simple preset from the brief. */
   zoom: 'power2.in',
 
-  /** Objects drift at near-constant speed; a tiny ease-out reads as air drag. */
-  fly: 'power1.out',
+  /**
+   * FLYING OBJECTS. One ease, and it is `none` on purpose.
+   *
+   * Each flight in flyObjects.js is a polyline of rows measured off the clip,
+   * kept exactly where a straight line between neighbours stops reproducing the
+   * reference. The acceleration is therefore already IN the rows — the recede
+   * at the end of a flight is a run of rows that get further apart, not a curve
+   * applied to two anchors. Easing each segment on top of that would ripple the
+   * speed and stop the object dead at every row.
+   */
+  flyPath: 'none',
 
   /** The brief's simple entrance. */
   backOut: 'back.out(1.5)',
