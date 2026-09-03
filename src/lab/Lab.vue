@@ -24,7 +24,11 @@
               <template #back>
                 <div class="lab-back"><span>BACK COVER</span></div>
               </template>
-              <div class="journal-page journal-page--active">
+              <div
+                class="journal-page journal-page--active"
+                :data-page="shownSlide?.page"
+                :data-face="face"
+              >
                 <!-- The REAL page, through the same registry the player uses,
                      so the lab is the authoring surface for page work too.
                      Pages not yet built fall through to PageStub. -->
@@ -165,11 +169,12 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { gsap } from 'gsap'
 import JournalStage from '@/components/Journal/JournalStage.vue'
 import { resolvePage } from '@/components/pages/index.js'
 import { resolveTargets, setPose } from '@/journal3d'
+import { useJournalFit } from '@/composables/useJournalFit.js'
 import * as presets from '@/journal3d/presets.js'
 import { SLIDES } from '@/story/slides.js'
 import { DEPTH, PAGE_SCALE } from '@/story/journalGeometry.js'
@@ -466,6 +471,13 @@ function copyAsData() {
 watch(persp, v => {
   if (stageRef.value) stageRef.value.style.setProperty('--persp', String(v))
 })
+
+// The lab is the authoring surface for page work, so it fits text exactly the
+// way the player does — otherwise a screenshot taken here would not show what
+// ships. It mounts one page at a time, so switching slides needs a re-fit;
+// nothing else does (ADR-0004).
+const { refit } = useJournalFit(stageRef)
+watch(shownSlide, () => nextTick().then(() => refit('lab-slide')))
 
 onMounted(() => {
   targets = resolveTargets(stageRef.value)

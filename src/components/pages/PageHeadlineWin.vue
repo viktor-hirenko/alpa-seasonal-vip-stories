@@ -17,7 +17,14 @@
 
     <!-- Heading is pinned LEFT at 108 and set at 82 px with line-height 1.15,
          three explicit lines — not the usual centred 96/1.08. -->
-    <JHeading :text="copy.headline" :top="389" :size="82" align="left" :left="108" :line-height="1.15" />
+    <JHeading
+      :text="copy.headline"
+      :top="389"
+      :size="82"
+      align="left"
+      :left="108"
+      :line-height="1.15"
+    />
 
     <!-- Digits sit to the right of the heading, centred on 984.46. -->
     <JDigitTiles :value="amount" :height="120.805" :top="409.195" :center-x="984.46" />
@@ -25,7 +32,11 @@
     <!-- Currency and game name are right-aligned to 1334.38. -->
     <JCurrency :top="585" :size="82" align="right" :right="1334.38">{{ currency }}</JCurrency>
     <div class="hw__divider" />
-    <JValue :value="gameName" :top="787" :size="96" align="right" :right="1334.38" />
+    <!-- The mock's game-name box is a fixed 1230 wide ending at 1334.38
+         (21770:3331), which is the budget useJournalFit shrinks into. Stating
+         the width changes nothing while the name fits: the box is
+         right-anchored either way. -->
+    <JValue :value="gameName" :top="787" :size="96" align="right" :right="1334.38" :width="1230" />
 
     <img class="page__art hw__coins" :src="coins" alt="" />
     <JGameThumb :src="gameImage" :name="gameName" :top="947" />

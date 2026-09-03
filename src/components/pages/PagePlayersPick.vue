@@ -18,8 +18,10 @@
 
     <JChip :top="129">{{ copy.chip }}</JChip>
     <JHeading :text="copy.headline" :top="389" />
-    <!-- Game name: 96 px accent gradient, same treatment as the value labels. -->
-    <JValue :value="gameName" :top="620" :size="96" />
+    <!-- Game name: 96 px accent gradient, same treatment as the value labels.
+         The mock's box is 848 wide at x=297 — page-centred, so a max-width
+         states it exactly, and it is the budget useJournalFit fits into. -->
+    <JValue :value="gameName" :top="620" :size="96" :max-width="848" />
     <JGameThumb :src="gameImage" :name="gameName" :top="841" />
   </PageChrome>
 </template>

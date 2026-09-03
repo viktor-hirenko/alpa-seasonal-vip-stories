@@ -13,7 +13,9 @@ export function installStoryDebugHook(ctx) {
   if (!import.meta.env.DEV) return
   const { tl, hoverTl, videoPlayer, segments, seek, targets } = ctx
 
-  window.__story = {
+  // Merge rather than assign: useJournalFit parks its report on the same
+  // object, and the two are installed independently.
+  window.__story = Object.assign(window.__story || {}, {
     tl,
     hoverTl,
     get video() {
@@ -35,5 +37,5 @@ export function installStoryDebugHook(ctx) {
         jh: getComputedStyle(targets.stage).getPropertyValue('--jh').trim(),
       }
     },
-  }
+  })
 }

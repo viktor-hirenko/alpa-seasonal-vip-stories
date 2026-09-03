@@ -34,7 +34,9 @@
       </p>
 
       <p class="cover__featuring">Featuring:</p>
-      <p class="cover__name">{{ playerName }}</p>
+      <!-- The one text on this page that takes arbitrary player input, so it
+           is the one that carries a fit role (see useJournalFit). -->
+      <p class="cover__name" data-fit-role="value">{{ playerName }}</p>
     </div>
   </div>
 </template>

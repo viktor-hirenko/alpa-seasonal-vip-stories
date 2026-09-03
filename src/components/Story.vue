@@ -23,6 +23,8 @@
             :key="seg.page"
             class="journal-page"
             :class="{ 'journal-page--active': seg.index === activeSegment }"
+            :data-page="seg.page"
+            :data-face="seg.face"
           >
             <component
               :is="resolvePage(seg.page)"
@@ -84,6 +86,7 @@ import { buildStoryTimeline } from '@/animations/buildStoryTimeline.js'
 import { installStoryDebugHook } from '@/animations/installStoryDebugHook.js'
 import { useStoryPlayback } from '@/composables/useStoryPlayback.js'
 import { useStoryBridge } from '@/composables/useStoryBridge.js'
+import { useJournalFit } from '@/composables/useJournalFit.js'
 import { STORY_SEGMENTS } from '@/story/slides.js'
 
 const segments = STORY_SEGMENTS
@@ -112,6 +115,13 @@ const hoverTlRef = shallowRef(null)
 let targets = null
 
 const { notify, closeStory } = useStoryBridge({ endLink })
+
+// Called from the setup body, not from onMounted: it registers onScopeDispose,
+// and an effect scope is only current while setup runs. It waits for
+// document.fonts.ready itself and then fits all 17 pages in one sweep — they
+// are all mounted and merely `visibility: hidden`, so they are all measurable
+// (ADR-0004, ADR-0008).
+useJournalFit(stageRef)
 
 let playback = {}
 const updateTime = () => playback.updateTime?.()

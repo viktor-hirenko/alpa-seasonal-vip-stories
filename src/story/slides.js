@@ -28,6 +28,9 @@ import { snap, TIMING } from './timing.js'
  */
 
 /** @type {Slide[]} */
+// prettier-ignore — one line per slide keeps this readable AS A TABLE, which is
+// the whole point of the file; it is also the shape the lab's "copy as data"
+// button emits and the shape scripts/probe.mjs greps.
 const RAW = [
   { frame: 4, at: 2.5, page: 'cover', face: 'cover', pose: { rot: 22.95, scale: 1.291, cx: 142.2, cy: 159.1 } },
   { frame: 5, at: 3.3, page: 'cover', face: 'cover', pose: { rot: 22.95, scale: 0.589, cx: 72.4, cy: 92.7 } },
@@ -82,7 +85,8 @@ export const slideByFrame = n => SLIDES.find(s => s.frame === n)
  * bar key off `start`, because that is where the slide's window opens.
  *
  * @typedef {{ page: string, index: number, start: number, cut: number,
- *             end: number, dur: number, firstFrame: number, skip?: string }} Segment
+ *             end: number, dur: number, firstFrame: number, face: 'cover'|'page',
+ *             skip?: string }} Segment
  */
 export const STORY_SEGMENTS = PAGE_ORDER.map((page, index) => {
   const own = SLIDES.filter(s => s.page === page)
@@ -100,6 +104,10 @@ export const STORY_SEGMENTS = PAGE_ORDER.map((page, index) => {
     end,
     dur: end - first.at,
     firstFrame: first.frame,
+    // Which base size the box is laid out at while this page shows. Carried on
+    // the segment because the page stack shares ONE box: a page measured while
+    // another face is current is measured at the wrong width (useJournalFit).
+    face: first.face,
     skip: first.skip,
   }
 })

@@ -228,7 +228,10 @@
 .j-tile__digit {
   font-family: $font-stack;
   font-weight: 800;
-  font-size: calc(var(--tile-font) * var(--tile-fit, 1));
+  // `--tile-font` already carries `--tile-fit`: JDigitTiles multiplies every
+  // derived dimension by it at once, so the row scales as one similar figure.
+  // Multiplying again here would apply the fit twice to the glyph alone.
+  font-size: var(--tile-font);
   line-height: 0.94;
   text-align: center;
   white-space: nowrap;
@@ -755,8 +758,10 @@
   pointer-events: none;
 }
 
-/// Player name (21770:2761): fixed 1058-wide shrink-to-fit box (task 2,
-/// useJournalFit, not wired yet — rendered at fixed size for now).
+/// Player name (21770:2761): fixed 1058-wide shrink-to-fit box, fitted by
+/// useJournalFit under the `value` role. Unlike the JValue slots this element
+/// is both the box and the text, so the fitter reads it as a block —
+/// `scrollWidth` against `clientWidth` — rather than as an inline leaf.
 .cover__name {
   position: absolute;
   left: du(77);
@@ -764,7 +769,7 @@
   width: du(1058);
   font-family: $font-stack;
   font-weight: 800;
-  font-size: du(160);
+  font-size: calc(#{du(160)} * var(--fit, 1));
   line-height: 1.3;
   text-shadow: 0 du(6.024) du(20.081) rgba(0, 0, 0, 0.37);
   text-transform: uppercase;
