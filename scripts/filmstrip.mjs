@@ -143,18 +143,20 @@ class CDP {
 }
 
 /**
- * `keepDrift` decides what the idle drift does, and the choice is not cosmetic.
+ * `keepDrift` — AND WHY IT NO LONGER MATTERS, kept because the flag is in the
+ * register and somebody will reach for it.
  *
- * OFF (default) is right for judging a POSE: the drift is ours alone, it moves
- * the journal by up to 2.5 deg, and leaving it live puts our own noise into
- * every comparison.
+ * There is no idle drift any more. It was ours, not the reference's: an
+ * invented sine that existed to keep the journal alive between slides while the
+ * pose table parked it. The pose is a measured path now (JOURNAL_PATH), so two
+ * of our frames inside one slide differ because the JOURNAL MOVED, which is the
+ * thing being judged — with or without this flag.
  *
- * ON is the only way to judge MOTION. With the drift cleared, every one of our
- * frames inside a settled slide is identical by construction — the journal
- * cannot be seen to move, so "does ours live the way the clip's does" is a
- * question the default parking answers `no` to before looking. `--drift` seeks
- * the drift timeline to the same second instead of neutralising it, so the
- * frame is what the viewer actually sees.
+ * What the flag used to buy: with the drift cleared, every one of our frames
+ * inside a settled slide was identical by construction, so "does ours live the
+ * way the clip's does" got the answer `no` before anyone looked. That trap is
+ * gone with the drift itself. The flag is now a no-op on the journal;
+ * `s.hoverTl` is null and the guard below simply skips.
  */
 const PARK = (t, keepDrift) => `(async () => {
   const s = window.__story, v = s.video
@@ -168,6 +170,8 @@ const PARK = (t, keepDrift) => `(async () => {
     setTimeout(r, 1500)
   })
   s.tl.seek(${t}, false)
+  // ...and the PAGE back too: the wait above let the sync loop advance it.
+  s.applySegment?.(${t})
   if (s.hoverTl) {
     s.hoverTl.pause()
     ${keepDrift ? `s.hoverTl.seek(${t} % s.hoverTl.duration(), false)` : ''}

@@ -229,7 +229,7 @@ const MEASURE_FLY = `(() => {
   return { u, objs }
 })()`
 
-/** Predict the AABB from a pose the same way the pose table was solved. */
+/** Predict the AABB from a pose the same way the storyboard poses were solved. */
 function predict(pose, jw, jh) {
   const t = (pose.rot * Math.PI) / 180
   const c = Math.abs(Math.cos(t)), s = Math.abs(Math.sin(t))
@@ -241,13 +241,17 @@ function predict(pose, jw, jh) {
   }
 }
 
-const slidesSrc = readFileSync(new URL('../src/story/slides.js', import.meta.url), 'utf8')
-const SLIDES = [...slidesSrc.matchAll(
-  /frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:\s*'([^']+)',\s*face:\s*'([^']+)',\s*pose:\s*\{\s*rot:\s*(-?[\d.]+),\s*scale:\s*([\d.]+),\s*cx:\s*(-?[\d.]+),\s*cy:\s*(-?[\d.]+)\s*\}/g,
-)].map(m => ({
-  frame: +m[1], at: +m[2], page: m[3], face: m[4],
-  pose: { rot: +m[5], scale: +m[6], cx: +m[7], cy: +m[8] },
-}))
+/**
+ * The story table, IMPORTED rather than scraped.
+ *
+ * It used to be pulled out of the file with a regular expression that expected
+ * `pose: { rot: ..., scale: ..., cx: ..., cy: ... }` on the same line. That is a
+ * gate which cannot fail loudly: change the shape of the table and the match
+ * count goes to zero, the gate prints an empty report and exits green. slides.js
+ * imports nothing but timing.js, so node can load it directly — and a shape
+ * change now breaks the import, in the open.
+ */
+const { SLIDES, JOURNAL_PATH, poseAt, settledAt } = await import('../src/story/slides.js')
 
 /**
  * Flight records, regex-parsed out of the data file the same way SLIDES are.
@@ -727,19 +731,110 @@ if (fitMode) {
   )
   if (fails) process.exitCode = 1
 } else if (all) {
-  console.log('frame page                 measured cx/cy        expected cx/cy       delta cx/cy      w/h delta')
-  for (const s of SLIDES) {
-    const m = await probeOne(`${ORIGIN}/lab.html?panel=0&bg=grid&frame=${s.frame}`)
-    if (m.error) { console.log(`${s.frame}  ${m.error}`); continue }
-    const p = predict(s.pose, m.jw, m.jh)
-    console.log(
-      String(s.frame).padStart(5) + '  ' + s.page.padEnd(20) +
-      `${m.aabb.cx.toFixed(1)}/${m.aabb.cy.toFixed(1)}`.padStart(18) +
-      `${p.cx.toFixed(1)}/${p.cy.toFixed(1)}`.padStart(20) +
-      `${fmt(m.aabb.cx - p.cx)}/${fmt(m.aabb.cy - p.cy)}`.padStart(18) +
-      `${fmt(m.aabb.w - p.w)}/${fmt(m.aabb.h - p.h)}`.padStart(16),
-    )
+  /**
+   * THE POSE GATE, AND WHAT IT NOW ASSERTS.
+   *
+   * It used to render each slide in the lab, predict that slide's AABB from the
+   * pose table, and compare the two. Both sides of that came out of the same
+   * four numbers, so it was green by construction and could only ever catch a
+   * broken transform chain — never a wrong pose. With the pose table replaced by
+   * a measured path, keeping it would have been worse than useless: it would
+   * have gone green on the new numbers the moment they were written down, and
+   * looked like a verdict on them.
+   *
+   * What it checks instead is THE CLAIM THIS SESSION MAKES: that the journal
+   * moves through a slide the way the clip's does. `scripts/journal-reference.json`
+   * holds the clip's own pose, second by second, as measured by clip-fit. For
+   * each slide, our journal is parked at each of those seconds IN THE PLAYER —
+   * not in the lab, so what is measured is what ships — and its motion SINCE
+   * THE SLIDE'S FIRST MEASURED SECOND is compared with the clip's motion over
+   * the same interval.
+   *
+   * The comparison is of deltas rather than absolutes on purpose. clip-fit
+   * registers our page's type and art against the clip's, so its absolute answer
+   * carries our layout's own difference from the clip's edition; that offset is
+   * fixed within a slide and cancels in a delta, which is exactly why the path
+   * takes its motion from this instrument and its anchor from elsewhere. An
+   * absolute check would be measuring the layout, and would fail for the wrong
+   * reason.
+   */
+  const REFP = JSON.parse(readFileSync(new URL('./journal-reference.json', import.meta.url), 'utf8'))
+  const PARK = t => `(async () => {
+    const s = window.__story, v = s.video
+    s.seek(${t})
+    await new Promise(r => setTimeout(r, 700))
+    v.pause(); s.tl.pause()
+    v.currentTime = ${t}
+    await new Promise(r => { if (Math.abs(v.currentTime - ${t}) < 0.02) return r()
+      v.addEventListener('seeked', r, { once: true }); setTimeout(r, 1200) })
+    s.tl.seek(${t}, false)
+    s.applySegment?.(${t})
+    const g = (window.__story && window.__story.gsap) || window.gsap
+    const box = document.querySelector('.journal-box'), pos = document.querySelector('.journal-pos')
+    const num = (el, pr) => { const v = Number(g.getProperty(el, pr)); return Number.isFinite(v) ? v : 0 }
+    return { t: s.tl.time(), rot: num(box, 'rotationZ'), scale: num(box, 'scaleX'),
+             cx: num(pos, 'xPercent'), cy: num(pos, 'yPercent') }
+  })()`
+
+  const bySlide = new Map()
+  for (const r of REFP.rows) {
+    let f = SLIDES[0].frame
+    for (const x of SLIDES) if (x.at <= r.t + 1e-6) f = x.frame
+    if (!bySlide.has(f)) bySlide.set(f, [])
+    bySlide.get(f).push(r)
   }
+
+  await cdp.send('Page.navigate', { url: `${ORIGIN}/index.html` })
+  await sleep(Math.max(waitMs, 7000))
+
+  const TOL = { pos: 9, scale: 0.008, rot: 0.6 }
+  console.log(`The journal's MOTION against the clip's, from ${REFP.src || 'journal-reference.json'}.`)
+  console.log('Each row: how far our journal has moved since this slide\'s first')
+  console.log('measured second, against how far the clip\'s moved over the same seconds.\n')
+  console.log('frame page                     t    ours dcx/dcy   clip dcx/dcy    err px   dsize    drot')
+  let fails = 0, worstPos = 0, worstScale = 0, worstRot = 0
+  for (const [frame, rows] of [...bySlide].sort((a, b) => a[0] - b[0])) {
+    const page = SLIDES.find(x => x.frame === frame)?.page || ''
+    let ourBase = null
+    for (const r of rows) {
+      const m = await cdp.eval(PARK(r.t))
+      // The reference's own columns are ALREADY relative to the slide's first
+      // sample — dx/dy in design px, size as a ratio, rot in degrees — so this
+      // side only has to make ours relative too.
+      if (!ourBase) { ourBase = m; continue }
+      const ourDx = ((m.cx - ourBase.cx) / 100) * 1080
+      const ourDy = ((m.cy - ourBase.cy) / 100) * 1920
+      const refDx = r.dx
+      const refDy = r.dy
+      const ePos = Math.hypot(ourDx - refDx, ourDy - refDy)
+      const eScale = Math.abs(m.scale / ourBase.scale / r.size - 1)
+      const eRot = Math.abs(m.rot - ourBase.rot - r.rot)
+      // A comparison that produced no number is a FAILURE, not a pass. NaN loses
+      // every `>` it is put through, so a gate that only asks "is the error too
+      // big" reports a clean sheet when it has measured nothing at all — which
+      // is exactly what this gate did on its first run, against a reference
+      // whose columns it was reading by the wrong names.
+      const num = [ourDx, ourDy, refDx, refDy, ePos, eScale, eRot].every(Number.isFinite)
+      const bad = !num || ePos > TOL.pos || eScale > TOL.scale || eRot > TOL.rot
+      if (bad) fails++
+      worstPos = Math.max(worstPos, ePos)
+      worstScale = Math.max(worstScale, eScale)
+      worstRot = Math.max(worstRot, eRot)
+      console.log(
+        String(frame).padStart(5) + '  ' + page.padEnd(20) + r.t.toFixed(2).padStart(7) +
+          `${fmt(ourDx)}/${fmt(ourDy)}`.padStart(16) + `${fmt(refDx)}/${fmt(refDy)}`.padStart(16) +
+          ePos.toFixed(1).padStart(9) + (eScale * 100).toFixed(2).padStart(8) + '%' +
+          eRot.toFixed(2).padStart(8) + (!num ? '  NOT MEASURED' : bad ? '  OUT' : ''),
+      )
+    }
+  }
+  console.log(
+    `\n${fails} sample(s) out of tolerance` +
+      `\nworst: motion ${worstPos.toFixed(1)} design px (tol ${TOL.pos}), ` +
+      `size ${(worstScale * 100).toFixed(2)} % (tol ${(TOL.scale * 100).toFixed(1)} %), ` +
+      `angle ${worstRot.toFixed(2)}\u00b0 (tol ${TOL.rot}\u00b0)`,
+  )
+  if (fails) process.exitCode = 1
 } else {
   const m = await probeOne(`${ORIGIN}/${target}`)
   if (shotPath) {
@@ -759,7 +854,9 @@ if (fitMode) {
   const frame = Number(new URL(`http://x/${target}`).searchParams.get('frame'))
   const s = SLIDES.find(x => x.frame === frame)
   if (s && !m.error) {
-    const p = predict(s.pose, m.jw, m.jh)
+    // Where the PATH has the journal once this slide has settled — the pose the
+    // lab's `frame=N` is meant to reproduce.
+    const p = predict(poseAt(settledAt(frame)), m.jw, m.jh)
     console.log('\nexpected AABB (design px):', JSON.stringify(p, null, 2))
     console.log('delta cx/cy:', fmt(m.aabb.cx - p.cx), fmt(m.aabb.cy - p.cy))
     console.log('delta w/h  :', fmt(m.aabb.w - p.w), fmt(m.aabb.h - p.h))

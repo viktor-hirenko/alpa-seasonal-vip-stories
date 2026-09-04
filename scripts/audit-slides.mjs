@@ -92,13 +92,10 @@ const board = JSON.parse(readFileSync(`${ROOT}scripts/storyboard.json`, 'utf8'))
  * intro (1-3) and outro (25-27) carry no journal and their timecodes are the
  * landmarks in _context/30-timecodes.md.
  */
-const slidesSrc = readFileSync(`${ROOT}src/story/slides.js`, 'utf8')
-const SLIDES = [...slidesSrc.matchAll(
-  /frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:\s*'([^']+)',\s*face:\s*'([^']+)',\s*pose:\s*\{\s*rot:\s*(-?[\d.]+),\s*scale:\s*([\d.]+),\s*cx:\s*(-?[\d.]+),\s*cy:\s*(-?[\d.]+)\s*\}/g,
-)].map(m => ({
-  frame: +m[1], at: +m[2], page: m[3], face: m[4],
-  pose: { rot: +m[5], scale: +m[6], cx: +m[7], cy: +m[8] },
-}))
+// IMPORTED, not scraped. The regex this replaced expected a `pose:` object on
+// each row; when the pose became a path the match count would have gone to zero
+// and this audit would have printed nothing and exited green.
+const { SLIDES } = await import(`${ROOT}src/story/slides.js`)
 const LANDMARK = { 1: 0.5, 2: 1.5, 3: 2.2, 25: 88.4, 26: 92.9, 27: 93.8 }
 /** Land past the whole page turn, so the clip shows a settled page and not a hairline. */
 const LEAD = 0.95
@@ -223,6 +220,7 @@ const PARK = t => `(async () => {
   // and has no counterpart in the reference, so the honest comparison is with
   // it switched off. Clearing the inline transform is safe while paused: GSAP
   // only rewrites it on its next render, and there is not going to be one.
+  s.applySegment?.(${t})
   if (s.hoverTl) s.hoverTl.pause()
   const hv = document.querySelector('.journal-hover')
   if (hv) hv.style.transform = 'none'

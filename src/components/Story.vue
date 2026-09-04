@@ -196,6 +196,7 @@ onMounted(async () => {
     videoPlayer,
     segments,
     seek: playback.seek,
+    applySegment: playback.applySegment,
     targets,
   })
 

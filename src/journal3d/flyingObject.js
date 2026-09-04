@@ -1,5 +1,6 @@
 import { gsap } from 'gsap'
 import { ROUND_ASSETS } from '@/story/flyObjects.js'
+import { splineReader } from './hermite.js'
 
 /**
  * ONE FLYING OBJECT.
@@ -19,21 +20,9 @@ import { ROUND_ASSETS } from '@/story/flyObjects.js'
  * than a sine. Anything the reference actually does is now IN the table, which
  * is also why TIMING.fly and the fly eases are gone.
  *
- * WHY THE ROWS ARE READ THROUGH A SPLINE AND NOT TWEENED ONE TO THE NEXT.
- * Straight segments between rows give a path that is continuous but a SPEED
- * that is not: the velocity is constant along a segment and changes in a single
- * frame at each row. Where the clip decelerates hard — every object slides in
- * past a frame edge and settles — neighbouring rows differ by 3x in speed, and
- * the object visibly snaps. Measured on the first cut of this table: 19
- * direction changes above 100 degrees and a worst speed step of 63 -> 21 % of
- * the stage per second, none of them in the reference.
- *
- * A Hermite curve with finite-difference tangents fixes that at the source. It
- * passes exactly through every measured row, so the table stays the thing that
- * is checked, and its velocity is continuous, so nothing snaps. Tangents are
- * taken over unequal spacing (`(P[i+1] - P[i-1]) / (t[i+1] - t[i-1])`) because
- * the rows are not evenly spaced — decimation put them where the motion needed
- * them.
+ * WHY THE ROWS ARE READ THROUGH A SPLINE AND NOT TWEENED ONE TO THE NEXT, and
+ * why that reader lives in hermite.js: see the note there. The journal's own
+ * path in slides.js is the same kind of table and is read the same way.
  *
  * TWO PROPERTIES, TWO ELEMENTS (see the contract in _stage.scss):
  *   .fly-obj       >> GSAP owns --fo-x / --fo-y <<        (screen percent)
@@ -67,41 +56,9 @@ export function flyingObject(els, rec) {
   const duration = k[k.length - 1][0] - t0
   const base = rec.base
 
-  // Finite-difference tangents, in units per second, one per row and channel.
-  // The ends are one-sided, so a flight neither overshoots its entry nor
-  // curls past its last row.
-  const tan = ch => {
-    const m = new Array(k.length)
-    for (let i = 0; i < k.length; i++) {
-      const a = k[Math.max(0, i - 1)]
-      const b = k[Math.min(k.length - 1, i + 1)]
-      const dt = b[0] - a[0]
-      m[i] = dt > 0 ? (b[ch] - a[ch]) / dt : 0
-    }
-    return m
-  }
-  const M = [null, tan(1), tan(2), tan(3), tan(4)]
-
-  let seg = 0
-  const at = (time, ch) => {
-    // The playhead only ever moves a little between renders, so walking from
-    // the last segment is cheaper than a search — and a seek just walks further.
-    while (seg > 0 && time < k[seg][0]) seg--
-    while (seg < k.length - 2 && time >= k[seg + 1][0]) seg++
-    const a = k[seg],
-      b = k[seg + 1]
-    const h = b[0] - a[0]
-    if (h <= 0) return b[ch]
-    const u = Math.min(1, Math.max(0, (time - a[0]) / h))
-    const u2 = u * u,
-      u3 = u2 * u
-    return (
-      (2 * u3 - 3 * u2 + 1) * a[ch] +
-      (u3 - 2 * u2 + u) * h * M[ch][seg] +
-      (-2 * u3 + 3 * u2) * b[ch] +
-      (u3 - u2) * h * M[ch][seg + 1]
-    )
-  }
+  // The rows are read through the shared Hermite reader — see hermite.js for
+  // why a spline and not a tween per segment, and how the tangents are taken.
+  const at = splineReader(k)
 
   // A round silhouette has no measurable angle, so its `rot` column is fit noise
   // and animating it reads as a spin the clip never does. Those flights hold the

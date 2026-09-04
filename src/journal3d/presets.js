@@ -3,6 +3,7 @@ import { EASE } from '@/story/easing.js'
 import { TIMING, HOVER_AMP } from '@/story/timing.js'
 import { DEPTH } from '@/story/journalGeometry.js'
 import { posVars, boxVars } from './poseTween.js'
+import { splineReader } from './hermite.js'
 
 /**
  * THE REUSABLE 3D LIBRARY (ticket item 4).
@@ -151,12 +152,97 @@ export function swingOpen(t, params) {
 swingOpen.PARAM_SCHEMA = {}
 
 /**
- * IDLE DRIFT. Runs on `.journal-hover`, on its OWN standalone infinite
- * timeline — never on the master. `repeat: -1` on the master would make
- * `tl.duration()` infinite and destroy the whole video-sync and progress model.
+ * THE JOURNAL'S PATH — the pose as a measured polyline, not one pose per slide.
  *
- * Per-property periods differ and are offset so the loop never reads as
- * periodic, which is the thing that makes a hover look mechanical.
+ * WHAT THIS REPLACES, and why. `slides.js` used to hold ONE pose per slide and
+ * `rePose` moved between them over half a second; for the remaining four or five
+ * seconds of a slide the journal stood still, and the only thing moving was
+ * `hover()`, a drift this project invented. Against the clip that is wrong twice
+ * over. Two frames inside one slide, 3 s apart, page unchanged (t = 40.2 and
+ * 43.2 of frame 14): the clip's journal moves 60-150 design px and turns, ours
+ * moved 20 px and grew 1.5 %. Measured across the whole story, the clip's
+ * journal never once holds a pose — it drifts through every slide.
+ *
+ * So the pose is a TRAJECTORY, and it is measured the way the flight table is
+ * measured: rows of `[t, rot, scale, cx, cy]` read through the shared Hermite
+ * reader, passing exactly through every measured second, with continuous
+ * velocity so nothing snaps at a row. See JOURNAL_PATH in slides.js for where
+ * the numbers come from and what in them is measured against what is anchored.
+ *
+ * WHAT THIS PRESET DOES NOT TOUCH: `rotationY`. The page turn owns that, and it
+ * is a separate measurement (TIMING.flip). Both write to `.journal-box`, which
+ * is safe because they write different properties into the same GSAP transform
+ * cache — but it is the reason the turn is no longer bolted onto the re-pose.
+ */
+export function journalPath(t, keys) {
+  const at = splineReader(keys)
+  const t0 = keys[0][0]
+  const t1 = keys[keys.length - 1][0]
+  const head = { t: t0 }
+  const s = tl()
+  s.to(head, {
+    t: t1,
+    duration: t1 - t0,
+    ease: 'none',
+    onUpdate() {
+      const time = head.t
+      gsap.set(t.pos, { xPercent: at(time, 3), yPercent: at(time, 4) })
+      gsap.set(t.box, { rotationZ: at(time, 1), scale: at(time, 2) })
+    },
+  })
+  return s
+}
+/** The times live IN the rows; a slider cannot move a measurement. */
+journalPath.PARAM_SCHEMA = {}
+
+/**
+ * THE PAGE TURN, on its own.
+ *
+ * It used to be a flag on `rePose`, because a re-pose and a turn happened at the
+ * same instant and shared a tween. Now that the pose is a continuous path, the
+ * turn is the only thing left that happens AT a slide boundary, so it is its own
+ * preset — and the path underneath it keeps moving through the turn instead of
+ * being frozen by it.
+ *
+ * rotationY is written ABSOLUTELY — a `set` to 0 at the head, then out, then
+ * back — never as a relative `+=`. The master timeline is seeked arbitrarily
+ * (ADR-0008), and a relative tween would freeze whatever value it happened to
+ * find on its first render, so scrubbing backwards would accumulate garbage.
+ * That head `set` is also what normalises the -4 deg of yaw the entrance leaves
+ * behind, at the first page turn.
+ *
+ * The measurement behind `peak`, `out` and `back` is in TIMING.flip.
+ */
+export function pageTurn(t, params) {
+  const p = P({ ...TIMING.flip, easeOut: EASE.flipOut, easeBack: EASE.flipBack }, params)
+  const s = tl()
+  s.set(t.box, { rotationY: 0 }, 0)
+  s.to(t.box, { rotationY: p.peak, duration: p.out, ease: p.easeOut }, 0)
+  s.to(t.box, { rotationY: 0, duration: p.back, ease: p.easeBack }, p.out)
+  return s
+}
+pageTurn.PARAM_SCHEMA = {
+  peak: { min: 0, max: 180, step: 1 },
+  out: { min: 0.02, max: 0.6, step: 0.01 },
+  back: { min: 0.05, max: 1.5, step: 0.01 },
+}
+pageTurn.PARAM_DEFAULTS = { ...TIMING.flip }
+
+/**
+ * IDLE DRIFT — NO LONGER PART OF THE STORY. Kept as a library preset and used
+ * by the lab; `buildStoryTimeline` does not build it any more.
+ *
+ * IT WAS INVENTED, NOT MEASURED. Its job was to keep the journal alive between
+ * slides, because the pose table held one pose per slide and the journal
+ * genuinely stood still. The pose is a measured path now, and that path already
+ * carries every bit of movement the clip has — adding a synthetic drift on top
+ * would not make the journal livelier, it would double the motion and put it
+ * out of step with the reference. Removed deliberately; see the log entry for
+ * the measurement that decided it.
+ *
+ * Runs on `.journal-hover`, on its OWN standalone infinite timeline — never on
+ * the master. `repeat: -1` on the master would make `tl.duration()` infinite and
+ * destroy the whole video-sync and progress model.
  */
 export function hover(t, params) {
   const p = P({ amp: HOVER_AMP, period: TIMING.hover, ease: EASE.hoverDrift }, params)

@@ -185,7 +185,7 @@ import { FLIGHTS } from '@/story/flyAssets.js'
 import { useJournalFit } from '@/composables/useJournalFit.js'
 import { provideStoryData } from '@/composables/useStoryData.js'
 import * as presets from '@/journal3d/presets.js'
-import { SLIDES } from '@/story/slides.js'
+import { SLIDES, RECEDE_POSE, poseAt, settledAt } from '@/story/slides.js'
 import { DEPTH, PAGE_SCALE } from '@/story/journalGeometry.js'
 import { TIMING } from '@/story/timing.js'
 
@@ -240,6 +240,13 @@ const qNum = (k, fallback) => (Q.has(k) ? Number(Q.get(k)) : fallback)
 const qStr = (k, fallback) => (Q.has(k) ? String(Q.get(k)) : fallback)
 const seedSlide =
   SLIDES.find(s => s.frame === qNum('frame', 11)) || SLIDES.find(s => s.frame === 11) || SLIDES[0]
+/**
+ * A slide no longer carries a pose — the journal's pose is a measured path now
+ * (JOURNAL_PATH in slides.js). `poseFor` is what "the pose of frame N" means
+ * from here on: where the path has the journal once that slide has SETTLED,
+ * past the page turn. During the turn there is no flat pose to show.
+ */
+const poseFor = frame => poseAt(settledAt(frame))
 
 const bg = ref(qStr('bg', 'grid'))
 const face = ref(qStr('face', seedSlide.face))
@@ -264,14 +271,23 @@ const objectsVisible = ref(qStr('objects', '1') !== '0')
 const AT_TIME = Q.has('t') ? qNum('t', 0) : null
 const activePreset = ref('')
 const params = reactive({})
+/**
+ * WITH `?t=` THE POSE COMES FROM THE PATH AT THAT SECOND, not from the slide's
+ * settled pose. It has to: the journal no longer holds a pose for the length of
+ * a slide, it drifts through it, so "frame 12's pose" is only true for one
+ * instant of frame 12. `fly:check` compares an object against the page edge that
+ * covers it, and posing the journal where it is 2 s later would be measuring the
+ * occlusion against a page that is not there.
+ */
+const seedPose = AT_TIME != null ? poseAt(AT_TIME) : poseFor(seedSlide.frame)
 const pose = reactive({
   rotationX: qNum('rotX', 0),
   rotationY: qNum('rotY', 0),
-  rot: qNum('rot', seedSlide.pose.rot),
-  scale: qNum('scale', seedSlide.pose.scale ?? PAGE_SCALE),
+  rot: qNum('rot', seedPose.rot),
+  scale: qNum('scale', seedPose.scale ?? PAGE_SCALE),
   z: qNum('z', 0),
-  cx: qNum('cx', seedSlide.pose.cx),
-  cy: qNum('cy', seedSlide.pose.cy),
+  cx: qNum('cx', seedPose.cx),
+  cy: qNum('cy', seedPose.cy),
 })
 
 // Vite resolves these at build time; keep the dev proxy out of prod bundles by
@@ -328,11 +344,11 @@ function resetPose() {
   Object.assign(pose, {
     rotationX: 0,
     rotationY: 0,
-    rot: slide.value?.pose.rot ?? 0,
-    scale: slide.value?.pose.scale ?? PAGE_SCALE,
+    rot: slide.value ? poseFor(slide.value.frame).rot : 0,
+    scale: slide.value ? poseFor(slide.value.frame).scale : PAGE_SCALE,
     z: 0,
-    cx: slide.value?.pose.cx ?? 50,
-    cy: slide.value?.pose.cy ?? 50,
+    cx: slide.value ? poseFor(slide.value.frame).cx : 50,
+    cy: slide.value ? poseFor(slide.value.frame).cy : 50,
   })
   if (targets)
     gsap.set([targets.pos, targets.flash, targets.speed].filter(Boolean), {
@@ -369,13 +385,14 @@ function firePreset(name) {
 
   // rePose/recede take (targets, from, to, params); the rest take (targets, params).
   if (name === 'recede') {
-    const from = SLIDES.find(s => s.frame === 23)?.pose
-    const to = SLIDES.find(s => s.frame === 24)?.pose
-    current = fn(targets, from, to, params)
+    current = fn(targets, poseFor(23), RECEDE_POSE, params)
   } else if (name === 'rePose') {
-    // The turn INTO the parked slide, which is the one worth looking at.
+    // The turn INTO the parked slide, which is the one worth looking at. The
+    // story does not use rePose any more — the path moves the journal and
+    // `pageTurn` only yaws it — but the preset stays in the library and this
+    // button is what exercises it.
     const i = Math.max(1, slideIndex())
-    current = fn(targets, SLIDES[i - 1].pose, SLIDES[i].pose, { flip: true, ...params })
+    current = fn(targets, poseFor(SLIDES[i - 1].frame), poseFor(SLIDES[i].frame), { flip: true, ...params })
   } else {
     current = fn(targets, params)
   }
@@ -400,10 +417,10 @@ function gotoSlide(s) {
   Object.assign(pose, {
     rotationX: 0,
     rotationY: 0,
-    rot: s.pose.rot,
-    scale: s.pose.scale,
-    cx: s.pose.cx,
-    cy: s.pose.cy,
+    rot: poseFor(s.frame).rot,
+    scale: poseFor(s.frame).scale,
+    cx: poseFor(s.frame).cx,
+    cy: poseFor(s.frame).cy,
     z: 0,
   })
   applyManualPose()
@@ -507,7 +524,7 @@ function parkFlip() {
   const i = slideIndex()
   if (i < 1) return
   killCurrent()
-  current = presets.rePose(targets, SLIDES[i - 1].pose, slide.value.pose, { flip: true })
+  current = presets.rePose(targets, poseFor(SLIDES[i - 1].frame), poseFor(slide.value.frame), { flip: true })
   current.time(flipLead) // stays paused: this renders the frame, it does not play it
 }
 function setBg(id) {

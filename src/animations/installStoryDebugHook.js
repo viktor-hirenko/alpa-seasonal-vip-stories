@@ -12,7 +12,7 @@ import { TIMING } from '@/story/timing.js'
  */
 export function installStoryDebugHook(ctx) {
   if (!import.meta.env.DEV) return
-  const { tl, hoverTl, videoPlayer, segments, seek, targets } = ctx
+  const { tl, hoverTl, videoPlayer, segments, seek, applySegment, targets } = ctx
 
   // Merge rather than assign: useJournalFit parks its report on the same
   // object, and the two are installed independently.
@@ -30,6 +30,19 @@ export function installStoryDebugHook(ctx) {
     targets,
     segments,
     seek,
+    /**
+     * THE PAGE CUT, ON DEMAND — for measuring scripts, not for the product.
+     *
+     * `seek` already applies it, but every parking routine in scripts/ then
+     * waits for the video to settle, and during that wait the video is still
+     * PLAYING and the sync loop keeps applying the cut for the advancing
+     * second. The park ends by putting the video and the timeline back where
+     * they were asked to be; nothing put the PAGE back. Contact sheets around a
+     * cut therefore showed the next page against the clip's previous one — seen
+     * at t = 30.0, where our panel had `money_talks` and the clip still had
+     * `vip_status`. Parking scripts call this last.
+     */
+    applySegment,
     seekPage(frame) {
       const seg = segments.find(s => s.firstFrame === frame)
       if (!seg) return console.warn('[story] no segment for frame', frame)

@@ -151,6 +151,8 @@ const PARK = t => `(async () => {
     setTimeout(r, 1500)
   })
   s.tl.seek(${t}, false)
+  // ...and the PAGE back too: the wait above let the sync loop advance it.
+  s.applySegment?.(${t})
   if (s.hoverTl) s.hoverTl.pause()
   const hv = document.querySelector('.journal-hover')
   if (hv) hv.style.transform = 'none'
@@ -258,11 +260,24 @@ function fitPair(rgbA, rgbB, mask, pivot, opt = {}) {
   return { ...report(best), rival, best }
 }
 
+/**
+ * How wide a size difference the coarse ladder sweeps.
+ *
+ * The default 0.5..2.2 is right when nothing is known about the answer — the
+ * entrance, where our journal and the clip's can differ by two. On a settled
+ * slide it is 38 rungs of a full translation sweep to find something that has
+ * never once been outside +/-2.5 %, and it dominates the run: 50 seconds a
+ * sample, an hour and three quarters for the story. FIT_SRANGE narrows it. It
+ * changes only how far the search LOOKS, never what it measures — and a run that
+ * needs the wide ladder can still have it.
+ */
+const SRANGE = (process.env.FIT_SRANGE || '0.5,2.2').split(',').map(Number)
+
 /** The answer for one pair of pictures. `geo` is what QUAD returned. */
 function fitJournal(rgbA, rgbB, geo, opt = {}) {
   const piv = geo.centre
   return fitPair(rgbA, rgbB, pageMask(geo.quad), piv,
-    { ...opt, reach: reachMask(geo.quad, piv, 2.0) })
+    { sRange: SRANGE, ...opt, reach: reachMask(geo.quad, piv, 2.0) })
 }
 
 const HEAD = '   ours/clip     size      shift(px)     rot   score  rival'
@@ -313,7 +328,13 @@ await cdp.send('Page.enable')
 // = 0.5, so the canvas covers the viewport exactly and ONE SCREENSHOT PIXEL IS
 // ONE DESIGN PIXEL. Every number below depends on that identity.
 await cdp.send('Emulation.setDeviceMetricsOverride', { width: 540, height: 960, deviceScaleFactor: 2, mobile: true })
-await cdp.send('Page.navigate', { url: `${ORIGIN}/index.html` })
+// THE PAGE'S OWN NUMBERS ARE PART OF THE TEMPLATE. In dev an absent query
+// parameter is filled from SAMPLE (params.js), so the digit tiles read 22257
+// where the clip reads 257 — a five-tile block against a three-tile one, and
+// the tiles are one of the strongest gradient features on the page. Pass the
+// clip's own values with FIT_QUERY so the template and the reference carry the
+// same text. It changes what is COMPARED, never how.
+await cdp.send('Page.navigate', { url: `${ORIGIN}/index.html${process.env.FIT_QUERY || ''}` })
 await sleep(7000)
 
 /**
@@ -615,10 +636,15 @@ if (argv.includes('--pose')) {
     jobs.push({ n: parseInt(f, 10), tag: f, rot: v[0], scale: v[1], cx: v[2], cy: v[3],
       rotY: v[4] ?? 0, persp: v[5] ?? 1800 })
   }
-  // Park somewhere the COVER is the live face, then overwrite the pose. Any
-  // second on the cover will do; 6.95 is past the entrance so nothing is
-  // mid-tween and nothing will re-render over what we set.
-  await cdp.eval(PARK(6.95))
+  // Park somewhere the RIGHT FACE is live, then overwrite the pose. The default
+  // 6.95 is the cover: past the entrance, so nothing is mid-tween and nothing
+  // re-renders over what we set. For a POSE ON A DATA PAGE that default is
+  // wrong by 6 % — the cover face is laid out at 1465x1868 and a page at
+  // 1564x1911 (FACE in journalGeometry.js) — so `--park <t>` parks on the page
+  // whose pose is being judged. It also makes that page the visible one, which
+  // is what makes the blend readable.
+  const parkAt = argv.includes('--park') ? Number(argv[argv.indexOf('--park') + 1]) : 6.95
+  await cdp.eval(PARK(parkAt))
   await sleep(320)
   console.log('frame     t    pose                                        quad x/y  w x h')
   for (const j of jobs) {
@@ -639,6 +665,11 @@ if (argv.includes('--pose')) {
     ff(['-y', '-i', file2png(CLIP, j.n, `${OUT}/.clipfr-${j.tag}.png`), '-i', ours, '-filter_complex',
       '[0][1]blend=all_mode=average', '-update', '1', '-frames:v', '1', `${OUT}/pose-blend-${j.tag}.png`])
     drawQuad(clip, geo.quad, `${OUT}/pose-outline-${j.tag}.png`)
+    // THE CONTROL FOR THE OVERLAY ITSELF. The same quad on OUR OWN frame answers
+    // a question the clip overlay cannot: how far the front FACE sits outside
+    // the page as drawn. Without it, a face that carries bleed beyond the
+    // visible page reads as "our pose is 30 px off the clip" on every frame.
+    drawQuad(rgbOfPng(ours), geo.quad, `${OUT}/pose-self-${j.tag}.png`)
     const qx = Math.min(...geo.quad.map(p => p[0])), qX = Math.max(...geo.quad.map(p => p[0]))
     const qy = Math.min(...geo.quad.map(p => p[1])), qY = Math.max(...geo.quad.map(p => p[1]))
     console.log(j.tag.padStart(5) + t.toFixed(3).padStart(8) + '  ' +
