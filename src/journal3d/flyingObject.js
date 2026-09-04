@@ -1,4 +1,5 @@
 import { gsap } from 'gsap'
+import { ROUND_ASSETS } from '@/story/flyObjects.js'
 
 /**
  * ONE FLYING OBJECT.
@@ -102,6 +103,14 @@ export function flyingObject(els, rec) {
     )
   }
 
+  // A round silhouette has no measurable angle, so its `rot` column is fit noise
+  // and animating it reads as a spin the clip never does. Those flights hold the
+  // MEDIAN of their own rows — constant, but not zero, so a deliberate tilt
+  // survives. See ROUND_ASSETS in flyObjects.js.
+  const spin = !ROUND_ASSETS.has(rec.asset)
+  const rots = k.map(r => r[4]).sort((a, b) => a - b)
+  const fixedRot = rots[rots.length >> 1]
+
   const head = { t: t0 }
   const s = gsap.timeline({ paused: true })
   s.to(head, {
@@ -111,7 +120,7 @@ export function flyingObject(els, rec) {
     onUpdate() {
       const time = head.t
       gsap.set(els.pos, { '--fo-x': at(time, 1), '--fo-y': at(time, 2) })
-      gsap.set(els.box, { rotationZ: at(time, 4), scale: at(time, 3) / base })
+      gsap.set(els.box, { rotationZ: spin ? at(time, 4) : fixedRot, scale: at(time, 3) / base })
     },
   })
 

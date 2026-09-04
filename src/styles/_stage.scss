@@ -56,30 +56,31 @@
   // container-type: size enables cqw/cqh, which is what makes --u JS-free.
   container-type: size;
 
-  // CONTAIN fit onto the 1080x1920 design canvas — `min`, not `max`, and that
-  // one word is load-bearing. This is Thor's split, and it is the right one:
-  // THE SCENE IS NEVER CROPPED, ONLY THE VIDEO IS.
+  // COVER fit onto the 1080x1920 design canvas, and the SAME fit the backdrop
+  // video uses. This is a registration requirement, not a taste one.
   //
-  //   .stage      --u: min(...)        scene fits whole, always visible
-  //   .stage__bg  object-fit: cover    video fills, spills, paints the margins
+  // THE FLYING OBJECTS ARE MEASURED IN THE VIDEO'S OWN FRAME. Every anchor in
+  // flyObjects.js is a percentage of the 1080x1920 clip, read off the clip. So
+  // the scene and the video have to be laid out at the same scale on the same
+  // centre, or every object slides away from the room it is flying through:
   //
-  // The scene does NOT need to be pixel-registered with the video. `clean bg`
-  // is the render WITHOUT the journal and WITHOUT the objects, so there is
-  // nothing in the video for either of them to line up against; all that must
-  // hold is that the journal and the objects share ONE canvas, which they do.
-  // Forcing the scene to crop like the video (`max`, 2026-09-04) bought that
-  // false constraint and cost the composition: the canvas is 9:16 and nothing
-  // else is, so on every real shape the scene grew and lost its edges —
+  //   viewport                     object drift, scene `min` vs video `cover`
+  //   430x932 iPhone 14/15 Pro Max     up to 47 px
+  //   393x852 iPhone 15 Pro            up to 43 px
+  //   360x800 Android                  up to 45 px
   //
-  //   viewport                       what `max` did
-  //   420x747 (9:16, the probe)      nothing — which is why no gate saw it
-  //   430x932 iPhone 14/15 Pro Max   cropped left and right
-  //   desktop card 58.2 x 90vh       15 % larger, cropped top and bottom
+  // I shipped `min` here once, reasoning that `clean bg` contains neither the
+  // journal nor the objects so there is nothing to register against. That was
+  // wrong: the ROOM is in it, and the objects fly through the room. A coin has
+  // to pass the porthole where the clip passes it.
   //
-  // — and the journal is authored to reach the frame edge on several slides, so
-  // cropping the frame crops the journal. `min` costs nothing in return: the
-  // video still covers, so the margins are painted rather than black.
-  --u: min(100cqw / 1080, 100cqh / 1920);
+  // The other half of the problem — `cover` enlarges and crops the composition
+  // on any shape that is not 9:16 — is solved where it belongs, by making the
+  // DESKTOP CARD 9:16 (see below). There `cover` and `contain` coincide and
+  // nothing is cropped. On a phone taller than 9:16 the sides do crop, which is
+  // what a full-screen story does and what the design expects: the `interior`
+  // art is authored 1340 px wide inside a 1080 px frame.
+  --u: max(100cqw / 1080, 100cqh / 1920);
 
   // Camera distance in DESIGN px, not real px. "1000px" from the brief is a
   // real-pixel figure, but the stage is ~400 CSS px wide on a phone and ~600 on
@@ -95,11 +96,20 @@
   --jseam: 1; // half-pixel-ish inset so edge quads are never coplanar with the faces
 
   @include desktop {
-    // Frame the story as a rounded card, exactly as Thor does. Centring uses
-    // margin-left, not translate(-50%), to keep transforms out of the 3D chain's
-    // ancestry.
-    width: 58.2vh;
-    margin-left: -29.1vh;
+    // Frame the story as a rounded card, as Thor does — but at EXACTLY 9:16,
+    // which Thor's 58.2vh is not. The card's shape is the one thing here we
+    // control, and making it the canvas's own aspect is what lets the scene
+    // keep the video's `cover` fit (which the flying objects require) while
+    // nothing gets cropped or enlarged: at 9:16, cover and contain are the same
+    // scale. Thor's wider card cost 15 % of enlargement and a crop top and
+    // bottom.
+    //
+    //   height 90vh  ->  width 90 * 9/16 = 50.625vh
+    //
+    // Centring uses margin-left, not translate(-50%), to keep transforms out of
+    // the 3D chain's ancestry.
+    width: 50.625vh;
+    margin-left: -25.3125vh;
     left: 50%;
     top: 5%;
     height: 90%;
@@ -120,10 +130,12 @@
 }
 
 ///
-/// THE DESIGN CANVAS. Exactly 1080 x 1920 design px, centred on the stage. With
-/// `--u: min(...)` it is the largest 9:16 rectangle that FITS the stage, so it
-/// never overflows and never gets cropped; the video behind it covers, and
-/// paints whatever margin the canvas leaves.
+/// THE DESIGN CANVAS. Exactly 1080 x 1920 design px, centred on the stage —
+/// the same rectangle `object-fit: cover` gives the backdrop video, so the two
+/// are one coordinate system and an object measured off the clip lands where
+/// the clip puts it. On the desktop card (9:16) it fits exactly; on a taller
+/// phone it spills over the sides and the stage's `overflow: hidden` crops both
+/// it and the video by the same amount.
 ///
 /// This element exists so that A PERCENTAGE MEANS A PERCENTAGE OF THE FRAME.
 /// Everything below it is `width: 100%; height: 100%` and positions itself in

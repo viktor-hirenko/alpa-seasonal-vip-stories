@@ -256,6 +256,14 @@ const SLIDES = [...slidesSrc.matchAll(
  * regex is exactly the kind of thing the gate should shout about.
  */
 const flySrc = readFileSync(new URL('../src/story/flyObjects.js', import.meta.url), 'utf8')
+/**
+ * The sprites whose silhouette has no long axis. Parsed rather than imported,
+ * like everything else here, so the gate stays dependency-free.
+ */
+const ROUND_ASSETS = new Set(
+  (flySrc.match(/export const ROUND_ASSETS = new Set\(\[([^\]]*)\]/)?.[1] || '')
+    .split(',').map(x => x.trim().replace(/^'|'$/g, '')).filter(Boolean),
+)
 const FLIGHTS = [
   ...flySrc.matchAll(
     /id: '([^']+)', asset: '([^']+)', frame: (\d+), size: (\d+),\s*\n\s*t0: ([\d.]+), dur: ([\d.]+),\s*\n\s*from: \{ x: (-?[\d.]+), y: (-?[\d.]+), z: (-?\d+) \},\s*\n\s*hold: \{ x: (-?[\d.]+), y: (-?[\d.]+), z: (-?\d+) \},\s*\n\s*to: \{ x: (-?[\d.]+), y: (-?[\d.]+), z: (-?\d+) \}/g,
@@ -345,22 +353,31 @@ if (fitMode) {
     [1512, 945, 'MacBook (desktop card)'],
     [1920, 1080, 'wide desktop'],
   ]
-  // THE CLAIM UNDER TEST: the scene FITS and the video COVERS.
+  // THE CLAIM UNDER TEST: the scene is laid out on the VIDEO'S rectangle, and
+  // on the desktop card that rectangle is not cropped.
   //
-  //   .stage      --u: min(...)       the 1080x1920 canvas fits whole, uncropped
-  //   .stage__bg  object-fit: cover   the video fills and spills, painting the margin
+  // Two things have to hold at once and they pull against each other:
   //
-  // The previous version of this gate asserted the opposite — that the canvas
-  // IS the video's cropped rect — and passed a build whose scene was 15 % too
-  // large and cut off on every shape but 9:16. It is not enough for the two to
-  // agree; the scene has to be the one that stays whole, because the journal is
-  // authored right up to the frame edge and a cropped frame is a cropped
-  // journal. The video has nothing in it for the scene to register against —
-  // `clean bg` is the render without the journal and without the objects.
-  console.log('Scene vs backdrop, per viewport. The scene must FIT the stage whole')
-  console.log('(--u: min) while the video COVERS it (object-fit: cover), so that no')
-  console.log('shape but 9:16 can ever crop the composition.\n')
-  console.log('viewport      device                  canvas       fit    overflow   off-centre  video')
+  //   REGISTRATION. The flying objects are measured in the clip's own frame, so
+  //   the scene must use the video's `cover` scale and centre. Lay the scene out
+  //   with `contain` instead and every object slides away from the room it flies
+  //   through — up to 47 px on a 430x932 phone. That shipped once, on the
+  //   reasoning that `clean bg` holds neither journal nor objects; but it holds
+  //   the ROOM, and a coin has to pass the porthole where the clip passes it.
+  //
+  //   NO CROP WHERE WE CONTROL THE SHAPE. `cover` enlarges and crops on any
+  //   aspect but 9:16, and the desktop card's shape is ours to choose, so it is
+  //   9:16 and crops nothing. A phone taller than 9:16 does crop the sides, and
+  //   that is what a full-screen story does — the design agrees, its `interior`
+  //   art is 1340 px wide inside a 1080 px frame.
+  //
+  // So: registration is asserted everywhere, zero crop is asserted on the
+  // desktop card only, and the phones' crop is printed so a change in it cannot
+  // pass unnoticed.
+  console.log('Scene vs backdrop, per viewport. The scene must be laid out on the SAME')
+  console.log('rectangle object-fit: cover gives the video, or every flying object slides')
+  console.log('away from the room. The desktop card is 9:16 so that costs it no crop.\n')
+  console.log('viewport      device                  canvas       fit    crop   off-centre  video')
   let worst = 0
   for (const [w, h, name] of SHAPES) {
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: w < 800 })
@@ -376,27 +393,29 @@ if (fitMode) {
         u: box.offsetWidth / parseFloat(getComputedStyle(st).getPropertyValue('--jw')),
         bgFit: bg ? getComputedStyle(bg).objectFit : 'none' }
     })()`)
-    // What `contain` gives a 1080x1920 canvas in this stage — the scale the
-    // scene must be laid out at.
-    const sFit = Math.min(m.sw / 1080, m.sh / 1920)
-    const fit = m.u / sFit
-    // Nothing may stick out of the stage: that is what "never cropped" means.
-    const overflow = Math.max(0, m.cw - m.sw, m.ch - m.sh)
+    // The scale `object-fit: cover` gives a 1080x1920 source in this stage.
+    const sCover = Math.max(m.sw / 1080, m.sh / 1920)
+    const fit = m.u / sCover
+    // How far the canvas spills past the stage, i.e. how much is cropped away.
+    const crop = Math.max(0, m.cw - m.sw, m.ch - m.sh)
     const off = Math.max(Math.abs(m.cx - m.sw / 2), Math.abs(m.cy - m.sh / 2))
-    const bad = Math.abs(fit - 1) > 0.005 || overflow > 1 || off > 1 || m.bgFit !== 'cover'
+    const isCard = w >= 768
+    const bad = Math.abs(fit - 1) > 0.005 || off > 1 || m.bgFit !== 'cover' || (isCard && crop > 1)
     if (bad) fails++
     worst = Math.max(worst, Math.abs(fit - 1))
     console.log(
       `${w}x${h}`.padEnd(14) + name.padEnd(24) +
       `${m.cw.toFixed(0)}x${m.ch.toFixed(0)}`.padEnd(12) +
       fit.toFixed(3).padStart(6) +
-      overflow.toFixed(1).padStart(10) + ' px' +
+      crop.toFixed(0).padStart(7) + ' px' +
       off.toFixed(1).padStart(11) + ' px' +
       '  ' + m.bgFit +
-      (bad ? '   CROPPED' : ''),
+      (bad ? (Math.abs(fit - 1) > 0.005 ? '   OUT OF REGISTER' : '   CARD CROPS') : ''),
     )
   }
-  console.log(`\n${fails} viewport(s) where the scene is not laid out whole; worst fit error ${(worst * 100).toFixed(1)} %`)
+  console.log(`\n${fails} viewport(s) bad; worst registration error ${(worst * 100).toFixed(1)} %`)
+  console.log('crop on a phone is expected — it is what a full-screen story does; crop on')
+  console.log('the desktop card is a bug, because the card is ours to shape.')
   if (fails) process.exitCode = 1
 } else if (occId) {
   const f = FLIGHTS.find(x => x.id === occId)
@@ -546,6 +565,7 @@ if (fitMode) {
     // 135 samples at four screenshots each, and chasing one object should not
     // cost ten minutes.
     if (process.env.FLY_ONLY && f.id !== process.env.FLY_ONLY) continue
+    const spun = []
     for (const smp of f.samples) {
       const [t, rx, ry, rsq, rdeg, relong, rhid] = smp   // see fly-reference.json's `units`
       await cdp.send('Page.navigate', {
@@ -553,6 +573,17 @@ if (fitMode) {
       })
       await sleep(waitMs)
       const g = await cdp.eval(ISOLATE(f.id))
+      // The angle actually APPLIED, read off the element rather than off the
+      // pixels. For a round object the measured angle is noise on both sides of
+      // the comparison, so the pixel test below cannot see a spin — which is
+      // exactly how a spin shipped. This reads what the code did.
+      const applied = await cdp.eval(`(() => {
+        const b = document.querySelector('.fly-obj[data-fly="${f.id}"] .fly-obj__box')
+        if (!b) return null
+        const m = new DOMMatrixReadOnly(getComputedStyle(b).transform)
+        return Math.atan2(m.b, m.a) * 180 / Math.PI
+      })()`)
+      if (applied != null) spun.push(applied)
       await cdp.eval(SHOW_JOURNAL(false))
       const A = await shotGray()
       await cdp.eval(BG('#fff'))
@@ -609,9 +640,13 @@ if (fitMode) {
       while (ddeg < -90) ddeg += 180
       const relratio = obj.elong / relong
       // A round silhouette has no meaningful principal axis; only judge the
-      // angle where BOTH shapes actually have one. A four-pointed star measures
-      // an elongation just over the line and an axis that is pure noise.
-      const degMatters = relong > 1.2 && obj.elong > 1.2
+      // angle where BOTH shapes actually have one. The list comes from
+      // flyObjects.js rather than from a threshold of its own, because the two
+      // rules drifting apart is exactly how a frozen `calendar` ended up being
+      // judged on an angle: the runtime called it round at 1.25 and this gate
+      // called it measurable at 1.2. One list, used by both.
+      const degMatters =
+        !ROUND_ASSETS.has(f.asset) && relong > 1.2 && obj.elong > 1.2
       const bad = []
       if (!clipped) {
         if (dpos > TOL.pos) bad.push('POS')
@@ -667,6 +702,21 @@ if (fitMode) {
           (clipped ? '  (at the frame edge)' : '') +
           (bad.length ? '  ' + bad.join(' ') : ''),
       )
+    }
+    // PER FLIGHT: a round object must not turn at all. The pixel tests above
+    // cannot see this — for a round silhouette the measured angle is noise on
+    // BOTH sides, so `degMatters` skips it, and that blind spot is precisely
+    // how a spin shipped: `rot` for these came from a correlation fit that had
+    // no angle to find, and the table carried jumps of up to 87 deg in a single
+    // row. So this reads the rotation the code actually APPLIED, off the
+    // element, and asserts it never changes. It is not circular: what decides
+    // that a shape is round is its own alpha, measured independently.
+    if (ROUND_ASSETS.has(f.asset) && spun.length > 1) {
+      const spread = Math.max(...spun) - Math.min(...spun)
+      if (spread > 1) {
+        fails++
+        console.log(`${f.id.padEnd(14)}   SPIN — a round sprite turned ${spread.toFixed(1)} deg over its flight`)
+      }
     }
   }
   console.log(

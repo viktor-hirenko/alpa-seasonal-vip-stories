@@ -27,6 +27,22 @@
  * between them is a pixel the journal painted over.
  *
  * WHAT THE MEASUREMENT SAYS, and where it corrects every earlier reading:
+ *   - THE FIVE COINS WERE ASSIGNED ONE SPRITE OFF. `cash-a` exports five coins
+ *     at five viewing angles, and which one a flight uses had been picked by
+ *     eye. Elongation is exactly the viewing angle, and the clip measures it
+ *     per flight: 1.46, 1.69 and 1.21 against the sprites' 1.48 (coin-b), 1.63
+ *     (coin-d) and 1.02 (coin-face). `coin-edge` is 3.95 and belongs to no
+ *     flight at all — it was on coin-2, which is why that coin read as a blade.
+ *     The error hid behind a second bug: the old sprites carried a shard of a
+ *     neighbouring coin that rounded them out, so a wrong sprite still measured
+ *     roughly right. Fixing the sprites is what exposed it.
+ *   - SWAPPING A SPRITE MOVES ITS OWN FRAME, so `size` and `rot` move with it.
+ *     `coin-1` and `coin-2` were re-fitted by the constant the gate measured
+ *     against the clip after the swap — x1.54 of size and +35.9 deg for coin-2,
+ *     +82.2 deg for coin-1 — and constant is the point: all four samples of each
+ *     agreed to 0.02 and 0.1 deg, which is a change of reference frame rather
+ *     than a spread. Anything that is NOT constant is a fit error and belongs in
+ *     `npm run fly:measure`, not here.
  *   - THE OBJECTS ARE FLAT AND BARELY ROTATE. The pen holds 46-48 deg for the
  *     whole of its 6 s, and its silhouette keeps an elongation of 8.5-8.9
  *     against the sprite's 8.3 — i.e. no foreshortening at all. The `spin`
@@ -47,29 +63,88 @@
  *     that it is scenery inside the camera's own fly-through, at frame-filling
  *     scale. Neither is a flying object; the three records are gone.
  *
- * DEPTH. `FLY_Z` below is the ONE depth in the scene, and it is a sort key
- * rather than a size: _fly.scss divides the perspective back out of both the
- * anchor and the box, so `size` and `x`/`y` are literally what lands on screen.
- * That split is what lets the table match the reference's sizes AND its
- * occlusion at the same time, which the previous model could not do.
+ * DEPTH. Two depths and a crossing time, not one depth: an object flies IN
+ * FRONT of the journal and passes behind it partway through, and `zFlip` says
+ * when. Both are sort keys rather than sizes — _fly.scss divides the
+ * perspective back out of the anchor and the box, so `size` and `x`/`y` are
+ * literally what lands on screen. That split is what lets the table match the
+ * reference's sizes AND its occlusion at the same time.
  *
  * @typedef {[number, number, number, number, number]} FlyKey
- * @typedef {{ id: string, asset: string, frame: number, keys: FlyKey[],
- *             base: number, t0: number, t1: number }} FlyRecord
+ * @typedef {{ id: string, asset: string, frame: number, zFlip: number,
+ *             keys: FlyKey[], base: number, t0: number, t1: number }} FlyRecord
  */
 
 /**
- * Depth of the flying layer, design px towards the camera. Negative is away,
- * so every object is BEHIND the journal's plane and the browser occludes it for
- * free (ADR-0006) — which is what the reference does on every flight.
+ * The two depths an object can be at, design px towards the camera, and the
+ * moment it crosses between them.
  *
- * The magnitude is arbitrary by construction: the perspective is compensated
- * out in _fly.scss, so this number changes nothing on screen except which side
- * of the page an object is on. It is large enough to survive the journal's own
- * `--jd` spine thickness and the pose's z, and small enough to stay well inside
- * the camera.
+ * DEPTH IS NOT CONSTANT OVER A FLIGHT, and treating it as constant is what made
+ * the objects read as wrong. An object enters IN FRONT of the journal, drifts
+ * down across the page, and only then passes behind it. With a single negative
+ * z it is behind from the first frame, so it is clipped by the page the whole
+ * way in — which on screen looks like the object being eaten rather than
+ * flying over.
+ *
+ * `zFlip` on each record is when it crosses, and it is a MEASUREMENT, not a
+ * choice: `scripts/fly-reference.json` carries, per sampled second, the
+ * fraction of the object the journal covers in the clip (preview minus clean
+ * isolates exactly that). Every flight runs 0.00 while it is in front and
+ * reaches ~1.00 by its end; `zFlip` is the midpoint between the last clear
+ * sample and the first covered one. Re-derive it with the snippet in
+ * _context/33-fly-objects.md rather than nudging a number.
+ *
+ * The magnitudes are arbitrary by construction: _fly.scss divides the
+ * perspective back out of both the anchor and the box, so z changes nothing on
+ * screen except which side of the page the object is on. They are large enough
+ * to clear the journal's own `--jd` and the pose's z, and small enough to stay
+ * well inside the camera.
  */
+/**
+ * Sprites whose silhouette has no long axis, so `rot` in the table below is
+ * MEANINGLESS FOR THEM and must not be animated.
+ *
+ * `rot` comes from correlating the sprite against the clip over angle. For a
+ * round shape there is no angle to find, and the fit returns whatever the noise
+ * favours frame to frame — coin-3 swung 39 deg between two neighbouring rows,
+ * basketball spanned 48 deg over its flight, milkpack-3 jumped 87 deg in one
+ * step. Played back through the spline that reads as the object spinning, which
+ * is nothing the clip does: measured on the clip, these silhouettes hold still.
+ *
+ * The threshold is the sprite's own moment elongation < 1.55, measured off its
+ * alpha — and 1.55 rather than the 1.2 that looks natural, because the CLIP's
+ * own angles say so. Read the reference's angle column for a flight and see how
+ * steady it is:
+ *
+ *   report   elong 1.46   75.0  82.5  82.5  49.5  49.5   jumps 33 deg
+ *   planet-cow    1.27    -2.4 -38.4 -36.9 -33.9 -33.9   jumps 36 deg
+ *   calendar      1.23   -15.2 -15.2 -52.7 -54.2 -52.7   jumps 39 deg
+ *   pen           8.33          steady to 9 deg over six seconds
+ *
+ * At 1.46 the clip cannot measure its own object's angle to better than 33 deg,
+ * so neither can we, and animating that column is animating the disagreement.
+ * `calendar` is the clearest case and worth naming: it is not a calendar but a
+ * clock face — a disc with a POINTER ARM that sweeps inside it. The disc never
+ * turns; the fit locks onto the arm at a different place each frame. A static
+ * sprite cannot reproduce a moving arm at all, and pretending otherwise by
+ * spinning the whole disc is worse than holding it still.
+ *
+ * ONE list, used twice: `fly:check` skips its angle comparison for exactly
+ * these assets rather than deriving its own threshold. That the two rules were
+ * separate — 1.25 here and 1.2 there — is how `calendar` ended up frozen by one
+ * and judged by the other.
+ *
+ * These flights keep a CONSTANT angle — the median of their own rows, so a
+ * deliberate tilt survives — rather than zero, which would stand every cross
+ * and every clock face upright.
+ */
+export const ROUND_ASSETS = new Set([
+  'basketball', 'calendar', 'coin-b', 'coin-face', 'cross', 'gift', 'heart',
+  'planet-cow', 'points-b', 'report', 'spark', 'tennis',
+])
+
 export const FLY_Z = -600
+export const FLY_Z_FRONT = 600
 
 /** @type {Omit<FlyRecord,'base'|'t0'|'t1'>[]} */
 // The rows are a measurement, not hand-authored numbers: regenerate with
@@ -77,7 +152,7 @@ export const FLY_Z = -600
 // prettier-ignore
 const RAW = [
   // pen-1 — frame 8, 10.87..18.07 s
-  { id: 'pen-1', asset: 'pen', frame: 8, keys: [
+  { id: 'pen-1', asset: 'pen', frame: 8, zFlip: 14.73, keys: [
     [10.87,   78.0,   -0.8,  326,  -84.0],
     [10.97,   73.8,    0.8,  326,  -84.0],
     [11.17,   65.2,    3.9,  365,  -84.0],
@@ -102,7 +177,7 @@ const RAW = [
     [18.07,   51.7,   33.7,  201,  -76.5],
   ] },
   // calendar-1 — frame 9, 17.10..23.67 s
-  { id: 'calendar-1', asset: 'calendar', frame: 9, keys: [
+  { id: 'calendar-1', asset: 'calendar', frame: 9, zFlip: 20.3, keys: [
     [17.10,   63.8,  101.8,  369,   34.5],
     [17.43,   60.1,   97.4,  369,   34.5],
     [17.63,   57.9,   94.7,  389,   24.0],
@@ -132,7 +207,7 @@ const RAW = [
     [23.67,   50.1,   67.0,  182,   -3.0],
   ] },
   // spark-1 — frame 10, 21.87..26.94 s
-  { id: 'spark-1', asset: 'spark', frame: 10, keys: [
+  { id: 'spark-1', asset: 'spark', frame: 10, zFlip: 22.95, keys: [
     [21.87,   56.1,   -2.6,  107,    1.5],
     [21.97,   56.4,    1.1,  107,    1.5],
     [22.17,   57.0,    8.6,  107,   -6.0],
@@ -152,7 +227,7 @@ const RAW = [
     [26.94,   50.8,   36.2,   49,   -6.0],
   ] },
   // spark-2 — frame 10, 21.97..26.94 s
-  { id: 'spark-2', asset: 'spark', frame: 10, keys: [
+  { id: 'spark-2', asset: 'spark', frame: 10, zFlip: 24.91, keys: [
     [21.97,   69.2,   -0.4,  181,   -6.0],
     [22.07,   68.2,    1.1,  181,   -6.0],
     [22.27,   66.3,    4.2,  181,   -7.5],
@@ -172,7 +247,7 @@ const RAW = [
     [26.94,   53.7,   33.6,  100,   -6.0],
   ] },
   // spark-3 — frame 10, 21.97..26.94 s
-  { id: 'spark-3', asset: 'spark', frame: 10, keys: [
+  { id: 'spark-3', asset: 'spark', frame: 10, zFlip: 25.01, keys: [
     [21.97,   50.4,   -0.3,  271,  -12.0],
     [22.07,   48.5,    0.9,  271,  -12.0],
     [22.27,   44.7,    3.2,  279,  -19.5],
@@ -194,7 +269,7 @@ const RAW = [
     [26.94,   46.6,   33.1,  123,  -19.5],
   ] },
   // spark-4 — frame 10, 22.07..26.90 s
-  { id: 'spark-4', asset: 'spark', frame: 10, keys: [
+  { id: 'spark-4', asset: 'spark', frame: 10, zFlip: 22.63, keys: [
     [22.07,   13.8,  102.0,  264,   75.0],
     [22.23,   15.6,   98.8,  264,   75.0],
     [22.43,   17.9,   94.8,  264,   45.0],
@@ -215,7 +290,7 @@ const RAW = [
     [26.90,   49.9,   64.7,  120,   43.5],
   ] },
   // spark-5 — frame 10, 22.07..26.80 s
-  { id: 'spark-5', asset: 'spark', frame: 10, keys: [
+  { id: 'spark-5', asset: 'spark', frame: 10, zFlip: 25.47, keys: [
     [22.07,   26.2,  106.3,  175,   51.0],
     [22.73,   31.7,   96.0,  175,   51.0],
     [22.93,   33.4,   93.0,  175,   49.5],
@@ -233,7 +308,7 @@ const RAW = [
     [26.80,   49.9,   70.3,   84,   52.5],
   ] },
   // chip-1 — frame 11, 26.04..31.63 s
-  { id: 'chip-1', asset: 'points-b', frame: 11, keys: [
+  { id: 'chip-1', asset: 'points-b', frame: 11, zFlip: 30.43, keys: [
     [26.04,   67.2,    3.9,  309,   40.5],
     [26.14,   66.7,    4.7,  309,   40.5],
     [26.67,   64.0,    8.9,  309,   24.0],
@@ -256,7 +331,7 @@ const RAW = [
     [31.63,   49.1,   34.6,  167,   36.0],
   ] },
   // chip-2 — frame 11, 26.07..32.03 s
-  { id: 'chip-2', asset: 'points-b', frame: 11, keys: [
+  { id: 'chip-2', asset: 'points-b', frame: 11, zFlip: 28.63, keys: [
     [26.07,   36.5,  103.1,  194,  -25.5],
     [26.47,   42.0,   99.0,  194,  -25.5],
     [26.74,   45.6,   96.2,  194,  -63.0],
@@ -279,50 +354,50 @@ const RAW = [
     [32.03,   49.2,   66.2,  112,  -57.0],
   ] },
   // coin-1 — frame 12, 30.10..34.83 s
-  { id: 'coin-1', asset: 'coin-d', frame: 12, keys: [
-    [30.10,   98.1,   -2.1,  133,  -46.5],
-    [30.23,   94.4,    1.0,  133,  -46.5],
-    [30.43,   88.9,    5.8,  133,  -63.0],
-    [30.63,   86.9,    9.9,  120,  -63.0],
-    [30.83,   85.9,   12.3,  120,  -60.0],
-    [31.23,   85.0,   15.4,  113,  -60.0],
-    [31.73,   84.1,   17.8,  106,  -60.0],
-    [32.00,   84.2,   18.5,  104,  -55.5],
-    [32.27,   84.9,   18.7,  103,  -55.5],
-    [32.80,   86.5,   18.0,  103,  -57.0],
-    [33.03,   86.6,   17.6,  103,  -58.5],
-    [33.23,   86.1,   17.5,  100,  -58.5],
-    [33.43,   85.0,   17.7,   98,  -58.5],
-    [33.63,   83.1,   18.3,   98,  -58.5],
-    [33.83,   80.6,   19.3,   93,  -58.5],
-    [34.23,   74.2,   22.1,   81,  -57.0],
-    [34.43,   70.0,   24.1,   79,  -57.0],
-    [34.63,   64.7,   26.3,   79,  -64.5],
-    [34.83,   58.1,   29.5,   66,  -64.5],
+  { id: 'coin-1', asset: 'coin-b', frame: 12, zFlip: 30.73, keys: [
+    [30.10, 98.1, -2.1, 133, -128.7],
+    [30.23, 94.4, 1.0, 133, -128.7],
+    [30.43, 88.9, 5.8, 133, -145.2],
+    [30.63, 86.9, 9.9, 120, -145.2],
+    [30.83, 85.9, 12.3, 120, -142.2],
+    [31.23, 85.0, 15.4, 113, -142.2],
+    [31.73, 84.1, 17.8, 106, -142.2],
+    [32.00, 84.2, 18.5, 104, -137.7],
+    [32.27, 84.9, 18.7, 103, -137.7],
+    [32.80, 86.5, 18.0, 103, -139.2],
+    [33.03, 86.6, 17.6, 103, -140.7],
+    [33.23, 86.1, 17.5, 100, -140.7],
+    [33.43, 85.0, 17.7, 98, -140.7],
+    [33.63, 83.1, 18.3, 98, -140.7],
+    [33.83, 80.6, 19.3, 93, -140.7],
+    [34.23, 74.2, 22.1, 81, -139.2],
+    [34.43, 70.0, 24.1, 79, -139.2],
+    [34.63, 64.7, 26.3, 79, -146.7],
+    [34.83, 58.1, 29.5, 66, -146.7],
   ] },
   // coin-2 — frame 12, 30.10..35.27 s
-  { id: 'coin-2', asset: 'coin-edge', frame: 12, keys: [
-    [30.10,  -12.6,   -4.0,  276,   60.0],
-    [30.47,    4.1,    1.1,  276,   60.0],
-    [30.67,   13.2,    4.0,  276,   40.5],
-    [30.87,   16.3,    6.9,  266,   40.5],
-    [31.07,   17.7,    8.9,  266,   40.5],
-    [31.27,   18.6,   10.2,  261,   40.5],
-    [31.53,   19.5,   11.3,  255,   40.5],
-    [31.80,   20.2,   12.0,  252,   40.5],
-    [32.87,   22.7,   13.8,  244,   42.0],
-    [33.47,   26.4,   15.9,  235,   43.5],
-    [33.67,   28.0,   16.8,  229,   45.0],
-    [33.87,   29.8,   17.8,  228,   46.5],
-    [34.07,   31.8,   18.9,  214,   46.5],
-    [34.47,   36.6,   22.5,  195,   48.0],
-    [34.67,   39.7,   25.0,  167,   51.0],
-    [34.87,   43.8,   28.5,  155,   51.0],
-    [35.07,   48.9,   32.6,  155,   52.5],
-    [35.27,   50.5,   34.1,  119,   55.5],
+  { id: 'coin-2', asset: 'coin-d', frame: 12, zFlip: 33.97, keys: [
+    [30.10, -12.6, -4.0, 180, 24.1],
+    [30.47, 4.1, 1.1, 180, 24.1],
+    [30.67, 13.2, 4.0, 180, 4.6],
+    [30.87, 16.3, 6.9, 173, 4.6],
+    [31.07, 17.7, 8.9, 173, 4.6],
+    [31.27, 18.6, 10.2, 170, 4.6],
+    [31.53, 19.5, 11.3, 166, 4.6],
+    [31.80, 20.2, 12.0, 164, 4.6],
+    [32.87, 22.7, 13.8, 159, 6.1],
+    [33.47, 26.4, 15.9, 153, 7.6],
+    [33.67, 28.0, 16.8, 149, 9.1],
+    [33.87, 29.8, 17.8, 149, 10.6],
+    [34.07, 31.8, 18.9, 139, 10.6],
+    [34.47, 36.6, 22.5, 127, 12.1],
+    [34.67, 39.7, 25.0, 109, 15.1],
+    [34.87, 43.8, 28.5, 101, 15.1],
+    [35.07, 48.9, 32.6, 101, 16.6],
+    [35.27, 50.5, 34.1, 78, 19.6],
   ] },
   // coin-3 — frame 12, 30.10..35.57 s
-  { id: 'coin-3', asset: 'coin-b', frame: 12, keys: [
+  { id: 'coin-3', asset: 'coin-face', frame: 12, zFlip: 34.03, keys: [
     [30.10,   26.8,  104.6,  132,  -22.5],
     [30.73,   40.1,   99.3,  132,  -22.5],
     [30.93,   44.3,   97.6,  180,  -22.5],
@@ -341,7 +416,7 @@ const RAW = [
     [35.57,   47.6,   65.4,   71,    3.0],
   ] },
   // planet-1 — frame 13, 34.07..40.64 s
-  { id: 'planet-1', asset: 'planet', frame: 13, keys: [
+  { id: 'planet-1', asset: 'planet', frame: 13, zFlip: 39.04, keys: [
     [34.07,   -7.3,    5.6,  349,  103.5],
     [34.30,    1.8,    6.7,  349,  103.5],
     [34.50,    9.6,    7.7,  497,   76.5],
@@ -367,7 +442,7 @@ const RAW = [
     [40.64,   52.3,   53.2,  188,   51.0],
   ] },
   // cross-1 — frame 14, 39.04..46.03 s
-  { id: 'cross-1', asset: 'cross', frame: 14, keys: [
+  { id: 'cross-1', asset: 'cross', frame: 14, zFlip: 41.41, keys: [
     [39.04,   53.4,   -0.9,  229,   16.5],
     [39.14,   52.9,    0.6,  229,   16.5],
     [39.40,   51.6,    4.6,  229,   16.5],
@@ -392,7 +467,7 @@ const RAW = [
     [46.03,   49.6,   34.1,  100,   19.5],
   ] },
   // cross-2 — frame 14, 39.07..46.53 s
-  { id: 'cross-2', asset: 'cross', frame: 14, keys: [
+  { id: 'cross-2', asset: 'cross', frame: 14, zFlip: 40.27, keys: [
     [39.07,  -20.8,  104.1,  252,  -72.0],
     [39.47,    4.5,   98.9,  252,  -72.0],
     [39.74,   21.3,   95.4,  269,  -72.0],
@@ -419,7 +494,7 @@ const RAW = [
     [46.53,   48.4,   68.9,  108,  -69.0],
   ] },
   // heart-1 — frame 15, 44.03..50.40 s
-  { id: 'heart-1', asset: 'heart', frame: 15, keys: [
+  { id: 'heart-1', asset: 'heart', frame: 15, zFlip: 49.19, keys: [
     [44.03,   76.3,   -6.4,  173,  -39.0],
     [44.66,   64.7,    0.8,  173,  -39.0],
     [44.83,   61.6,    2.6,  188,  -49.5],
@@ -449,7 +524,7 @@ const RAW = [
     [50.40,   49.0,   32.9,  102,  -39.0],
   ] },
   // report-1 — frame 16, 49.10..54.57 s
-  { id: 'report-1', asset: 'report', frame: 16, keys: [
+  { id: 'report-1', asset: 'report', frame: 16, zFlip: 53.47, keys: [
     [49.10,   85.6,  104.9,  247,  -22.5],
     [49.53,   83.8,   99.0,  247,  -22.5],
     [49.73,   83.0,   96.3,  272,  -61.5],
@@ -476,7 +551,7 @@ const RAW = [
     [54.57,   51.1,   67.1,  177,  -48.0],
   ] },
   // report-2 — frame 16, 49.10..54.20 s
-  { id: 'report-2', asset: 'report', frame: 16, keys: [
+  { id: 'report-2', asset: 'report', frame: 16, zFlip: 52.59, keys: [
     [49.10,   15.2,   -1.5,  141,   13.5],
     [49.56,   18.6,    0.9,  141,   13.5],
     [49.76,   20.0,    1.9,  181,   13.5],
@@ -501,7 +576,7 @@ const RAW = [
     [54.20,   51.2,   34.6,  156,   34.5],
   ] },
   // basketball-1 — frame 17, 53.13..58.14 s
-  { id: 'basketball-1', asset: 'basketball', frame: 17, keys: [
+  { id: 'basketball-1', asset: 'basketball', frame: 17, zFlip: 56.94, keys: [
     [53.13,   81.3,    3.4,  327,   43.5],
     [53.23,   79.2,    4.2,  327,   43.5],
     [53.43,   75.1,    5.9,  327,    6.0],
@@ -520,7 +595,7 @@ const RAW = [
     [58.14,   53.4,   33.8,  164,   -3.0],
   ] },
   // tennis-1 — frame 17, 53.27..58.64 s
-  { id: 'tennis-1', asset: 'tennis', frame: 17, keys: [
+  { id: 'tennis-1', asset: 'tennis', frame: 17, zFlip: 57.03, keys: [
     [53.27,    4.6,  105.4,  184,  -18.0],
     [54.00,   12.1,   97.4,  184,  -18.0],
     [54.20,   14.2,   95.2,  202,  -18.0],
@@ -541,7 +616,7 @@ const RAW = [
     [58.64,   49.9,   67.2,   71,   -3.0],
   ] },
   // soccer-1 — frame 18, 57.07..62.17 s
-  { id: 'soccer-1', asset: 'soccer', frame: 18, keys: [
+  { id: 'soccer-1', asset: 'soccer', frame: 18, zFlip: 61.61, keys: [
     [57.07,   18.8,   -0.4,  208,  126.0],
     [57.17,   20.1,    1.0,  208,  126.0],
     [57.44,   23.5,    4.7,  293,   97.5],
@@ -565,7 +640,7 @@ const RAW = [
     [62.17,   52.0,   35.8,  122,   91.5],
   ] },
   // cross-3 — frame 18, 57.07..62.60 s
-  { id: 'cross-3', asset: 'cross', frame: 18, keys: [
+  { id: 'cross-3', asset: 'cross', frame: 18, zFlip: 58.23, keys: [
     [57.07,   76.6,  104.3,  221,  -73.5],
     [57.57,   79.9,   99.0,  221,  -73.5],
     [57.84,   81.7,   96.2,  255,  -73.5],
@@ -591,7 +666,7 @@ const RAW = [
     [62.60,   50.6,   67.8,  108,  -72.0],
   ] },
   // planet-cow-1 — frame 19, 61.10..68.54 s
-  { id: 'planet-cow-1', asset: 'planet-cow', frame: 19, keys: [
+  { id: 'planet-cow-1', asset: 'planet-cow', frame: 19, zFlip: 67.92, keys: [
     [61.10,   33.7,   -3.2,  426,   18.0],
     [61.60,   49.3,    0.9,  426,   18.0],
     [62.00,   61.7,    4.2,  427,   -7.5],
@@ -617,7 +692,7 @@ const RAW = [
     [68.54,   48.2,   37.3,  211,  -13.5],
   ] },
   // milkpack-1 — frame 20, 67.07..74.20 s
-  { id: 'milkpack-1', asset: 'milkpack', frame: 20, keys: [
+  { id: 'milkpack-1', asset: 'milkpack', frame: 20, zFlip: 72.38, keys: [
     [67.07,   14.9,   -1.4,  328,  -73.5],
     [67.20,   17.6,    0.8,  328,  -73.5],
     [67.40,   21.6,    4.1,  413,  -73.5],
@@ -643,7 +718,7 @@ const RAW = [
     [74.20,   51.5,   35.8,  195,  -43.5],
   ] },
   // milkpack-2 — frame 20, 67.07..74.47 s
-  { id: 'milkpack-2', asset: 'milkpack', frame: 20, keys: [
+  { id: 'milkpack-2', asset: 'milkpack', frame: 20, zFlip: 71.94, keys: [
     [67.07,   96.4,  106.6,  302,    1.5],
     [67.53,   89.6,   99.0,  302,    1.5],
     [67.73,   86.7,   95.7,  346,    0.0],
@@ -670,7 +745,7 @@ const RAW = [
     [74.47,   50.8,   68.2,  203,   39.0],
   ] },
   // milkpack-3 — frame 21, 73.07..79.57 s
-  { id: 'milkpack-3', asset: 'milkpack', frame: 21, keys: [
+  { id: 'milkpack-3', asset: 'milkpack', frame: 21, zFlip: 76.5, keys: [
     [73.07,   36.0,  102.0,  407,   -3.0],
     [73.30,   40.3,   99.1,  407,   -3.0],
     [73.57,   45.2,   95.8,  480,  -90.0],
@@ -699,7 +774,7 @@ const RAW = [
     [79.57,   50.7,   67.5,  223,  -48.0],
   ] },
   // gift-1 — frame 22, 78.07..84.14 s
-  { id: 'gift-1', asset: 'gift', frame: 22, keys: [
+  { id: 'gift-1', asset: 'gift', frame: 22, zFlip: 81.34, keys: [
     [78.07,   57.1,   -6.4,  278,  -54.0],
     [78.54,   59.6,    0.7,  278,  -54.0],
     [78.80,   61.1,    4.7,  370,  -54.0],

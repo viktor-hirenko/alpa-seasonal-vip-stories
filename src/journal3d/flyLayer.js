@@ -1,5 +1,6 @@
 import { gsap } from 'gsap'
 import { snap } from '@/story/timing.js'
+import { FLY_Z, FLY_Z_FRONT } from '@/story/flyObjects.js'
 import { flyingObject } from './flyingObject.js'
 
 /**
@@ -25,10 +26,12 @@ import { flyingObject } from './flyingObject.js'
  * WHAT `visibility` IS AND IS NOT FOR. It is the flight's window, not its exit.
  * In the reference an object does not fade or blink out: it drifts down onto
  * the journal and the journal covers it, which is why every flight in the table
- * ends with the object BEHIND the page (FLY_Z) and reading 90-100 % occluded on
- * the reference's own frames. The switch happens after that, on an object the
- * page is already hiding — turning it off any earlier is the "objects vanish
- * instead of going behind the journal" the first pass shipped.
+ * ends BEHIND the page and reading 90-100 % occluded on the reference's own
+ * frames. The switch happens after that, on an object the page is already
+ * hiding — turning it off any earlier is the "objects vanish instead of going
+ * behind the journal" the first pass shipped. Getting BEHIND the page is
+ * `--fo-z`, set below at the flight's own measured `zFlip`; before that moment
+ * the object is in front and the page must not clip it.
  *
  * @param {HTMLElement} layerEl the `.fly-layer` element
  * @param {import('@/story/flyObjects.js').FlyRecord[]} records
@@ -48,7 +51,7 @@ export function buildFlyLayer(layerEl, records) {
     // the page has already swallowed the object, so a frame of slack there
     // costs nothing and a frame short is a visible pop.
     const at = snap(rec.t0)
-    entries.push({ rec, el: pos, at, end: rec.t1, live: null })
+    entries.push({ rec, el: pos, at, end: rec.t1, live: null, front: null })
     tl.add(flyingObject({ pos, box }, rec).paused(false), at)
   }
 
@@ -58,6 +61,19 @@ export function buildFlyLayer(layerEl, records) {
       if (live !== e.live) {
         e.live = live
         e.el.style.visibility = live ? 'visible' : 'hidden'
+      }
+      // Depth belongs here for exactly the reason visibility does: it is a pure
+      // function of the clock, so it is right after any seek, backwards
+      // included. An object flies IN FRONT of the journal and crosses behind it
+      // at `zFlip` — measured off the clip, see flyObjects.js. Held as a single
+      // step rather than a ramp because _fly.scss divides the perspective back
+      // out, so z is only a sort key and a step changes nothing but the order;
+      // and the crossing lands where the page is already covering most of the
+      // object, so there is nothing to see popping.
+      const front = t < e.rec.zFlip
+      if (front !== e.front) {
+        e.front = front
+        e.el.style.setProperty('--fo-z', String(front ? FLY_Z_FRONT : FLY_Z))
       }
     }
   }

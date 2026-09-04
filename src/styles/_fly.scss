@@ -28,7 +28,9 @@
 /// was as big as its depth happened to make it, and matching the reference's
 /// sizes and its occlusion at the same time was not possible.
 ///
-/// `--fo-z` and `--fo-size` are therefore STATIC per object (set by FlyObject),
+/// `--fo-size` is therefore STATIC per object (set by FlyObject); `--fo-z` is
+/// owned by flyLayer's clock-driven `applyAt`, which flips it once per flight
+/// at the measured moment the object passes behind the page,
 /// and `--fo-ik` with them. GSAP animates `--fo-x` / `--fo-y` here and
 /// `rotationZ` / `scale` on the box, so nothing on this element relayouts per
 /// frame.
@@ -69,9 +71,12 @@
   // GSAP owns these two numbers and nothing else here.
   --fo-x: 50;
   --fo-y: 50;
-  // Depth, design px towards the camera. Static; set by FlyObject from FLY_Z.
+  // Depth, design px towards the camera. Set by FlyObject to the in-front value
+  // and flipped once per flight by flyLayer.applyAt at the record's `zFlip`.
   --fo-z: 0;
-  // 1/k — see the note above. Static, because --fo-z is.
+  // 1/k — see the note above. Follows --fo-z, so the perspective stays divided
+  // back out on both sides of the flip and the object does not change size when
+  // it crosses.
   --fo-ik: calc((var(--persp) - var(--fo-z)) / var(--persp));
 
   transform: translate3d(
