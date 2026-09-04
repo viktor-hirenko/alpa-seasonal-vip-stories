@@ -56,27 +56,30 @@
   // container-type: size enables cqw/cqh, which is what makes --u JS-free.
   container-type: size;
 
-  // COVER fit onto the 1080x1920 design canvas — `max`, not `min`, and that one
-  // word is load-bearing.
+  // CONTAIN fit onto the 1080x1920 design canvas — `min`, not `max`, and that
+  // one word is load-bearing. This is Thor's split, and it is the right one:
+  // THE SCENE IS NEVER CROPPED, ONLY THE VIDEO IS.
   //
-  // The backdrop is a 1080x1920 video drawn with `object-fit: cover`: it fills
-  // the stage and spills over the short axis. The scene has to be laid out on
-  // the SAME canvas or the two cannot stay registered — and with `min` they did
-  // not. The two scales are equal only where the viewport is exactly 9:16, and
-  // 420x747 (what the probe runs at) is 9:16 to three decimals, so every gate
-  // and every screenshot agreed while real devices did not:
+  //   .stage      --u: min(...)        scene fits whole, always visible
+  //   .stage__bg  object-fit: cover    video fills, spills, paints the margins
   //
-  //   viewport            scene / video      drift at 10 % from an edge
-  //   420x747 (probe)         0.999                    0 px
-  //   430x932 (iPhone 14 PM)  0.821                   38 px
-  //   393x852 (iPhone 15 Pro) 0.820                   35 px
-  //   desktop card            0.870                   51 px
+  // The scene does NOT need to be pixel-registered with the video. `clean bg`
+  // is the render WITHOUT the journal and WITHOUT the objects, so there is
+  // nothing in the video for either of them to line up against; all that must
+  // hold is that the journal and the objects share ONE canvas, which they do.
+  // Forcing the scene to crop like the video (`max`, 2026-09-04) bought that
+  // false constraint and cost the composition: the canvas is 9:16 and nothing
+  // else is, so on every real shape the scene grew and lost its edges —
   //
-  // The design agrees that the canvas is meant to be cropped rather than
-  // letterboxed: on every storyboard frame the `interior` art is 1340 px wide
-  // inside a 1080 px frame, and the journal itself is wider than the frame on
-  // several slides.
-  --u: max(100cqw / 1080, 100cqh / 1920);
+  //   viewport                       what `max` did
+  //   420x747 (9:16, the probe)      nothing — which is why no gate saw it
+  //   430x932 iPhone 14/15 Pro Max   cropped left and right
+  //   desktop card 58.2 x 90vh       15 % larger, cropped top and bottom
+  //
+  // — and the journal is authored to reach the frame edge on several slides, so
+  // cropping the frame crops the journal. `min` costs nothing in return: the
+  // video still covers, so the margins are painted rather than black.
+  --u: min(100cqw / 1080, 100cqh / 1920);
 
   // Camera distance in DESIGN px, not real px. "1000px" from the brief is a
   // real-pixel figure, but the stage is ~400 CSS px wide on a phone and ~600 on
@@ -117,19 +120,17 @@
 }
 
 ///
-/// THE DESIGN CANVAS. Exactly 1080 x 1920 design px, centred on the stage and
-/// deliberately allowed to overflow it — the same rectangle `object-fit: cover`
-/// gives the backdrop video, cropped by the stage's own `overflow: hidden`.
+/// THE DESIGN CANVAS. Exactly 1080 x 1920 design px, centred on the stage. With
+/// `--u: min(...)` it is the largest 9:16 rectangle that FITS the stage, so it
+/// never overflows and never gets cropped; the video behind it covers, and
+/// paints whatever margin the canvas leaves.
 ///
 /// This element exists so that A PERCENTAGE MEANS A PERCENTAGE OF THE FRAME.
 /// Everything below it is `width: 100%; height: 100%` and positions itself in
 /// percentages — journal poses, flying-object anchors, the lot. While this box
 /// was `inset: 0` those percentages were percentages OF THE VIEWPORT, so the
-/// scene stretched and squashed against a backdrop that did not: on a
-/// 430 x 932 phone an anchor at 10 % of the frame landed 38 px away from the
-/// same point in the video, and at 50 % it landed exactly right, which is why
-/// the journal looked nearly correct while the objects around the edges did
-/// not.
+/// scene stretched and squashed with the window instead of staying a fixed
+/// 9:16 composition. Keep the box; only the fit changed.
 ///
 /// Centring is `left/top` plus a negative margin, never `translate(-50%)`:
 /// this element is an ancestor of the 3D chain and must carry no transform of

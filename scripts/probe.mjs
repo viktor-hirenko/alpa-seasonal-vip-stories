@@ -345,10 +345,22 @@ if (fitMode) {
     [1512, 945, 'MacBook (desktop card)'],
     [1920, 1080, 'wide desktop'],
   ]
-  console.log('Scene vs backdrop, per viewport. The video is object-fit: cover on a')
-  console.log('1080x1920 source, so the scene has to be laid out at the SAME scale on')
-  console.log('the SAME centre or the two drift apart towards the edges of the frame.\n')
-  console.log('viewport      device                  canvas      scene/video   canvas vs video rect')
+  // THE CLAIM UNDER TEST: the scene FITS and the video COVERS.
+  //
+  //   .stage      --u: min(...)       the 1080x1920 canvas fits whole, uncropped
+  //   .stage__bg  object-fit: cover   the video fills and spills, painting the margin
+  //
+  // The previous version of this gate asserted the opposite — that the canvas
+  // IS the video's cropped rect — and passed a build whose scene was 15 % too
+  // large and cut off on every shape but 9:16. It is not enough for the two to
+  // agree; the scene has to be the one that stays whole, because the journal is
+  // authored right up to the frame edge and a cropped frame is a cropped
+  // journal. The video has nothing in it for the scene to register against —
+  // `clean bg` is the render without the journal and without the objects.
+  console.log('Scene vs backdrop, per viewport. The scene must FIT the stage whole')
+  console.log('(--u: min) while the video COVERS it (object-fit: cover), so that no')
+  console.log('shape but 9:16 can ever crop the composition.\n')
+  console.log('viewport      device                  canvas       fit    overflow   off-centre  video')
   let worst = 0
   for (const [w, h, name] of SHAPES) {
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: w < 800 })
@@ -358,30 +370,33 @@ if (fitMode) {
       const st = document.querySelector('.stage'), sr = st.getBoundingClientRect()
       const cv = document.querySelector('.stage-3d').getBoundingClientRect()
       const box = document.querySelector('.journal-box')
+      const bg = document.querySelector('.stage__bg')
       return { sw: sr.width, sh: sr.height, cw: cv.width, ch: cv.height,
         cx: cv.left - sr.left + cv.width / 2, cy: cv.top - sr.top + cv.height / 2,
-        u: box.offsetWidth / parseFloat(getComputedStyle(st).getPropertyValue('--jw')) }
+        u: box.offsetWidth / parseFloat(getComputedStyle(st).getPropertyValue('--jw')),
+        bgFit: bg ? getComputedStyle(bg).objectFit : 'none' }
     })()`)
-    // what object-fit: cover does to a 1080x1920 source in this stage
-    const s2 = Math.max(m.sw / 1080, m.sh / 1920)
-    const scale = m.u / s2
-    // The canvas must BE the video's rect: the same size and the same centre.
-    // Overflowing the stage is not an error — the video overflows it too, and
-    // the stage's `overflow: hidden` crops both by the same amount.
+    // What `contain` gives a 1080x1920 canvas in this stage — the scale the
+    // scene must be laid out at.
+    const sFit = Math.min(m.sw / 1080, m.sh / 1920)
+    const fit = m.u / sFit
+    // Nothing may stick out of the stage: that is what "never cropped" means.
+    const overflow = Math.max(0, m.cw - m.sw, m.ch - m.sh)
     const off = Math.max(Math.abs(m.cx - m.sw / 2), Math.abs(m.cy - m.sh / 2))
-    const driftNow = Math.max(Math.abs(m.cw - 1080 * s2), Math.abs(m.ch - 1920 * s2), off)
-    const bad = Math.abs(scale - 1) > 0.02 || driftNow > 2
+    const bad = Math.abs(fit - 1) > 0.005 || overflow > 1 || off > 1 || m.bgFit !== 'cover'
     if (bad) fails++
-    worst = Math.max(worst, Math.abs(scale - 1))
+    worst = Math.max(worst, Math.abs(fit - 1))
     console.log(
       `${w}x${h}`.padEnd(14) + name.padEnd(24) +
       `${m.cw.toFixed(0)}x${m.ch.toFixed(0)}`.padEnd(12) +
-      scale.toFixed(3).padStart(11) +
-      driftNow.toFixed(1).padStart(16) + ' px' +
-      (bad ? '   OFF-CANVAS' : ''),
+      fit.toFixed(3).padStart(6) +
+      overflow.toFixed(1).padStart(10) + ' px' +
+      off.toFixed(1).padStart(11) + ' px' +
+      '  ' + m.bgFit +
+      (bad ? '   CROPPED' : ''),
     )
   }
-  console.log(`\n${fails} viewport(s) out of registration; worst scale error ${(worst * 100).toFixed(1)} %`)
+  console.log(`\n${fails} viewport(s) where the scene is not laid out whole; worst fit error ${(worst * 100).toFixed(1)} %`)
   if (fails) process.exitCode = 1
 } else if (occId) {
   const f = FLIGHTS.find(x => x.id === occId)

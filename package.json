@@ -14,6 +14,7 @@
     "pose:check": "node scripts/probe.mjs --all",
     "fit:check": "node scripts/probe.mjs --fit",
     "fly:check": "node scripts/probe.mjs --fly",
+    "audit": "node scripts/audit-slides.mjs",
     "fly:measure": "node scripts/fly-measure.mjs",
     "fly:sprites": "node scripts/fly-sprites.mjs",
     "check-locales": "node scripts/check-locales.mjs",

@@ -43,16 +43,29 @@ lab.html?frame=9&journal=0                         # reference alone
 ## Verification
 
 ```sh
-npm run pose:check   # measure every slide's on-screen AABB vs slides.js
+npm run audit        # THE ONE THAT COMPARES AGAINST THE ORIGINALS (needs _refs/)
+npm run fit:check    # scene fits the stage whole, video covers it — run first
+npm run pose:check   # every slide's on-screen AABB vs slides.js
+npm run fly:check    # flying objects vs scripts/fly-reference.json
 npm run probe -- "lab.html?frame=11"
-npm run frames       # reference stills into _refs/frames/ (needs _refs/)
 ```
 
+Run the gates **one at a time**: two headless Chromes fight over the profile
+directory and produce phantom failures and hangs.
+
+`npm run audit` is the important one, and the only one that can fail for the
+right reason. Every other check here compares the build against a TABLE that was
+itself derived from the mock — `pose:check` cannot report a pose error, because
+the pose table is what it checks against, and it was green throughout a build
+that was rejected on sight. The audit puts our render, the reference clip and
+the Figma storyboard frame side by side for all 27 slides, writes the numbers,
+and drops a 50/50 blend of ours-over-clip into `_refs/audit/`, where a
+disagreement reads as a doubled edge. Findings live in
+`_context/35-slide-audit.md`.
+
 `scripts/probe.mjs` drives headless Chrome over the DevTools Protocol using
-Node's built-in WebSocket — no dependencies. It reports the journal's bounding
-box in design pixels and the delta against the pose table, which is what turns
-"looks a bit off" into "cy is 4.2 design px low". Current state: all 21 poses
-reproduce the Figma mock within ±1.5 design px.
+Node's built-in WebSocket — no dependencies. All 21 poses reproduce the Figma
+storyboard within 2 design px; the clip is a different matter, see the audit.
 
 ## Video
 
