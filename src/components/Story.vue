@@ -54,9 +54,6 @@
         />
 
         <TapZones @press="handleEvent" @release="handleEventEnd" />
-
-        <StoryArrow direction="back" @nav="jumpToSegment" />
-        <StoryArrow direction="forward" @nav="jumpToSegment" />
       </div>
 
       <!-- Only shown when autoplay is refused, exactly as in Thor. -->
@@ -71,6 +68,13 @@
         </div>
       </div>
     </div>
+
+    <!-- Desktop arrows live OUTSIDE the card, as the reference has them, so
+         they are siblings of `.stage` rather than children: `.stage` is the
+         rounded card and clips with `overflow: hidden` on desktop, so an arrow
+         placed beyond its edge from the inside would simply be cut off. -->
+    <StoryArrow direction="back" @nav="jumpToSegment" />
+    <StoryArrow direction="forward" @nav="jumpToSegment" />
   </div>
 </template>
 

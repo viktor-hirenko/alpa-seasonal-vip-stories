@@ -6,6 +6,7 @@
       :width="glowWidth"
       :height="glowHeight"
       :plus="glowPlus"
+      :blend="glowBlend"
     />
     <slot />
   </div>
@@ -44,6 +45,8 @@ const props = defineProps({
   glowHeight: { type: Number, default: 1143.676 },
   /** Most pages stack two glow copies; VIP Status has only the hard-light one. */
   glowPlus: { type: Boolean, default: true },
+  /** Blend of the first glow copy — see JGlow. Seasonal Power uses 'dodge'. */
+  glowBlend: { type: String, default: 'hard' },
 })
 
 const d = n => `calc(${+n.toFixed(3)} * var(--u))`

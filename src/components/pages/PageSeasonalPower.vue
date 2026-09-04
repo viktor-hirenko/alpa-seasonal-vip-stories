@@ -5,10 +5,37 @@
   <PageChrome>
     <template #art>
       <PageBackdrop :planets="false" />
-      <JHero :left="261" :top="566">
-        <!-- Icon box from metadata; the rotation is unknown without a
-             get_design_context pass on this hero, so it is left unrotated. -->
-        <JHeroIcon :src="icon" :left="143.234" :top="-125" :width="1135.351" :height="1135.351" />
+      <!-- The glow is this hero's OWN mask group (21770:3037), not the shared
+           Money Talks default: ONE copy rather than two, blended color-dodge
+           rather than hard-light + plus-lighter, and a box a quarter smaller
+           sitting 150 px lower. All three differ at once, which is why the page
+           read as too dark while the numbers were borrowed from a neighbour.
+           JGlow takes the MASK GROUP box, as on every other page. -->
+      <JHero
+        :left="261"
+        :top="566"
+        glow-blend="dodge"
+        :glow-plus="false"
+        :glow-x="64.235"
+        :glow-top="40.324"
+        :glow-width="1439.454"
+        :glow-height="862.735"
+      >
+        <!-- get_design_context on 21770:3036: a 1135.351 box centring the 919
+             artwork at 15.88deg. The 143.234 that used to stand here was
+             get_metadata's x for the ROTATED node — trap 1 in 91-handover.md,
+             and 143.234 - 919*sin(15.88deg) = -108.17 is the same number seen
+             from the AABB. -->
+        <JHeroIcon
+          :src="icon"
+          :left="-108.17"
+          :top="-125"
+          :width="1135.351"
+          :height="1135.351"
+          :img-width="919"
+          :img-height="919"
+          :rotate="15.88"
+        />
       </JHero>
     </template>
 

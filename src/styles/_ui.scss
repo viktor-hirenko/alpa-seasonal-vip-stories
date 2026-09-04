@@ -142,18 +142,34 @@
   left: 50%;
 }
 
-/// Desktop arrows, outside the story card.
+/// Desktop arrows — OUTSIDE the story card, which is what the reference does
+/// and what Thor's `desktopControlButton` does (left: -37vh / left: 32vh
+/// against a 58.2vh card, i.e. a 2.9vh gutter outside each edge).
+///
+/// They are siblings of `.stage`, not children: `.stage` IS the card and clips
+/// with `overflow: hidden`, so an arrow positioned past its edge from the
+/// inside is invisible. Positioning is `left`/`right` off the viewport centre
+/// so it stays symmetric at any window width.
+///
+/// $card-half + $arrow-gap is where the arrow's inner edge sits; the `min()`
+/// clamp keeps it on screen in a window too narrow for card + gutters (below
+/// ~72vh of width) instead of letting it slide off the edge.
+$card-half: 29.1vh;
+$arrow-size: 5vh;
+$arrow-gap: 2.9vh;
+$arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
+
 .story-arrow {
   display: none;
 
   @include desktop {
     position: absolute;
     top: 50%;
-    margin-top: -2.5vh;
+    margin-top: calc(#{$arrow-size} * -0.5);
     display: grid;
     place-items: center;
-    width: 5vh;
-    height: 5vh;
+    width: $arrow-size;
+    height: $arrow-size;
     padding: 0;
     border: 0;
     border-radius: 50%;
@@ -175,11 +191,11 @@
 }
 
 .story-arrow--back {
-  left: 2vh;
+  right: min(calc(50% + #{$card-half} + #{$arrow-gap}), calc(100% - #{$arrow-size} - #{$arrow-edge}));
 }
 
 .story-arrow--forward {
-  right: 2vh;
+  left: min(calc(50% + #{$card-half} + #{$arrow-gap}), calc(100% - #{$arrow-size} - #{$arrow-edge}));
 
   svg {
     transform: rotate(180deg);

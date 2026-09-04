@@ -317,6 +317,15 @@
   mix-blend-mode: plus-lighter;
 }
 
+/// Seasonal Power's hero (21770:3037) has ONE mask group, not two, and blends
+/// it with color-dodge rather than hard-light — which is why that page reads as
+/// a broad wash in the mock despite a glow box a quarter smaller than Money
+/// Talks'. Reproducing it as a hard-light pair gets both the size and the
+/// brightness wrong at once.
+.j-glow--dodge {
+  mix-blend-mode: color-dodge;
+}
+
 /// `Lvl 1` ray burst behind the hero icons: plus-lighter, so it only adds light.
 .j-hero__rays {
   position: absolute;
