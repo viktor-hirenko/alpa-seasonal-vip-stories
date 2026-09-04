@@ -78,6 +78,7 @@ const STEP = Number(flag('--step', 4))            // in video frames
 const COLS = Number(flag('--cols', 2))
 const ROWS = Number(flag('--rows', 3))
 const LANG = flag('--lang', 'en')
+const DRIFT = has('--drift')   // keep the idle drift alive: motion, not pose
 const PAD = Number(flag('--pad', 0.14))           // crop padding, share of box
 const PANEL = Number(flag('--panel', 470))        // px per panel in the sheet
 
@@ -141,7 +142,21 @@ class CDP {
   }
 }
 
-const PARK = t => `(async () => {
+/**
+ * `keepDrift` decides what the idle drift does, and the choice is not cosmetic.
+ *
+ * OFF (default) is right for judging a POSE: the drift is ours alone, it moves
+ * the journal by up to 2.5 deg, and leaving it live puts our own noise into
+ * every comparison.
+ *
+ * ON is the only way to judge MOTION. With the drift cleared, every one of our
+ * frames inside a settled slide is identical by construction — the journal
+ * cannot be seen to move, so "does ours live the way the clip's does" is a
+ * question the default parking answers `no` to before looking. `--drift` seeks
+ * the drift timeline to the same second instead of neutralising it, so the
+ * frame is what the viewer actually sees.
+ */
+const PARK = (t, keepDrift) => `(async () => {
   const s = window.__story, v = s.video
   s.seek(${t})
   await new Promise(r => setTimeout(r, 700))
@@ -153,9 +168,12 @@ const PARK = t => `(async () => {
     setTimeout(r, 1500)
   })
   s.tl.seek(${t}, false)
-  if (s.hoverTl) s.hoverTl.pause()
+  if (s.hoverTl) {
+    s.hoverTl.pause()
+    ${keepDrift ? `s.hoverTl.seek(${t} % s.hoverTl.duration(), false)` : ''}
+  }
   const hv = document.querySelector('.journal-hover')
-  if (hv) hv.style.transform = 'none'
+  if (hv && ${!keepDrift}) hv.style.transform = 'none'
   const ui = document.querySelector('.stage__ui'); if (ui) ui.style.display = 'none'
   await new Promise(r => setTimeout(r, 120))
   return { vt: v.currentTime, tt: s.tl.time() }
@@ -266,14 +284,14 @@ async function openPlayer() {
 // ------------------------------------------------------------------- capture
 
 const key = t => t.toFixed(3)
-const oursPath = t => `${CACHE}/ours-${LANG}-${key(t)}.png`
+const oursPath = t => `${CACHE}/ours-${LANG}${DRIFT ? '-drift' : ''}-${key(t)}.png`
 const clipPath = t => `${CACHE}/clip-${key(t)}.png`
 
 async function captureOurs(t) {
   const f = oursPath(t)
   const metaFile = `${f}.json`
   if (existsSync(f) && existsSync(metaFile)) return JSON.parse(readFileSync(metaFile, 'utf8'))
-  const park = await cdp.eval(PARK(t))
+  const park = await cdp.eval(PARK(t, DRIFT))
   const meas = await cdp.eval(MEASURE)
   const shot = await cdp.send('Page.captureScreenshot', { format: 'png' })
   writeFileSync(f, Buffer.from(shot.data, 'base64'))
