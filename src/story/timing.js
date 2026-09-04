@@ -21,10 +21,54 @@ export const SYNC_EPSILON = 1 / FPS
 export const AUDIO_EPSILON = 0.08
 
 export const TIMING = {
-  /** Journal lies flat on the floor and swings up. */
-  entrance: { start: 2.5, floorLift: 1.15, edgeOnAt: 1.43, settleAt: 3.5 },
+  /**
+   * THE ENTRANCE, measured off the clip frame by frame (2026-09-04).
+   *
+   * `start` is not a cut and not a guess: the journal is ABSENT from the clip
+   * until frame 118. The difference mask `preview` minus `clean bg` — the two
+   * clips differ nowhere else — is under 50 px2 of codec noise on every frame
+   * from 60 to 117, and 195..650 design px wide on 118. Before `start` the
+   * journal is hidden outright; there is nothing to fade.
+   *
+   * `edgeOnAt` is where rotationY passes exactly -90 and only the spine faces
+   * the camera. Both branches of the silhouette-width curve extrapolate to the
+   * same vertex, frame 122.5:
+   *
+   *   118 414   120 206   122  22   124 101   126 222   128 345   130 468
+   *   119 305   121 118   123  20   125 164   127 286   129 408   131 521
+   *
+   * `settleAt` is frame 180, where the cover stops moving; 30-timecodes.md had
+   * that one right all along.
+   *
+   * These three are the RECORD of the measurement. The swing itself is driven by
+   * the key table in swingOpen, whose first column is these same seconds — the
+   * keys have to carry their own times because there are seven of them and no
+   * two are evenly spaced.
+   *
+   * WHAT THIS REPLACES. `start` was 2.50 — the interior cut, which a scene
+   * detector had labelled as the journal's entrance — so the whole swing ran
+   * 1.58 s ahead of the clip, and its keys put frame 7's settled pose on frame
+   * 6's timecode while the clip still had the cover filling the frame.
+   */
+  entrance: {
+    start: 3.9333, // frame 118, the journal appears
+    edgeOnAt: 0.15, // + this = frame 122.5, exactly edge-on
+    settleAt: 2.0667, // + this = frame 180, settled
+    floorLift: 1.15, // flyInFromFloor only, which the story no longer uses
+  },
 
-  /** Dolly zoom: the entrance shows extreme keystoning, the settled slides don't. */
+  /**
+   * Camera distance. NO DIP: the entrance is keystoned hard, and 1800 is what
+   * produces that keystone. Measured twice and by two methods — the convergence
+   * of the cover's vertical edges on frame 118 puts it at 1640..1900, and
+   * solving the entrance poses against the clip's own left and right edges at
+   * 1800 lands our quad on the cover to within ~20 px from frame 122 to 180.
+   *
+   * The old dip to 1100 belonged to an entrance that does not exist. It is also
+   * unusable at this size: at 1100 a cover half a canvas wide swings its near
+   * corner to within 170 px of the camera and the projection blows up — the
+   * quad came out 15 800 px tall.
+   */
   persp: { base: 1800, entranceDip: 1100, recover: 1.6 },
 
   /** Per-slide re-pose. */

@@ -18,10 +18,44 @@ export const FACE = {
 }
 
 /**
- * Spine thickness in design px. Calibrated against the frame at t=3.93 where
- * the journal passes exactly edge-on and only the glowing spine is visible.
- * Tune it in the lab (`__lab.setDepth`) against that frame — it is the single
- * number that decides whether the volume reads as a book or as a sheet of paper.
+ * Spine thickness in design px. Calibrated against the clip's edge-on frame —
+ * frame 122, t = 4.067, where the journal passes exactly through rotationY -90
+ * and the spine is all there is to see.
+ *
+ * 34 SURVIVED A CHALLENGE ON 2026-09-04 and the challenge is worth recording,
+ * because the argument against it is genuinely tempting and genuinely wrong.
+ *
+ * The tempting argument: fit the two branches of the clip's silhouette-width
+ * curve either side of the crossing and extrapolate them to their vertex. Both
+ * branches meet at zero, so the clip's journal appears to have no thickness at
+ * all, so ADR-0005's six faces are describing an object the reference does not
+ * contain. The fit is real: the vertex lands at frame 122.47 with a width of
+ * -23 +/- 25 px.
+ *
+ * Why it does not decide anything: +/-25 px is the whole quantity in dispute. A
+ * spine of 34 design px projects to about 54 px at that instant, but the two
+ * frames either side of the vertex are already 22 and 20 px wide from the COVER
+ * alone, and the run-length cleanup the width measurement needs eats a hairline.
+ * The curve cannot see a spine; it is not evidence that there is none.
+ *
+ * What does decide it is measuring the same thing in both pictures. The magenta
+ * excess, (R+B)/2 - G, across the edge-on frame, ours minus `clean bg` against
+ * the clip minus `clean bg`:
+ *
+ *   clip frame 122   peak 69   width 17 / 19 / 21 px at half, quarter, tenth
+ *   ours, DEPTH 34   peak 73   width 11 / 14 / 16
+ *   ours, DEPTH 10   peak 75   width 13 / 18 / 19
+ *
+ * 34 already draws a hairline of the clip's width and very nearly its
+ * brightness, and 10 is not distinguishable from it in the reference. So the
+ * number stays, ADR-0005 stands, and the six faces stay.
+ *
+ * A WARNING TO WHOEVER RE-RUNS THIS. The first pass of that measurement said our
+ * glow was thirty times too wide and half again too bright. It was not: the
+ * measuring harness left the backdrop video playing while it waited for the
+ * seek, so our frame carried a room from 0.9 s later — and 0.9 s later the room
+ * is washed magenta by a journal that is by then wide open. Check
+ * `video.currentTime` against `tl.time()` before believing anything about glow.
  */
 export const DEPTH = 34
 

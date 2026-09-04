@@ -1,3 +1,4 @@
+import { gsap } from 'gsap'
 import { TIMING } from '@/story/timing.js'
 
 /**
@@ -16,6 +17,11 @@ export function installStoryDebugHook(ctx) {
   // Merge rather than assign: useJournalFit parks its report on the same
   // object, and the two are installed independently.
   window.__story = Object.assign(window.__story || {}, {
+    // Exposed so a measuring script can read the LIVE pose. Mid-entrance the
+    // pose is a tween and no table holds it, and decomposing the computed
+    // matrix3d back into rotationX/Y/Z plus scale is exactly the guesswork
+    // GSAP already did on the way in.
+    gsap,
     tl,
     hoverTl,
     get video() {

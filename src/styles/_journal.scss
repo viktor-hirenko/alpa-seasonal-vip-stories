@@ -65,9 +65,14 @@
 }
 
 /// Spine (left edge) — THE money shot. This thin glowing magenta bar is the
-/// entire visual proof of real 3D volume at t=3.93, where the journal passes
-/// exactly edge-on. The bloom deliberately spills past the 34-px silhouette so
-/// it still reads when the stage is only ~400 CSS px wide.
+/// entire visual proof of real 3D volume at the edge-on instant, t = 4.067.
+///
+/// THESE TWO RADII WERE CHALLENGED AND KEPT. Measured as magenta excess,
+/// (R+B)/2 - G, across that frame, ours minus `clean bg` against the clip minus
+/// `clean bg`: the clip peaks at 69 over a 17-21 px hairline and we peak at 73
+/// over 11-16. Slightly tighter than the reference, not looser. Do not go
+/// hunting for a smaller glow here — see the warning in journalGeometry.js
+/// about measuring this with a backdrop that is a second late.
 .jedge--spine {
   @include j-face(var(--jd), calc(var(--jh) - var(--jseam)));
   transform: translateX(calc(var(--jw) * -0.5 * var(--u))) rotateY(-90deg);

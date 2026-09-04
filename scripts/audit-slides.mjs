@@ -198,6 +198,20 @@ const PARK = t => `(async () => {
   s.seek(${t})
   await new Promise(r => setTimeout(r, 900))
   v.pause(); s.tl.pause()
+  // AND NOW PUT THE VIDEO WHERE IT WAS ASKED TO BE. seek() hands control back to
+  // a PLAYING video, so the 900 ms spent waiting for it to settle are 900 ms it
+  // spends moving on: measured, tl.time() 4.0667 against video.currentTime
+  // 4.9634. On a settled slide the room barely changes in a second and this
+  // hides; during the entrance the room is being lit by the journal and it does
+  // not. It cost an afternoon here — a backdrop a second late read as a magenta
+  // wash over half the canvas, and the wash was blamed on our own spine glow,
+  // which was then "measured" at thirty times the clip's.
+  v.currentTime = ${t}
+  await new Promise(r => {
+    if (Math.abs(v.currentTime - ${t}) < 0.02) return r()
+    v.addEventListener('seeked', r, { once: true })
+    setTimeout(r, 1500)
+  })
   // ...and re-render WITH events, because tl.time()/seek() suppress callbacks by
   // default and the cover -> data-page handover (--jw/--jh) is a tl.call().
   s.tl.seek(${t}, false)

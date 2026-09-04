@@ -3,7 +3,6 @@ import { SLIDES } from '@/story/slides.js'
 import { FACE } from '@/story/journalGeometry.js'
 import { TIMING, snap } from '@/story/timing.js'
 import {
-  flyInFromFloor,
   swingOpen,
   rePose,
   recede,
@@ -64,8 +63,30 @@ export function buildStoryTimeline(targets, ctx) {
   const entrance = SLIDES[0]
   setFace(entrance.face)
   setPose(targets, entrance.pose)
+  // AND HIDDEN FROM THE FIRST PAINT. The timeline's own `set` at time 0 below
+  // only lands once something renders the timeline, and nothing does until
+  // playback starts — so without this the journal is on screen, in frame 4's
+  // entrance pose, for however long the preloader and the autoplay gesture
+  // take. The DOM's initial state has to be the state at t = 0.
+  gsap.set(targets.pos, { autoAlpha: 0 })
 
-  nest(tl, flyInFromFloor(targets), snap(TIMING.entrance.start))
+  // BEFORE THE ENTRANCE THE JOURNAL IS NOT THERE. Not faded, not off-screen —
+  // absent, the way it is absent from every clip frame before 118. This pair of
+  // `set`s is on the MASTER rather than inside swingOpen, because a `set` inside
+  // a nested child cannot act on the seconds before that child begins, which is
+  // the whole span that needs it.
+  //
+  // `autoAlpha` goes on `.journal-pos`, never on `.journal-box`: opacity on the
+  // box flattens its faces and the volume pops out of existence. whiteFlashExit
+  // hides it in the same place at the other end of the story.
+  tl.set(targets.pos, { autoAlpha: 0 }, 0)
+  tl.set(targets.pos, { autoAlpha: 1 }, snap(TIMING.entrance.start))
+
+  // `flyInFromFloor` is NOT part of the story any more, and stays exported only
+  // as a library preset. It described a journal lying on the floor and lifting,
+  // which the clip does not contain — there is nothing at all until 3.9333, and
+  // then a cover already past edge-on. It was also inert: nested at the same
+  // second as swingOpen, whose `set` on the same properties rendered after it.
   nest(tl, swingOpen(targets), snap(TIMING.entrance.start))
 
   // Per-slide re-pose from frame 8 onwards (4-7 are the entrance keyframes,

@@ -80,38 +80,63 @@ flyInFromFloor.PARAM_SCHEMA = {
 }
 
 /**
- * ENTRANCE, part 2. The swing-open: rotationY sweeps from edge-on towards
- * frontal while the journal shrinks from 1.291 to its settled cover scale, and
- * `--persp` recovers to base.
+ * THE ENTRANCE. The journal appears already past edge-on, swings through the
+ * exact edge, opens towards the camera and recedes into the settled cover.
  *
- * `edgeOnAt` is when rotationY passes exactly 90deg — that is the frame where
- * only the glowing spine is visible, and it is the visual proof of real 3D
- * volume. In the reference it lands at t=3.93, i.e. 1.43 s after the entrance
- * starts.
+ * THE KEYS ARE A MEASUREMENT, NOT A CHOREOGRAPHY, and they were re-shot in full
+ * rather than slid along the clock. The previous set began at rotationY -90 on
+ * TIMING.entrance.start and reached the settled pose 2.1 s later, which put
+ * frame 7's pose on frame 6's timecode; in the clip, 4.6 s still has the cover
+ * filling the frame from top to bottom.
+ *
+ * HOW EACH KEY WAS OBTAINED. The clip gives up two numbers per frame without an
+ * argument — the left and right edges of the journal, where the difference mask
+ * against `clean bg` starts and ends. They are a hard step against an unlit
+ * room, and on our own settled frame, where the browser's quad says the edge is
+ * at x=46 and the mask says 36, the bloom is worth 10 px on that boundary and
+ * no more. Those two numbers pin rotationY (which sets the width) and cx
+ * (which follows in closed form), through the browser's own projection, by
+ * `node scripts/clip-fit.mjs --solve`. From frame 131 the cover runs off the
+ * right of the canvas and only the left edge survives, so from there rotationY
+ * comes from the tilt of the cover's top edge instead and the fit is checked by
+ * laying our quad over the clip (`--pose`).
+ *
+ * WHAT COULD NOT BE MEASURED, and is therefore an author's choice: `scale`. The
+ * cover is clipped on three sides for most of the entrance, so there is no
+ * vertical extent to read, and any scale can be traded against rotationY for
+ * the same width. It is a smooth recede from 1.02 to the settled 0.746, chosen
+ * to keep the angular rate smooth through the crossing. If the entrance ever
+ * looks the wrong size, this is the number to move — and the picture, not a
+ * number, is what will say so.
+ *
+ * Keys are ABSOLUTE seconds from `start`, so a key's second is the clip's
+ * second minus 3.9333 and can be checked frame by frame against the table in
+ * timing.js.
  */
 export function swingOpen(t, params) {
   const p = P(
     {
-      edgeOnAt: TIMING.entrance.edgeOnAt,
-      settleAt: TIMING.entrance.settleAt,
-      perspBase: TIMING.persp.base,
       ease: EASE.swing,
       keys: [
-        // [time offset, rotationY, rotationZ, scale, cx, cy]
-        [0.0, -90, 30, 1.291, 46, 96],
-        [0.55, -60, 26, 1.15, 60, 78],
-        [1.05, -35, 23, 0.9, 68, 62],
-        [1.5, -18, 12, 0.75, 67.5, 52],
-        [2.1, -4, 3.1, 0.746, 57.7, 48.7],
+        // [t from start, rotationY, rotationZ, scale, cx, cy]   clip frame
+        [0.0, -104, 0.5, 1.02, 54.5, 50.0], //   118  appears, back cover to camera
+        [0.15, -90, 0.5, 0.97, 57.2, 50.0], //   122.5 exactly edge-on
+        [0.4, -76.3, 1.6, 0.92, 65.3, 50.0], //  130  front cover swinging into view
+        [0.6667, -59.6, 2.0, 0.885, 67.1, 50.0], // 138  fills the canvas
+        [1.0667, -36.5, 2.6, 0.845, 66.6, 50.0], // 150
+        [1.5667, -15.5, 2.9, 0.79, 61.6, 49.2], // 165
+        [2.0667, -4, 3.1, 0.746, 57.7, 48.7], // 180  settled: frame 7's pose
       ],
     },
     params,
   )
   const s = tl()
   const base = p.keys[0]
-  s.set(t.box, { rotationX: -20, rotationY: base[1], rotationZ: base[2], scale: base[3] })
-  s.set(t.pos, { xPercent: base[4], yPercent: base[5] })
-  s.to(t.box, { rotationX: 6, duration: p.edgeOnAt, ease: p.ease }, 0)
+  // The preset only poses. Making the journal appear is the STORY's business and
+  // lives on the master timeline: a `set` inside a nested child cannot hide
+  // anything before that child starts, which is exactly the frames that need it.
+  s.set(t.box, { rotationX: 0, rotationY: base[1], rotationZ: base[2], scale: base[3], z: 0 }, 0)
+  s.set(t.pos, { xPercent: base[4], yPercent: base[5] }, 0)
 
   p.keys.slice(1).forEach((k, i) => {
     const prev = p.keys[i]
@@ -119,16 +144,11 @@ export function swingOpen(t, params) {
     s.to(t.box, { rotationY: k[1], rotationZ: k[2], scale: k[3], duration: dur, ease: p.ease }, prev[0])
     s.to(t.pos, { xPercent: k[4], yPercent: k[5], duration: dur, ease: p.ease }, prev[0])
   })
-
-  s.to(t.stage, { '--persp': p.perspBase, duration: TIMING.persp.recover, ease: p.ease }, p.edgeOnAt * 0.5)
-  s.to(t.box, { rotationX: 0, duration: 0.6, ease: p.ease }, p.settleAt - 0.6)
   return s
 }
-swingOpen.PARAM_SCHEMA = {
-  edgeOnAt: { min: 0.3, max: 3, step: 0.01 },
-  settleAt: { min: 1, max: 6, step: 0.05 },
-  perspBase: { min: 800, max: 4000, step: 50 },
-}
+/** No sliders. The times live IN the keys — the second column is the clip's own
+ *  frame — and a slider that cannot move anything is worse than none. */
+swingOpen.PARAM_SCHEMA = {}
 
 /**
  * IDLE DRIFT. Runs on `.journal-hover`, on its OWN standalone infinite
