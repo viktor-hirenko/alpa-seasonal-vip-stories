@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Review — our build under the reference clip</title>
+    <!--
+      THE OWNER'S OWN EYES, without a script in the way.
+
+      The player runs in an iframe and the reference clip is laid straight over
+      it, pinned to the player's own `.stage` rectangle rather than to a size
+      guessed here — the iframe is same-origin, so the rect can simply be read.
+      One slider moves both clocks, another cross-fades between them.
+
+      HOW TO READ IT. At 50 % opacity anything that agrees reads as one picture
+      and anything that does not doubles; the doubling shows the size AND the
+      direction of the error, which no single number does. Park on a second, then
+      walk it a frame at a time with the arrow keys.
+
+      Two things to know before believing what you see:
+        - our dev backdrop is `ref-clean.mp4`, the reference room WITH the flying
+          objects baked in and WITHOUT the journal. So an object you see in our
+          panel may be the reference's own. Hit `o` to hide OUR objects and see
+          which is which.
+        - the idle drift (hover) never stops, and it moves the journal by up to
+          2.5 deg. Hit `d` to freeze it before judging a pose.
+
+      Dev only: it drives `window.__story`, which installStoryDebugHook installs
+      under `import.meta.env.DEV`, and it is deliberately not a build input.
+    -->
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: #0b0b10; color: #e8e8f0; overflow: hidden;
+        font: 13px/1.4 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+      }
+      #wrap { position: fixed; inset: 0 0 96px 0; }
+      iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+      #clip {
+        position: absolute; object-fit: cover; pointer-events: none;
+        opacity: .5; transition: opacity .08s linear;
+      }
+      #bar {
+        position: fixed; left: 0; right: 0; bottom: 0; height: 96px;
+        display: grid; grid-template-columns: 1fr auto; gap: 8px 18px;
+        align-items: center; padding: 10px 16px;
+        background: #14141c; border-top: 1px solid #262633;
+      }
+      .row { display: flex; align-items: center; gap: 12px; }
+      .row.wide { grid-column: 1 / -1; }
+      input[type=range] { width: 100%; accent-color: #ff3fb5; }
+      #op { width: 180px; }
+      button, select {
+        background: #23233010; border: 1px solid #3a3a4c; color: inherit;
+        border-radius: 6px; padding: 5px 10px; font: inherit; cursor: pointer;
+      }
+      button.on { background: #ff3fb5; border-color: #ff3fb5; color: #14141c; font-weight: 600; }
+      code { font: 12px/1 ui-monospace, Menlo, monospace; color: #9fe; }
+      .hint { color: #8a8a9c; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div id="wrap">
+      <iframe id="app" src="./index.html"></iframe>
+      <video id="clip" src="./video/ref-preview.mp4" muted playsinline></video>
+    </div>
+
+    <div id="bar">
+      <div class="row wide">
+        <button id="play">play</button>
+        <input id="t" type="range" min="0" max="94.366" step="0.0333" value="0" />
+        <code id="read">t 0.000</code>
+      </div>
+      <div class="row">
+        <span class="hint">clip</span>
+        <input id="op" type="range" min="0" max="1" step="0.01" value="0.5" />
+        <button id="src">preview</button>
+        <button id="objs">our objects</button>
+        <button id="drift">drift</button>
+        <select id="lang">
+          <option value="en">en</option><option value="fr">fr</option>
+          <option value="de">de</option><option value="it">it</option>
+        </select>
+      </div>
+      <div class="row hint">
+        &larr;/&rarr; one frame &nbsp;·&nbsp; shift = 10 &nbsp;·&nbsp; space play &nbsp;·&nbsp;
+        <code>o</code> our objects &nbsp;·&nbsp; <code>d</code> drift
+      </div>
+    </div>
+
+    <script type="module">
+      const app = document.getElementById('app')
+      const clip = document.getElementById('clip')
+      const tRange = document.getElementById('t')
+      const read = document.getElementById('read')
+      const FPS = 30
+
+      let story = null
+      let playing = false
+
+      const win = () => app.contentWindow
+      const doc = () => app.contentDocument
+
+      /** Pin the clip to the player's own stage rect. The player is full-bleed on a
+       *  phone and a 9:16 card on a desktop; measuring beats assuming. */
+      function fit() {
+        const st = doc()?.querySelector('.stage')
+        if (!st) return
+        const r = st.getBoundingClientRect()
+        Object.assign(clip.style, {
+          left: r.left + 'px', top: r.top + 'px',
+          width: r.width + 'px', height: r.height + 'px',
+        })
+      }
+
+      async function attach() {
+        story = null
+        for (let i = 0; i < 80 && !story; i++) {
+          story = win()?.__story?.tl ? win().__story : null
+          if (!story) await new Promise(r => setTimeout(r, 250))
+        }
+        fit()
+        seek(+tRange.value)
+      }
+
+      function seek(t) {
+        tRange.value = String(t)
+        clip.currentTime = t
+        if (story) {
+          story.seek(t)
+          // seek() hands control back to a PLAYING video; when we are parked we
+          // want it parked too, on the exact second asked for.
+          if (!playing) {
+            story.video.pause()
+            story.tl.pause()
+            story.video.currentTime = t
+            story.tl.seek(t, false)
+          }
+        }
+        read.textContent =
+          `t ${t.toFixed(3)}  frame ${Math.round(t * FPS)}` +
+          (story ? `  tl ${story.tl.time().toFixed(3)}  video ${story.video.currentTime.toFixed(3)}` : '')
+      }
+
+      document.getElementById('play').onclick = () => {
+        playing = !playing
+        document.getElementById('play').textContent = playing ? 'pause' : 'play'
+        if (playing) { story?.tl.play(); story?.video.play(); clip.play() }
+        else { story?.tl.pause(); story?.video.pause(); clip.pause(); seek(clip.currentTime) }
+      }
+      tRange.oninput = () => seek(+tRange.value)
+      document.getElementById('op').oninput = e => { clip.style.opacity = e.target.value }
+
+      document.getElementById('src').onclick = e => {
+        const preview = clip.src.includes('preview')
+        const t = clip.currentTime
+        clip.src = preview ? './video/ref-clean.mp4' : './video/ref-preview.mp4'
+        clip.currentTime = t
+        e.target.textContent = preview ? 'clean bg' : 'preview'
+      }
+
+      document.getElementById('objs').onclick = e => {
+        const fl = doc()?.querySelector('.fly-layer')
+        if (!fl) return
+        const off = fl.style.visibility === 'hidden'
+        fl.style.visibility = off ? '' : 'hidden'
+        e.target.classList.toggle('on', !off)
+        e.target.textContent = off ? 'our objects' : 'our objects OFF'
+      }
+
+      document.getElementById('drift').onclick = e => {
+        const hv = doc()?.querySelector('.journal-hover')
+        if (!hv || !story) return
+        const frozen = hv.style.transform === 'none'
+        if (frozen) { hv.style.transform = ''; story.hoverTl?.play() }
+        else { story.hoverTl?.pause(); hv.style.transform = 'none' }
+        e.target.classList.toggle('on', !frozen)
+        e.target.textContent = frozen ? 'drift' : 'drift FROZEN'
+      }
+
+      document.getElementById('lang').onchange = e => {
+        app.src = `./index.html?lang=${e.target.value}`
+        app.onload = attach
+      }
+
+      addEventListener('keydown', e => {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          const n = (e.shiftKey ? 10 : 1) * (e.key === 'ArrowRight' ? 1 : -1)
+          seek(Math.max(0, Math.min(94.366, +tRange.value + n / FPS)))
+          e.preventDefault()
+        } else if (e.key === ' ') { document.getElementById('play').click(); e.preventDefault() }
+        else if (e.key === 'o') document.getElementById('objs').click()
+        else if (e.key === 'd') document.getElementById('drift').click()
+      })
+
+      addEventListener('resize', fit)
+      app.onload = attach
+      setInterval(() => { fit(); if (playing) seek(clip.currentTime) }, playing ? 200 : 400)
+      attach()
+    </script>
+  </body>
+</html>

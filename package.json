@@ -15,6 +15,7 @@
     "fit:check": "node scripts/probe.mjs --fit",
     "fly:check": "node scripts/probe.mjs --fly",
     "audit": "node scripts/audit-slides.mjs",
+    "strip": "node scripts/filmstrip.mjs",
     "clip:fit": "node scripts/clip-fit.mjs",
     "clip:selftest": "node scripts/clip-fit.mjs --selftest",
     "fly:measure": "node scripts/fly-measure.mjs",
