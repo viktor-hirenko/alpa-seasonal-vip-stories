@@ -11,6 +11,10 @@
       <div class="sp__mascot">
         <img :src="cow" alt="" />
       </div>
+      <!-- 21770:4152, and it sits AFTER the cow in the mock's own order: the
+           mascot box runs 547 px past the bottom of the body, so without this
+           the page edge cut her off with a hard horizontal (V-12). -->
+      <div class="page__fade" />
     </template>
 
     <JHeading :text="copy.headline" :top="119" :size="96" v-bind="L.headline" />

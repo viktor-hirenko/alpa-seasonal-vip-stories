@@ -9,6 +9,10 @@
     "platinum": "Platinum",
     "diamond": "Diamond"
   },
+  "ui": {
+    "continue_journey": "Weiterreisen",
+    "watch_again": "Watch again"
+  },
   "pages": {
     "cover": {
       "vip_club": "VIP Club",
@@ -68,7 +72,7 @@
       "headline": ["Dein höchster", "Sport-Multiplikator:"]
     },
     "sponsor": {
-      "headline": ["Und jetzt… ein Wort", "von unserem Sponsor."],
+      "headline": ["Und jetzt… ein Wort von", "unserem Sponsor."],
       "subhead": ["Wir haben ein", "besonderes Geschenk", "für dich"]
     },
     "space_milk": {

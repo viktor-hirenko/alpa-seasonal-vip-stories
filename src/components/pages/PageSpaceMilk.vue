@@ -15,6 +15,10 @@
       <div class="sm__cow">
         <img :src="cow" alt="" />
       </div>
+      <!-- 21770:4231. After the cow and BEFORE the logo, which is the mock's
+           own order: the fade dissolves the mascot into the page bottom, and
+           the logo stays above it. Without it the body's edge cut her off. -->
+      <div class="page__fade" />
       <div class="page__art art-box sm__logo" :style="artBox(646, 80.785, 796.969, 796.969)">
         <img :src="logo" alt="" :style="artImg(796.969, 796.969, -8.52)" />
       </div>

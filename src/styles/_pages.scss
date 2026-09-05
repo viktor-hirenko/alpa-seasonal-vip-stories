@@ -425,6 +425,11 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
+  // 21770:3120's inner glow, moved off the clipping RECTANGLE and onto the
+  // badge's own alpha — same family as .sp__mascot (V-09..V-11). At alpha 0.13
+  // the rectangle never got caught by eye, which is exactly why it is fixed
+  // with its siblings rather than left to be found later.
+  filter: drop-shadow(du(15) du(15) du(17.2) rgba(255, 0, 212, 0.13));
 
   img {
     position: absolute;
@@ -435,14 +440,6 @@
     max-width: none;
     object-fit: contain;
   }
-}
-
-.j-level::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset du(15) du(15) du(17.2) rgba(255, 0, 212, 0.13);
 }
 
 ///
@@ -1112,9 +1109,14 @@
   width: du(890);
   height: du(1748);
   overflow: hidden;
-  box-shadow:
-    0 du(15) du(22.3) rgba(255, 0, 212, 0.27),
-    inset du(12) du(40) du(20.9) rgba(255, 0, 212, 0.52);
+  // 21770:4151. Figma hangs both glows on the ART layer, whose shape is the
+  // cow's own alpha, so it shades the silhouette. `box-shadow` shades the
+  // border-box instead, and drew a magenta rectangle with three visible edges
+  // (V-09). `drop-shadow` reads the same alpha Figma does, so every number
+  // below is the mock's, unchanged — only the shape they follow is fixed.
+  filter:
+    drop-shadow(0 du(15) du(22.3) rgba(255, 0, 212, 0.27))
+    drop-shadow(du(12) du(40) du(20.9) rgba(255, 0, 212, 0.52));
   pointer-events: none;
 
   img {
@@ -1195,10 +1197,11 @@
   height: du(1777);
   overflow: hidden;
   pointer-events: none;
-  box-shadow:
-    0 du(21) du(81.2) rgba(255, 0, 212, 0.56),
-    0 du(15) du(22.3) rgba(255, 0, 212, 0.27),
-    inset du(30) du(44) du(26.4) rgba(255, 0, 212, 0.36);
+  // 21770:4229 — same transfer error as .sp__mascot, see its note (V-11).
+  filter:
+    drop-shadow(0 du(21) du(81.2) rgba(255, 0, 212, 0.56))
+    drop-shadow(0 du(15) du(22.3) rgba(255, 0, 212, 0.27))
+    drop-shadow(du(30) du(44) du(26.4) rgba(255, 0, 212, 0.36));
 
   img {
     position: absolute;
@@ -1215,10 +1218,13 @@
   pointer-events: none;
 
   img {
-    box-shadow:
-      0 du(21) du(81.5) rgba(255, 199, 246, 0.33),
-      0 du(4) du(26.6) rgba(255, 0, 212, 0.46),
-      inset du(15) du(15) du(17.9) rgba(255, 204, 246, 0.77);
+    // 21770:4238. The light square the owner photographed (V-10) was this
+    // stack drawn on the 797 box; the mock's own shape here is the logo's
+    // alpha. Numbers unchanged, shape fixed — see .sp__mascot's note.
+    filter:
+      drop-shadow(0 du(21) du(81.5) rgba(255, 199, 246, 0.33))
+      drop-shadow(0 du(4) du(26.6) rgba(255, 0, 212, 0.46))
+      drop-shadow(du(15) du(15) du(17.9) rgba(255, 204, 246, 0.77));
   }
 }
 

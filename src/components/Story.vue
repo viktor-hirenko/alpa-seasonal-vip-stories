@@ -54,6 +54,12 @@
         />
 
         <TapZones @press="handleEvent" @release="handleEventEnd" />
+
+        <!-- The scene's two buttons. Both are chrome, not page content: the mock
+             draws them over the journal on storyboard frames 22-25 and 27, and
+             `.stage__ui` is the one layer with no perspective ancestor. -->
+        <StoryCta :visible="showCta" :label="copy.continue_journey" @click="getGift" />
+        <StoryReplay :visible="showReplay" :label="copy.watch_again" @click="watchAgain" />
       </div>
 
       <!-- Only shown when autoplay is refused, exactly as in Thor. -->
@@ -79,12 +85,14 @@
 </template>
 
 <script setup>
-import { nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import JournalStage from '@/components/Journal/JournalStage.vue'
 import FlyLayer from '@/components/Journal/FlyLayer.vue'
 import StoryHeader from '@/components/UI/StoryHeader.vue'
 import StoryArrow from '@/components/UI/StoryArrow.vue'
 import TapZones from '@/components/UI/TapZones.vue'
+import StoryCta from '@/components/UI/StoryCta.vue'
+import StoryReplay from '@/components/UI/StoryReplay.vue'
 import { resolvePage } from '@/components/pages/index.js'
 import { resolveTargets } from '@/journal3d'
 import { buildStoryTimeline } from '@/animations/buildStoryTimeline.js'
@@ -94,6 +102,7 @@ import { useStoryBridge } from '@/composables/useStoryBridge.js'
 import { useJournalFit } from '@/composables/useJournalFit.js'
 import { provideStoryData } from '@/composables/useStoryData.js'
 import { STORY_SEGMENTS } from '@/story/slides.js'
+import { TIMING } from '@/story/timing.js'
 
 const segments = STORY_SEGMENTS
 
@@ -129,7 +138,27 @@ const tlRef = shallowRef(null)
 const hoverTlRef = shallowRef(null)
 let targets = null
 
-const { notify, closeStory } = useStoryBridge({ endLink })
+const { notify, closeStory, getGift } = useStoryBridge({ endLink })
+
+// The scene's two buttons. Their windows are data (TIMING.cta / TIMING.replay,
+// derived from the storyboard frames they appear on), so nothing here decides
+// when they show — it only reads the clock.
+const copy = story.t('ui')
+const showCta = computed(
+  () => currentTime.value >= TIMING.cta.from && currentTime.value < TIMING.cta.to,
+)
+const showReplay = computed(() => currentTime.value >= TIMING.replay.at)
+
+/**
+ * "Watch again" restarts the story. `seek` clears the final-frame hold on its
+ * way through, so the burst at 92.83 plays once more rather than being skipped.
+ */
+const watchAgain = () => {
+  notify('watch_again')
+  isPaused.value = false
+  isPlaying.value = true
+  playback.seek?.(0)
+}
 
 // Called from the setup body, not from onMounted: it registers onScopeDispose,
 // and an effect scope is only current while setup runs. It waits for

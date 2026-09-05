@@ -132,6 +132,18 @@ export const TIMING = {
   /** Hyperspace burst: 1080 -> 2338 px = scale 2.165. */
   speed: { at: 92.83, dur: 1.1, scale: 2.165 },
 
+  /**
+   * WHEN THE SCENE'S TWO BUTTONS ARE ON SCREEN.
+   *
+   * `cta` — "Continue Journey" (21770:4456), which the storyboard draws on
+   * frames 22-25 and nowhere else: it appears with the Gift page and is gone
+   * before the hyperspace burst, so it ends exactly where `speed` begins.
+   * `replay` — "Watch again" (21811:3980) on storyboard frame 27, i.e. once the
+   * burst has finished (speed.at + speed.dur), and it stays for good.
+   */
+  cta: { from: 78.07, to: 92.83 },
+  replay: { at: 93.93 },
+
   outro: { at: 88.7, dur: 0.9 },
 
   /** Story length, from the reference video. */

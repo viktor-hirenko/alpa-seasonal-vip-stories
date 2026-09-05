@@ -9,6 +9,10 @@
     "platinum": "Platinum",
     "diamond": "Diamond"
   },
+  "ui": {
+    "continue_journey": "Continuer le voyage",
+    "watch_again": "Watch again"
+  },
   "pages": {
     "cover": {
       "vip_club": "VIP Club",

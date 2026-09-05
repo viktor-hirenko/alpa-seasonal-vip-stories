@@ -323,6 +323,10 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  // The mock states the height (201.173) as well as the padding, and the two do
+  // not agree: 58 x 1.7 plus 2 x 40.137 comes to 178.9. The stated height wins,
+  // because that is the box the storyboard actually draws.
+  height: du(201.173);
   padding: du(40.137) du(80.274);
   border: 0;
   border-radius: du(64.858);
@@ -331,9 +335,64 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
   font-weight: 900;
   font-size: du(58);
   letter-spacing: du(1.74);
-  line-height: 1;
+  line-height: 1.7;
   text-transform: uppercase;
   color: #000a12;
   white-space: nowrap;
   cursor: pointer;
+}
+
+///
+/// Scene CTA placement (21770:4885). The button itself is `.j-cta`; this is
+/// only where the mock's frame 24 puts it on the 1080x1920 canvas: top 81.99 %,
+/// 834.672 wide and centred, with the mock's own 201.173 height coming out of
+/// `.j-cta`'s padding and line box rather than being asserted twice.
+///
+.story-cta {
+  position: absolute;
+  left: 50%;
+  top: 81.99%;
+  transform: translateX(-50%);
+
+  .j-cta {
+    width: du(834.672);
+  }
+}
+
+///
+/// "Watch again" (21811:3980). One centred row: 37 sq icon, then the label in
+/// Rubik SemiBold 32 / 1.7, #fdd835, underlined.
+///
+/// The gap is MEASURED, not chosen: the mock puts the icon's left edge at
+/// 407.25 and the label's centre at 540 + 24.25 on a 1080 canvas, and the row
+/// as a whole is centred. Solving those gives a label 217 wide and 11.5 of air
+/// between the two.
+///
+.story-replay {
+  position: absolute;
+  left: 50%;
+  top: du(1785.54);
+  display: flex;
+  align-items: center;
+  gap: du(11.5);
+  padding: 0;
+  border: 0;
+  background: none;
+  transform: translateX(-50%);
+  font-family: $font-stack;
+  font-weight: 600;
+  font-size: du(32);
+  line-height: 1.7;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-position: from-font;
+  color: #fdd835;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.story-replay__icon {
+  width: du(37);
+  height: du(37);
+  flex: none;
 }
