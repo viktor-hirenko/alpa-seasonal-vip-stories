@@ -9,6 +9,7 @@ import {
   recede,
   whiteFlashExit,
   hyperspaceBurst,
+  outroText,
 } from '@/journal3d/presets.js'
 import { setPose } from '@/journal3d/poseTween.js'
 import { buildFlyLayer } from '@/journal3d/flyLayer.js'
@@ -123,6 +124,10 @@ export function buildStoryTimeline(targets, ctx) {
   nest(tl, recede(targets, from, RECEDE_POSE), snap(TIMING.recede.at))
   nest(tl, whiteFlashExit(targets), snap(TIMING.flash.at))
   nest(tl, hyperspaceBurst(targets), snap(TIMING.speed.at))
+  // Nested at the flash, not after it: the text's first frame IS the flash's
+  // first frame. Its exit leads the burst by 0.23 s and lives inside the same
+  // child, so there is one nest here and not two.
+  nest(tl, outroText(targets), snap(TIMING.outro.at))
 
   // Pad the timeline to the clip's full length so progress and `reach_end`
   // reflect the video, not just the last tween.

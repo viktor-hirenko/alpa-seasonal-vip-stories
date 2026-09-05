@@ -11,7 +11,8 @@
   },
   "ui": {
     "continue_journey": "Continue Journey",
-    "watch_again": "Watch again"
+    "watch_again": "Watch again",
+    "outro": ["See you", "in the next issue.", "To the stars!"]
   },
   "pages": {
     "cover": {

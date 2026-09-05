@@ -54,6 +54,24 @@ export const EASE = {
   zoom: 'power2.in',
 
   /**
+   * THE OUTRO TEXT, in and out. Both fitted to the clip's own scale curve,
+   * which was read off the LINE PITCH of the three-line block (the block
+   * overflows the frame while it is big, so a bounding box says nothing but the
+   * distance between its lines still scales with it).
+   *
+   * `outroIn` is the best of nine stock eases over the 19 measurable frames,
+   * 88.33..88.93: rms 0.107 on a scale that runs 1 -> 11.6, i.e. under 1 % of
+   * the range. Next best were sine.out (0.134) and power1.out (0.157).
+   *
+   * `outroOut` is the same contest over the exit, 92.60..93.18: expo.in at rms
+   * 0.159, well clear of power4.in (0.292) and power2.in (0.726). The text does
+   * not drift away, it accelerates past the camera — which is why the flattest
+   * curves lose by a factor of five.
+   */
+  outroIn: 'power1.inOut',
+  outroOut: 'expo.in',
+
+  /**
    * FLYING OBJECTS. One ease, and it is `none` on purpose.
    *
    * Each flight in flyObjects.js is a polyline of rows measured off the clip,

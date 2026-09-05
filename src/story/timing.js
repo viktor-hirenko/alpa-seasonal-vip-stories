@@ -133,6 +133,57 @@ export const TIMING = {
   speed: { at: 92.83, dur: 1.1, scale: 2.165 },
 
   /**
+   * THE OUTRO TEXT, measured off the clip frame by frame (2026-09-05).
+   *
+   * "See you in the next issue. To the stars!" (21770:4871) does not simply
+   * appear: it arrives eleven times oversized, shrinks onto the room, holds for
+   * four seconds, and then accelerates past the camera. All six numbers are
+   * read off the clip's LINE PITCH — the block overflows the frame while it is
+   * big, so its bounding box is useless, but the gap between its three lines
+   * scales with it and stays measurable throughout. At rest that pitch is
+   * 104.0..104.5 px against the mock's 96 x 1.08 = 103.68, which is how we know
+   * the mock's type size is the clip's type size.
+   *
+   * `at` is the white flash, not a separate cue. The text's first pixels appear
+   * on the same frame the flash does (white area 0.67 % -> 2.98 % at 88.10),
+   * and fitting the zoom with its start pinned there costs almost nothing:
+   * rms 0.107 against 0.089 for a freely-chosen start of 88.03. So the flash
+   * covers the arrival, exactly as it covers the journal's exit.
+   *
+   * `exitAt` is NOT `speed.at`. The text starts growing at 92.4333 — the first
+   * frame whose pitch leaves the 104.0..104.5 plateau — and the burst only
+   * fires at 92.83, so the text leads it by four tenths.
+   *
+   * The exit is fitted from that measured frame and NOT from the 92.60 the
+   * free fit prefers. On rms alone 92.60 wins (0.159 against 0.335), because
+   * dropping the slow first eighth of a second lets the curve sit better over
+   * the violent end. But an `expo.in` starting at 92.60 is still at scale 1.03
+   * on 92.70, where the clip is already at 1.16, and the contact sheet shows
+   * that as plain doubling in the BLEND panel — 33 px of it. Started at 92.4333
+   * the same ease is within 0.06 of scale through that whole stretch and the
+   * doubling goes. The sheet outranks the rms: it is what the defect looks like.
+   *
+   * The two legs come out the same length, 0.75 s. That is arithmetic, not
+   * symmetry imposed for its own sake.
+   *
+   * Scale is about the CANVAS centre, not the block's own centre; the fixed
+   * point of the measured zoom sits at 954..959 while the block's own centre is
+   * 951. See `.story-outro` in _ui.scss.
+   *
+   * WHAT THIS REPLACES. `{ at: 88.7, dur: 0.9 }` — a slot reserved by an
+   * earlier session and never wired to anything. 88.7 is 0.6 s late: by then
+   * the clip's text has all but finished shrinking (scale 1.95 and falling).
+   */
+  outro: {
+    at: 88.1,
+    dur: 0.75,
+    scale: 11.57,
+    exitAt: 92.4333,
+    exitDur: 0.75,
+    exitScale: 8.63,
+  },
+
+  /**
    * WHEN THE SCENE'S TWO BUTTONS ARE ON SCREEN.
    *
    * `cta` — "Continue Journey" (21770:4456), which the storyboard draws on
@@ -143,8 +194,6 @@ export const TIMING = {
    */
   cta: { from: 78.07, to: 92.83 },
   replay: { at: 93.93 },
-
-  outro: { at: 88.7, dur: 0.9 },
 
   /** Story length, from the reference video. */
   duration: 94.3667,

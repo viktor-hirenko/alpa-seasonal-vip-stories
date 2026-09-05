@@ -350,6 +350,41 @@ hyperspaceBurst.PARAM_SCHEMA = {
   scale: { min: 1, max: 4, step: 0.05 },
 }
 
+/**
+ * THE OUTRO TEXT (21770:4871). It arrives oversized under the white flash,
+ * shrinks onto the room, holds, then accelerates past the camera ahead of the
+ * hyperspace burst.
+ *
+ * Both legs are one preset because they are one layer's life, and the hold
+ * between them is not a tween — the element simply keeps the scale the first
+ * leg left it at.
+ *
+ * This preset owns SCALE and nothing else. Visibility is Story.vue's, read off
+ * the clock from `TIMING.outro` exactly as the two buttons are: a nested
+ * timeline renders at its own time 0 whenever the parent playhead is before it,
+ * so an `autoAlpha: 1` here would put the oversized text on screen from the
+ * first second of the story.
+ */
+export function outroText(t, params) {
+  const p = P({ ...TIMING.outro }, params)
+  const s = tl()
+  if (!t.outro) return s
+  s.set(t.outro, { scale: p.scale })
+  s.to(t.outro, { scale: 1, duration: p.dur, ease: EASE.outroIn }, 0)
+  s.to(
+    t.outro,
+    { scale: p.exitScale, duration: p.exitDur, ease: EASE.outroOut },
+    p.exitAt - p.at,
+  )
+  return s
+}
+outroText.PARAM_SCHEMA = {
+  dur: { min: 0.2, max: 2, step: 0.05 },
+  scale: { min: 1, max: 20, step: 0.1 },
+  exitDur: { min: 0.2, max: 2, step: 0.05 },
+  exitScale: { min: 1, max: 20, step: 0.1 },
+}
+
 // ---------------------------------------------------------------------------
 // The brief's simple presets. Kept, exported, and used by the lab and future
 // stories even though the real story follows the reference choreography.

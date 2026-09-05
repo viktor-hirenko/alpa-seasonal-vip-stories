@@ -55,9 +55,11 @@
 
         <TapZones @press="handleEvent" @release="handleEventEnd" />
 
-        <!-- The scene's two buttons. Both are chrome, not page content: the mock
-             draws them over the journal on storyboard frames 22-25 and 27, and
-             `.stage__ui` is the one layer with no perspective ancestor. -->
+        <!-- The scene's own layers: the outro title and the two buttons. All
+             three are chrome, not page content — the mock draws them over the
+             journal on storyboard frames 22-25, 25 and 27 — and `.stage__ui` is
+             the one layer with no perspective ancestor. -->
+        <StoryOutro :visible="showOutro" :lines="copy.outro" />
         <StoryCta :visible="showCta" :label="copy.continue_journey" @click="getGift" />
         <StoryReplay :visible="showReplay" :label="copy.watch_again" @click="watchAgain" />
       </div>
@@ -92,6 +94,7 @@ import StoryHeader from '@/components/UI/StoryHeader.vue'
 import StoryArrow from '@/components/UI/StoryArrow.vue'
 import TapZones from '@/components/UI/TapZones.vue'
 import StoryCta from '@/components/UI/StoryCta.vue'
+import StoryOutro from '@/components/UI/StoryOutro.vue'
 import StoryReplay from '@/components/UI/StoryReplay.vue'
 import { resolvePage } from '@/components/pages/index.js'
 import { resolveTargets } from '@/journal3d'
@@ -148,6 +151,14 @@ const showCta = computed(
   () => currentTime.value >= TIMING.cta.from && currentTime.value < TIMING.cta.to,
 )
 const showReplay = computed(() => currentTime.value >= TIMING.replay.at)
+// The outro title. Its SCALE is the timeline's (the `outroText` preset); this
+// only says when the element is on screen at all, and it has to, because a
+// nested timeline renders at its own time 0 while the playhead is before it.
+const showOutro = computed(
+  () =>
+    currentTime.value >= TIMING.outro.at &&
+    currentTime.value < TIMING.outro.exitAt + TIMING.outro.exitDur,
+)
 
 /**
  * "Watch again" restarts the story. `seek` clears the final-frame hold on its

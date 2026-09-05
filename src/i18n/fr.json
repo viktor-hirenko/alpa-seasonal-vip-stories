@@ -11,7 +11,8 @@
   },
   "ui": {
     "continue_journey": "Continuer le voyage",
-    "watch_again": "Watch again"
+    "watch_again": "Watch again",
+    "outro": ["Rendez-vous dans le prochain numéro.", "Vers les étoiles !"]
   },
   "pages": {
     "cover": {

@@ -11,7 +11,8 @@
   },
   "ui": {
     "continue_journey": "Weiterreisen",
-    "watch_again": "Watch again"
+    "watch_again": "Watch again",
+    "outro": ["Bis zur nächsten Ausgabe.", "Zu den Sternen!"]
   },
   "pages": {
     "cover": {

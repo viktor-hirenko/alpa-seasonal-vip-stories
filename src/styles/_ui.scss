@@ -360,6 +360,39 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
 }
 
 ///
+/// The outro title (21770:4871). The mock's node is 970 wide at x = 55 — i.e.
+/// centred — and 312 tall, which is exactly three 96 / 1.08 line boxes.
+///
+/// THE TOP IS NOT THE MOCK'S. The node's y is 847 and the storyboard renders
+/// its ink centred on 1002.5; the clip renders the same block — same 273 px ink
+/// height, same 932 px ink width, same 104 px line pitch — centred on 950.5.
+/// The room behind it is identical in the two (their difference image cancels
+/// the ceiling, the floor and the ring and doubles only the text), so those
+/// 52 px belong to the text and not to the framing. The clip wins, per the
+/// owner's 2026-09-04 decision that the video is the reference for how things
+/// move and where they end up: 847 - 52 = 795.
+///
+/// CENTRED WITHOUT `transform`, through `atCx`, because GSAP owns this
+/// element's transform outright (ADR-0002) — the outro preset scales it.
+///
+/// The origin of that scale is the CANVAS centre, not the block's own. Solving
+/// the measured zoom for its fixed point gives 954..959 over four frames, while
+/// the block's own centre is 951; 960 is the canvas centre and sits inside that
+/// spread. 165 = 960 - 795, written as a length rather than a percentage so the
+/// origin stays on the canvas centre in a locale whose text wraps to a fourth
+/// line.
+///
+/// `pointer-events: none` because `.stage__ui > *` switches them back on, and
+/// this box covers the middle of the screen, where the tap zones are.
+///
+.story-outro {
+  @include atCx(795, 970);
+  transform-origin: 50% du(165);
+  text-align: center;
+  pointer-events: none;
+}
+
+///
 /// "Watch again" (21811:3980). One centred row: 37 sq icon, then the label in
 /// Rubik SemiBold 32 / 1.7, #fdd835, underlined.
 ///

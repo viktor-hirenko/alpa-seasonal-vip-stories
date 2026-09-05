@@ -7,6 +7,7 @@
  *   node scripts/filmstrip.mjs --t 30.1 32.0 --step 4    # a range of seconds
  *   node scripts/filmstrip.mjs --slide all               # journal layout, per slide
  *   node scripts/filmstrip.mjs --slide 19 --lang de      # ...in German
+ *   node scripts/filmstrip.mjs --at 90.0 --ui             # ...with the chrome ON
  *
  * WHY THIS EXISTS, on top of `audit-slides.mjs`. The audit takes ONE frame per
  * slide and scales the whole 1080x1920 canvas into a 360 px column, which is
@@ -41,6 +42,14 @@
  *      shrinks the journal 2.3 %. The drift is cleared instead.
  * The flying objects are deliberately left VISIBLE, unlike in clip-fit.mjs:
  * here they are the subject, not noise.
+ *
+ * `.stage__ui` is HIDDEN by default and `--ui` puts it back. Default off,
+ * because the header and the progress bar sit on top of the journal and this
+ * sheet exists to judge the journal. But the scene's own layers live in there
+ * too — the two buttons and the outro title — and without the flag there is no
+ * sheet on which they can be checked at all: they are simply never in frame.
+ * The flag is part of the cache key, so a sheet cannot come back from a run
+ * made the other way round.
  *
  * ONE HEADLESS CHROME, one page, sequentially. Two of them fight over the
  * profile directory and produce failures that look like real ones.
@@ -79,6 +88,7 @@ const COLS = Number(flag('--cols', 2))
 const ROWS = Number(flag('--rows', 3))
 const LANG = flag('--lang', 'en')
 const DRIFT = has('--drift')   // keep the idle drift alive: motion, not pose
+const KEEP_UI = has('--ui')    // keep `.stage__ui`: header, buttons, outro title
 const PAD = Number(flag('--pad', 0.14))           // crop padding, share of box
 const PANEL = Number(flag('--panel', 470))        // px per panel in the sheet
 
@@ -158,7 +168,7 @@ class CDP {
  * gone with the drift itself. The flag is now a no-op on the journal;
  * `s.hoverTl` is null and the guard below simply skips.
  */
-const PARK = (t, keepDrift) => `(async () => {
+const PARK = (t, keepDrift, keepUi) => `(async () => {
   const s = window.__story, v = s.video
   s.seek(${t})
   await new Promise(r => setTimeout(r, 700))
@@ -178,7 +188,8 @@ const PARK = (t, keepDrift) => `(async () => {
   }
   const hv = document.querySelector('.journal-hover')
   if (hv && ${!keepDrift}) hv.style.transform = 'none'
-  const ui = document.querySelector('.stage__ui'); if (ui) ui.style.display = 'none'
+  const ui = document.querySelector('.stage__ui')
+  if (ui && ${!keepUi}) ui.style.display = 'none'
   await new Promise(r => setTimeout(r, 120))
   return { vt: v.currentTime, tt: s.tl.time() }
 })()`
@@ -288,14 +299,15 @@ async function openPlayer() {
 // ------------------------------------------------------------------- capture
 
 const key = t => t.toFixed(3)
-const oursPath = t => `${CACHE}/ours-${LANG}${DRIFT ? '-drift' : ''}-${key(t)}.png`
+const oursPath = t =>
+  `${CACHE}/ours-${LANG}${DRIFT ? '-drift' : ''}${KEEP_UI ? '-ui' : ''}-${key(t)}.png`
 const clipPath = t => `${CACHE}/clip-${key(t)}.png`
 
 async function captureOurs(t) {
   const f = oursPath(t)
   const metaFile = `${f}.json`
   if (existsSync(f) && existsSync(metaFile)) return JSON.parse(readFileSync(metaFile, 'utf8'))
-  const park = await cdp.eval(PARK(t, DRIFT))
+  const park = await cdp.eval(PARK(t, DRIFT, KEEP_UI))
   const meas = await cdp.eval(MEASURE)
   const shot = await cdp.send('Page.captureScreenshot', { format: 'png' })
   writeFileSync(f, Buffer.from(shot.data, 'base64'))
