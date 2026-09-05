@@ -68,7 +68,7 @@
  * Measured at t = 40.2 / 41.4 / 42.6, thresholds 20/30/45/60.
  */
 import { execFileSync } from 'node:child_process'
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
 import { pyramid, maskPyramid, register, margin, quadMask, reachMask } from './lib/gradfit.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
@@ -195,6 +195,32 @@ const SAMPLES = 220 // per edge
  * 3 left.
  */
 const SIDES = [0, 1, 2, 3]
+/**
+ * AND WITH WHAT WEIGHT. EQUAL — weighting the bottom edge up was tried and it
+ * measures worse, so `--wside` is kept only so the experiment can be repeated
+ * rather than taken on trust.
+ *
+ * The idea is tempting: on a clip frame the top edge is dark page against an
+ * unlit room and fits at 4.6 grey levels per pixel where the bottom fits at 27,
+ * so counting the strong edge for more looks like listening to the better
+ * witness. Run at `--wside 0.5,1,2,1` it does raise the score — 0.56 to 0.68 on
+ * frame 14 — and that rise is mechanical: the average is simply taken over less
+ * of the weakest side.
+ *
+ * What it costs: THREE OF THE FIVE self-test cases fail, against none at equal
+ * weights. Case 1 lands 13.3 design px out with 1.0 % of size and reports a yaw
+ * of -1 where the truth is 0; case 3 lands 17.2 px and 2.1 % out; case 5, the
+ * -8 yaw, comes back -9.5 and 12.7 px out. On the clip the trajectory frays in
+ * the same way: frame 14 at t = 42.84 jumps to -5.56 deg with 11.5 deg of yaw
+ * between neighbours sitting at -8.4 and -6.5 with 6.0.
+ *
+ * The reason is the reason the whole session exists. THE YAW IS NOTHING BUT THE
+ * DIVERGENCE OF THE TOP EDGE FROM THE BOTTOM ONE. Discount the top and the one
+ * axis being measured loses the only witness it has. The weak edge carries
+ * little, and what it carries is the part nothing else does — the same finding
+ * SIDES records for dropping it outright.
+ */
+let SIDE_W = [1, 1, 1, 1]
 const NBIN = 8 // gradient-direction bins over the full 360 degrees
 
 /**
@@ -288,6 +314,7 @@ function binOf(dx, dy) {
 /** Chamfer score: 1 at the edge, 0 at `dmax` and beyond, averaged over sides. */
 function fieldScore(fld, quad, dmax, sides = SIDES) {
   let sum = 0
+  let wsum = 0
   for (const e of sides) {
     const a = quad[e],
       b = quad[(e + 1) % 4]
@@ -311,9 +338,10 @@ function fieldScore(fld, quad, dmax, sides = SIDES) {
     }
     // A floor, so a side that is genuinely off-canvas does not zero the product
     // and take the other three down with it.
-    sum += side / SAMPLES
+    sum += (side / SAMPLES) * SIDE_W[e]
+    wsum += SIDE_W[e]
   }
-  return sum / sides.length
+  return wsum ? sum / wsum : 0
 }
 
 /** Which sides the score is allowed to use. See SIDES below. */
@@ -358,8 +386,8 @@ function sharpScore(fld, quad) {
  * Yaw is the weakest of the five — it shows only in how far the top and bottom
  * edges diverge — so it is swept from outside, by solvePose.
  */
-function solveFlat(fld, seed, face, rotY, span) {
-  let best = { ...seed, rotY }
+function solveFlat(fld, start, face, rotY, bounds) {
+  let best = { ...start, rotY }
   const stages = [
     { dmax: 60, cx: 1.0, cy: 1.0, rot: 1.0, scale: 0.02, passes: 3 },
     { dmax: 30, cx: 0.4, cy: 0.4, rot: 0.4, scale: 0.008, passes: 3 },
@@ -376,7 +404,11 @@ function solveFlat(fld, seed, face, rotY, span) {
           moved = false
           for (const dir of [1, -1]) {
             const cand = { ...best, [key]: best[key] + dir * st[key] }
-            if (Math.abs(cand[key] - seed[key]) > span[key]) continue
+            // EVERY leash is tied to a fixed centre, never to this round's own
+            // start, so neither polishing nor chaining can walk the answer away
+            // a step at a time. There are two of them when a run is chained:
+            // see solvePose.
+            if (bounds.some(b => Math.abs(cand[key] - b.centre[key]) > b.span[key])) continue
             const v = sc(cand)
             if (v > bv) {
               bv = v
@@ -402,19 +434,77 @@ function solveFlat(fld, seed, face, rotY, span) {
  */
 export function solvePose(fld, seed, face = 'page', opt = {}) {
   seed = { rotY: 0, ...seed }
+  // TWO LEASHES, AND EACH ANSWERS A DIFFERENT QUESTION.
+  //
+  // `span` is how far one second may sit from the second before it, and it is
+  // sized off the motion already measured: the widest slide travels 176 design
+  // px, turns 16 deg and grows 6.9 % over about five seconds, so 0.4 s of it is
+  // 14 px, 1.3 deg and 0.6 %. Three times that is generous and still refuses a
+  // jump onto the room's own furniture.
+  //
+  // `keep` is how far the whole chain may sit from OUR TABLE, and without it a
+  // chain has nothing to hold it at all. Measured, with the step leash alone:
+  // the scale walked from 0.683 down to 0.230 over ninety steps and the tilt
+  // from -6 to -25 deg, every step legal, every pose scoring 0.5 to 0.65 on the
+  // way. A leash tied to the previous answer only ever bounds the STEP.
+  //
+  // The table is wrong — that is this whole session — but it is wrong by a
+  // measured amount, not by an order: 12 deg of tilt and about 130 design px on
+  // frame 14. The keep-leash is set at several times that, so it contains every
+  // disagreement the clip has actually shown and none of the collapses.
   const span = opt.span || { cx: 12, cy: 12, rot: 14, scale: 0.2 }
-  const at = y => {
-    const p = solveFlat(fld, seed, face, y, span)
+  const bounds = [{ centre: seed, span }]
+  if (opt.keep) bounds.push(opt.keep)
+  const at = (y, from) => {
+    const p = solveFlat(fld, from, face, y, bounds)
     return { p, v: fieldScore(fld, quadOf(p, face), 12) }
   }
-  let best = null
-  for (let y = -16; y <= 16.001; y += 2) {
-    const r = at(y)
-    if (!best || r.v > best.v) best = r
+  // THE YAW GETS A LEASH TOO, and it needed one most of all. It is swept from
+  // outside the flat solve, so it was the one column with no tie between
+  // neighbours at all — and it showed: half a second apart it came back +0.5
+  // and -14.5 on the same settled slide. The scene's yaw is a property of the
+  // shot, not of the frame; it moves slowly or not at all. Within a chain the
+  // sweep is therefore local, and only the second that starts a run — the one
+  // with no neighbour to believe — sweeps the whole range.
+  const yawFrom = opt.yawNear ?? null
+  const sweep = from => {
+    let r = null
+    if (yawFrom === null) {
+      for (let y = -16; y <= 16.001; y += 2) {
+        const c = at(y, from)
+        if (!r || c.v > r.v) r = c
+      }
+    } else {
+      const lo = Math.max(-YAW_MAX, yawFrom - YAW_SPAN)
+      const hi = Math.min(YAW_MAX, yawFrom + YAW_SPAN)
+      for (let y = lo; y <= hi + 0.001; y += 1) {
+        const c = at(y, from)
+        if (!r || c.v > r.v) r = c
+      }
+    }
+    for (let y = r.p.rotY - 1.5; y <= r.p.rotY + 1.5001; y += 0.5) {
+      if (Math.abs(y) > YAW_MAX) continue
+      if (yawFrom !== null && Math.abs(y - yawFrom) > YAW_SPAN) continue
+      const c = at(y, from)
+      if (c.v > r.v) r = c
+    }
+    return r
   }
-  for (let y = best.p.rotY - 1.5; y <= best.p.rotY + 1.5001; y += 0.5) {
-    const r = at(y)
-    if (r.v > best.v) best = r
+  // THE SWEEP IS RUN AGAIN FROM ITS OWN WINNER, and that is not tidiness.
+  // Coordinate descent from a seed that is far off in size AND position gets
+  // trapped: on the -8 calibration render, seeded 3 deg / 5 % / 3 % wrong, the
+  // solve under yaw -8 never moved the size off the seed's 0.7308 and scored
+  // 0.334, while yaw -9 escaped to 0.695 and scored 0.583 — so the sweep
+  // crowned -9 over a truth of -8. Seeded at the truth instead, the same
+  // landscape peaks cleanly on -8 at 0.658. One polish round costs 0.3 s a
+  // frame and turns that failure into 0.00 deg.
+  let best = null
+  let from = seed
+  for (let round = 0; round < (opt.rounds ?? 3); round++) {
+    const r = sweep(from)
+    if (best && r.v <= best.v + 1e-4) break
+    best = r
+    from = r.p
   }
   const bp = best.p
   const quad = quadOf(bp, face)
@@ -460,6 +550,13 @@ function stiffness(fld, pose, face) {
   }
   return out
 }
+
+/** How far one second's yaw may sit from the second before it, and how far
+ *  from zero it may sit at all. The outer bound is the sweep's own range: past
+ *  it the front face is turning towards edge-on, which is the page turn's
+ *  business and not a settled pose's. */
+const YAW_SPAN = 5
+const YAW_MAX = 16
 
 /** Below this a nudge costs nothing and the axis is not measured at all. */
 export const SOFT = 0.02
@@ -518,10 +615,70 @@ function windowOf(frame) {
 const argv = process.argv.slice(2)
 const has = n => argv.includes(n)
 const val = n => (has(n) ? argv[argv.indexOf(n) + 1] : null)
+// `--wside 0.5,1,1.5,1` — top, right, bottom, left. For the experiment only.
+if (has('--wside')) SIDE_W = val('--wside').split(',').map(Number)
 
 const fmtPose = p =>
   `{ rot: ${p.rot.toFixed(2)}, scale: ${p.scale.toFixed(3)}, cx: ${p.cx.toFixed(1)}, ` +
   `cy: ${p.cy.toFixed(1)}, rotY: ${(p.rotY || 0).toFixed(2)} }`
+
+// ---------------------------------------------------------------- --redraw
+//
+// DRAW A RUN THAT ALREADY HAPPENED, without solving it again.
+//
+//   node scripts/journal-measure.mjs --redraw 12.04 18.07 27.04
+//
+// A run of the whole story is minutes of work and its answers land in
+// `_refs/pose/last.json`. Reviewing them means putting the quad back on the
+// clip and looking at it, which needs no search at all — so this reads the
+// rows and draws, and the picture judged is the one the run actually produced.
+if (has('--redraw')) {
+  const src = JSON.parse(readFileSync(val('--from') || `${OUT}/last.json`, 'utf8'))
+  const want = []
+  for (let i = argv.indexOf('--redraw') + 1; i < argv.length && !argv[i].startsWith('--'); i++)
+    want.push(Number(argv[i]))
+  const rows = want.length ? src.filter(r => want.some(w => Math.abs(r.t - w) < 0.06)) : src
+  for (const r of rows) {
+    drawQuad(clipFrame(r.t), quadOf(r, r.face), `${OUT}/redraw-${r.t.toFixed(2)}.png`)
+    console.log(`${r.t.toFixed(2)}  frame ${r.frame}  ${fmtPose(r)}  score ${r.score}  sharp ${r.sharp}`)
+  }
+  console.log(`\n-> ${OUT}/redraw-*.png`)
+  process.exit(0)
+}
+
+// ---------------------------------------------------------------- --yawscan
+//
+// HOW HARD A PICTURE PINS THE YAW, printed as a landscape rather than a number.
+//
+//   node scripts/journal-measure.mjs --yawscan _refs/fit/.pose-900c.png -7.25,0.696,51.5,45.7
+//
+// The yaw is the shallowest of the five axes — it shows only in how far the top
+// and bottom edges diverge — so "the solver returned 8.0" and "the picture says
+// 8.0" are different claims. This prints the second one: a full flat solve under
+// every yaw on the sweep's own grid, with the score each one reaches. A peak
+// that beats its neighbours by less than the noise is a refusal, and this is
+// where that shows.
+if (has('--yawscan')) {
+  const png = argv[argv.indexOf('--yawscan') + 1]
+  const truth = (val('--truth') || argv[argv.indexOf('--yawscan') + 2] || '').split(',').map(Number)
+  const seed = { rot: truth[0], scale: truth[1], cx: truth[2], cy: truth[3] }
+  const face = val('--face') || 'page'
+  const fld = chamfer(png.endsWith('.png') ? pngFrame(png) : clipFrame(Number(png)))
+  console.log(`YAW LANDSCAPE of ${png}, seeded at ${fmtPose({ ...seed, rotY: 0 })}\n`)
+  console.log('  rotY    score      rot    scale       cx      cy   sharp')
+  for (let y = -14; y <= 14.001; y += 1) {
+    const p = solveFlat(fld, { ...seed, rotY: 0 }, face, y,
+      [{ centre: { ...seed, rotY: 0 }, span: { cx: 12, cy: 12, rot: 14, scale: 0.2 } }])
+    const q = quadOf(p, face)
+    console.log(
+      y.toFixed(1).padStart(6) + fieldScore(fld, q, 12).toFixed(4).padStart(9) +
+        p.rot.toFixed(2).padStart(9) + p.scale.toFixed(4).padStart(9) +
+        p.cx.toFixed(2).padStart(9) + p.cy.toFixed(2).padStart(8) +
+        sharpScore(fld, q).toFixed(2).padStart(8),
+    )
+  }
+  process.exit(0)
+}
 
 // ---------------------------------------------------------------- --selftest
 if (has('--selftest')) {
@@ -557,6 +714,16 @@ if (has('--selftest')) {
     { png: `${ROOT}_refs/fit/.pose-1242.png`, truth: { rot: -8.75, scale: 0.679, cx: 44.5, cy: 48 } },
     { png: `${ROOT}_refs/fit/.pose-1278.png`, truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7 } },
     { png: `${ROOT}_refs/fit/.pose-1242b.png`, truth: { rot: 2.75, scale: 0.681, cx: 54.8, cy: 50.0 } },
+    // THE YAW, AGAINST A TRUTH THAT IS NOT ZERO. Every case above was rendered
+    // flat, so the one axis this measurement leans on hardest had no test that
+    // could fail. These are the calibration renders behind V-24 — case 2's pose,
+    // yawed +8 and -8. Which render carries which yaw was settled by the
+    // browser's own quads in table 1, not by this solver: the true quad scores
+    // 22-25 grey levels per pixel under its outline, the two wrong ones 1-3.
+    { png: `${ROOT}_refs/fit/.pose-900b.png`,
+      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: 8 } },
+    { png: `${ROOT}_refs/fit/.pose-900c.png`,
+      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: -8 } },
   ]
   // The third case is the worst geometry the story contains — its right-hand
   // side is off the canvas entirely and its left-hand side sits against the
@@ -707,11 +874,57 @@ if (has('--motion')) {
 }
 
 // ---------------------------------------------------------------- measuring
-/** Where to start the search. The table's own pose is the natural seed. */
-function seedFor(t) {
+/** Which slide a second belongs to. */
+function slideAt(t) {
   let s = SLIDES[0]
   for (const x of SLIDES) if (x.at <= t + 1e-6) s = x
-  return { pose: { ...poseAt(t), rotY: 0 }, slide: s }
+  return s
+}
+
+/** Where to start the search. The table's own pose is the natural seed. */
+function seedFor(t) {
+  return { pose: { ...poseAt(t), rotY: 0 }, slide: slideAt(t) }
+}
+
+/**
+ * THE SEED IS THE PREVIOUS SECOND'S ANSWER, not our own table's pose.
+ *
+ * Our table is the storyboard's anchor, and the clip disagrees with it in the
+ * one place a seed can least afford: the SIGN of the tilt. On frame 14 the table
+ * says +2.75 clockwise and the clip is at -6 to -9 — twelve degrees away, on an
+ * axis whose leash is fourteen. Seeding every frame there asks the search to
+ * cross the whole basin on every frame, from the same wrong side each time.
+ *
+ * Chained instead, only the FIRST frame of a run starts from the table; after
+ * that each second starts half a second from where it belongs, which is about
+ * 18 design px of travel and under a degree. That is the same reasoning
+ * `--motion` records for registering neighbours rather than a common reference,
+ * and the leash below is sized off the same numbers: the widest slide moves
+ * 176 px, turns 16 deg and grows 6.9 % over roughly five seconds, so half a
+ * second of it is 18 px, 1.6 deg and 0.7 %. The leash allows several times that
+ * and still refuses a jump to the room's own furniture.
+ *
+ * The chain is NOT broken at a slide boundary — the journal is continuous
+ * through a page turn, and the seconds inside the turn are skipped rather than
+ * measured, so the last settled pose of one slide is the best seed the next one
+ * can have. It IS broken when the FACE changes, because the cover and a data
+ * page are laid out at different base sizes (1465x1868 against 1564x1911) and a
+ * scale carried across that boundary means nothing.
+ */
+const CHAIN_SPAN = { cx: 3, cy: 3, rot: 4, scale: 0.03 }
+/**
+ * AND HOW FAR THE CHAIN AS A WHOLE MAY SIT FROM OUR OWN TABLE. See solvePose
+ * for why a step leash alone is not enough. The centre is `poseAt(t)`, which
+ * already carries the motion measured off the clip, so this bounds the
+ * disagreement in the ANCHOR — the thing this session is here to replace.
+ */
+const KEEP_SPAN = { cx: 18, cy: 15, rot: 18, scale: 0.1 }
+
+/** One frame's edge field, cached for the two passes that share a second. */
+let fldCache = { t: null, fld: null }
+const fldOf = t => {
+  if (fldCache.t !== t) fldCache = { t, fld: chamfer(clipFrame(t)) }
+  return fldCache.fld
 }
 
 const times = []
@@ -733,27 +946,97 @@ if (has('--t')) {
 
 console.log('THE CLIP\'S JOURNAL, POSE BY POSE, from its four edges.')
 console.log('seed = our table\'s pose for that slide; pose = what the clip is doing.\n')
-console.log('     t  frame page                    rot   scale     cx     cy    rotY   score   soft')
+const HEAD = '     t  frame page                    rot   scale     cx     cy    rotY   score  sharp    seed   soft'
+console.log(HEAD)
+const chain = !has('--nochain') && !has('--t')
+
+const rowAt = (t, seed, how) => {
+  const slide = slideAt(t)
+  const keep = { centre: { ...poseAt(t), rotY: 0 }, span: KEEP_SPAN }
+  const r = solvePose(fldOf(t), seed, slide.face,
+    how === 'table'
+      ? { span: KEEP_SPAN }
+      : { span: CHAIN_SPAN, keep, yawNear: seed.rotY })
+  return { t, frame: slide.frame, page: slide.page, face: slide.face, ...r.pose,
+    score: +r.score.toFixed(3), sharp: +r.sharp.toFixed(2),
+    soft: ['rot', 'scale', 'cx', 'cy', 'rotY'].filter(k => r.stiff[k] < SOFT),
+    seeded: how }
+}
+
+/**
+ * EVERY SECOND IS SOLVED TWICE, from its neighbour and from our own table, and
+ * the picture picks. A chain is a state machine, and a state machine that has
+ * entered a bad state stays there: the first cut of this ran the chain alone
+ * and watched the scale walk 0.68 -> 0.54 -> 0.23 across three slides while
+ * every step stayed inside its leash. The table seed is the escape hatch — it
+ * is available at every second, not only at the head, so no run of bad seconds
+ * can carry the good ones away with it. It also sweeps the whole yaw range
+ * where the chained candidate sweeps only its neighbourhood, which is what lets
+ * the yaw come back after a slide has lost it.
+ */
+const bestOf = (t, prev) => {
+  const table = rowAt(t, { ...poseAt(t), rotY: 0 }, 'table')
+  if (!prev) return table
+  const chained = rowAt(t, { ...prev }, 'chain')
+  return chained.score >= table.score ? chained : table
+}
+const poseOf = r => ({ rot: r.rot, scale: r.scale, cx: r.cx, cy: r.cy, rotY: r.rotY })
+const line = r =>
+  r.t.toFixed(2).padStart(6) + String(r.frame).padStart(6) + '  ' + r.page.padEnd(20) +
+  r.rot.toFixed(2).padStart(8) + r.scale.toFixed(3).padStart(8) +
+  r.cx.toFixed(1).padStart(7) + r.cy.toFixed(1).padStart(7) +
+  r.rotY.toFixed(2).padStart(8) + r.score.toFixed(3).padStart(8) +
+  r.sharp.toFixed(1).padStart(7) + '  ' + r.seeded.padEnd(6) +
+  ('  ' + r.soft.join(',')).padEnd(12)
+
 const rows = []
+let prev = null
 for (const t of times) {
-  const { pose: seed, slide } = seedFor(t)
-  const fld = chamfer(clipFrame(t))
-  const r = solvePose(fld, seed, slide.face)
-  const soft = ['rot', 'scale', 'cx', 'cy', 'rotY'].filter(k => r.stiff[k] < SOFT)
-  rows.push({ t, frame: slide.frame, page: slide.page, face: slide.face, ...r.pose,
-    score: +r.score.toFixed(3), sharp: +r.sharp.toFixed(2), soft })
-  console.log(
-    t.toFixed(2).padStart(6) + String(slide.frame).padStart(6) + '  ' + slide.page.padEnd(20) +
-      r.pose.rot.toFixed(2).padStart(8) + r.pose.scale.toFixed(3).padStart(8) +
-      r.pose.cx.toFixed(1).padStart(7) + r.pose.cy.toFixed(1).padStart(7) +
-      r.pose.rotY.toFixed(2).padStart(8) + r.score.toFixed(3).padStart(8) +
-      ('  ' + soft.join(',')).padEnd(12),
-  )
-  if (has('--overlay')) {
-    const rgb = clipFrame(t)
-    drawQuad(rgb, quadOf(r.pose, slide.face), `${OUT}/pose-${t}.png`)
+  const slide = slideAt(t)
+  const linked = chain && prev && prev.face === slide.face
+  const r = linked ? bestOf(t, prev.pose) : rowAt(t, { ...poseAt(t), rotY: 0 }, 'table')
+  rows.push(r)
+  prev = { face: slide.face, pose: poseOf(r) }
+  console.log(line(r))
+}
+
+/**
+ * AND THE SAME CHAIN BACKWARDS, keeping whichever answer the picture likes more.
+ *
+ * A chain has one second nobody can seed well: its first. That one starts from
+ * our own table, and on a data page the table's tilt has the WRONG SIGN — the
+ * clip runs -6 to -9 deg where the table says +2.75 — so the search sets off
+ * across the basin from the far side, and it can settle short of the answer
+ * every neighbour agrees on. Measured on frame 14: the first two seconds came
+ * back at -4.8 and -5.6 deg with 13.5 and 15.5 deg of yaw, scoring 0.405 and
+ * 0.398, while every second after them sat near -9 deg with 6-7 of yaw and
+ * scored up to 0.558.
+ *
+ * Run backwards, that second is seeded by the neighbour that got it right, and
+ * the two passes are judged by the one number here that is not an opinion: the
+ * chamfer score each pose reaches. Nothing is averaged — every row kept is a
+ * pose the search actually reached and the picture actually prefers.
+ */
+if (chain && rows.length > 1) {
+  let better = 0
+  for (let i = rows.length - 2; i >= 0; i--) {
+    if (rows[i].face !== rows[i + 1].face) continue
+    const back = rowAt(rows[i].t, poseOf(rows[i + 1]), 'chain')
+    if (back.score > rows[i].score) {
+      rows[i] = { ...back, seeded: 'back' }
+      better++
+    }
+  }
+  console.log(`\nBACKWARD PASS: ${better} of ${rows.length} seconds did better from the other side.`)
+  if (better) {
+    console.log(HEAD)
+    for (const r of rows) if (r.seeded === 'back') console.log(line(r))
   }
 }
+
+if (has('--overlay'))
+  for (const r of rows)
+    drawQuad(clipFrame(r.t), quadOf(r, r.face), `${OUT}/pose-${r.t}.png`)
 
 if (has('--write')) {
   writeFileSync(REF, JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows }, null, 1))
