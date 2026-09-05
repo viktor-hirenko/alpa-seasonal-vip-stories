@@ -116,10 +116,16 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  * SO WHAT IS STILL WRONG HERE, said plainly: the clip puts the journal 50-130
  * design px further LEFT than the storyboard does (V-25) and this table does not
  * carry that. It has no yaw column, and the clip has a yaw of about 8 degrees on
- * a settled slide (V-24). Frame 7's `rot` is the storyboard's, because it is
- * where `swingOpen` lands and the entrance is frozen — the clip's cover is 12
- * degrees off it. Those three are the next sessions' work — see
+ * a settled slide (V-24). Those two are the next session's work — see
  * _context/90-next-session.md.
+ *
+ * FRAME 7 IS NO LONGER ONE OF THEM (2026-09-05). Its `rot` was the storyboard's
+ * +3.1, kept because that is what `swingOpen` landed on and the two cannot move
+ * apart without tearing the handover at 6.0. They moved together: the entrance's
+ * last three keys are measured now, and so is this anchor. The first row is the
+ * one place in this table where `rot` is NOT anchor-plus-motion — it is the roll
+ * read at 6.00 itself, because the clip is still turning the cover as it lands
+ * (+10.04 at 6.00, +14.84 at 6.97) and the old row held it still for a second.
  *
  * FRAME 23 IS NO LONGER ONE OF THEM (2026-09-05). Its row used to be the pose
  * `recede` started from, so its `rot` was the storyboard's and the outro was a
@@ -137,17 +143,17 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
 // prettier-ignore
 export const JOURNAL_PATH = [
   // frame 7 cover
-  [6.00, 3.10, 0.7460, 57.70, 48.70],
-  [6.97, 3.10, 0.7460, 57.70, 48.70],
-  [7.47, 5.10, 0.7527, 55.76, 48.91],
-  [7.97, 6.85, 0.7382, 55.29, 47.76],
-  [8.47, 8.10, 0.7182, 55.57, 47.14],
-  [8.97, 8.60, 0.7130, 55.01, 47.50],
-  [9.47, 8.35, 0.7261, 52.70, 48.34],
-  [9.97, 7.35, 0.7470, 52.33, 49.27],
-  [10.47, 6.35, 0.7571, 54.83, 49.79],
-  [10.97, 5.35, 0.7515, 57.33, 49.64],
-  [11.05, 5.35, 0.7515, 57.33, 49.64],
+  [6.00, 10.04, 0.7460, 57.70, 48.70],
+  [6.97, 15.23, 0.7460, 57.70, 48.70],
+  [7.47, 17.23, 0.7527, 55.76, 48.91],
+  [7.97, 18.98, 0.7382, 55.29, 47.76],
+  [8.47, 20.23, 0.7182, 55.57, 47.14],
+  [8.97, 20.73, 0.7130, 55.01, 47.50],
+  [9.47, 20.48, 0.7261, 52.70, 48.34],
+  [9.97, 19.48, 0.7470, 52.33, 49.27],
+  [10.47, 18.48, 0.7571, 54.83, 49.79],
+  [10.97, 17.48, 0.7515, 57.33, 49.64],
+  [11.05, 17.48, 0.7515, 57.33, 49.64],
   // frame 8 editors_note
   [12.04, -10.94, 0.6830, 57.40, 47.80],
   [12.54, -11.19, 0.6648, 58.23, 46.50],

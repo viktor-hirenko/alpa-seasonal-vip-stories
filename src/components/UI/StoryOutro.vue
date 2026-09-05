@@ -11,8 +11,8 @@
  * "See you in the next issue. To the stars!" — storyboard frame 25, node
  * 21770:4871.
  *
- * A SCENE layer, not a page. By the time this shows, the white flash has taken
- * the journal off screen, so there is no page left to put it on; it lives in
+ * A SCENE layer, not a page. By the time this shows, `journalDissolve` has faded
+ * the journal out, so there is no page left to put it on; it lives in
  * `.stage__ui` for the same reason the two buttons do (see StoryCta.vue), that
  * being the one layer with no perspective ancestor.
  *

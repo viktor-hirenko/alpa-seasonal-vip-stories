@@ -84,12 +84,18 @@ const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:
  * (V-25) — but that disagreement cannot yet be separated from our own layout
  * error, and this session did not try. Only the angle is measured here.
  *
- * FRAME 7 IS DELIBERATELY NOT MEASURED. Its row is where `swingOpen` hands the
- * journal over at t = 6.0, and the entrance ends on exactly this rotationZ of
- * 3.1 (see the last key of swingOpen). The clip's cover is at +15.2 there, so
- * the entrance is wrong by 12 deg as well — but moving this number without
- * moving that key would tear the handover, and the entrance is frozen. Recorded
- * as an open defect instead.
+ * FRAME 7 IS NOW MEASURED LIKE THE REST (2026-09-05), together with the last
+ * three keys of `swingOpen`, because those two numbers can only move as a pair.
+ *
+ * It used to be the storyboard's +3.1, and the entrance ended on that same +3.1,
+ * so the handover at 6.0 was seamless and both ends of it were wrong by twelve
+ * degrees. What the clip actually does is roll the cover CONTINUOUSLY through
+ * the landing and on into the slide: +10.04 at 6.00, +14.84 at 6.97, peaking
+ * near +20.7 at 8.97. The second from 6.00 to 6.97 is a straight line to within
+ * 0.09 deg (11.27 / 12.42 / 13.71 measured at the quarters against 11.28 /
+ * 12.51 / 13.75 interpolated), so it is not a jump hidden by the page turn — it
+ * is the same drift the rest of this table describes, starting one second before
+ * the first `--motion` sample.
  *
  * FRAME 23 IS NOW MEASURED LIKE THE REST (2026-09-05), and the reason it was
  * not has gone with `recede`.
@@ -111,7 +117,7 @@ const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:
  * straight through it.
  */
 const ANCHOR = {
-  7: { rot: 3.1, scale: 0.746, cx: 57.7, cy: 48.7 },
+  7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 },
   8: { rot: -10.94, scale: 0.683, cx: 57.4, cy: 47.8 },
   9: { rot: 13.96, scale: 0.682, cx: 49.4, cy: 54.9 },
   10: { rot: -7.59, scale: 0.682, cx: 64.3, cy: 50.8 },
@@ -298,9 +304,30 @@ for (const s of SLIDES) {
     dCx: samples[samples.length - 1].dx, dCy: samples[samples.length - 1].dy,
     dScale: +((samples[samples.length - 1].size - 1) * 100).toFixed(1) })
 }
+/**
+ * THE HANDOVER ROLL, read off the clip at 6.00 exactly the way the anchors are.
+ *
+ * The head row used to be a straight copy of ANCHOR[7], on the reasoning that
+ * `swingOpen` lands the journal at 6.0 and the first measured second is 6.97, so
+ * the second between them was a hold. The clip does not hold it: it is still
+ * rolling, 10.04 at 6.00 against 14.84 at 6.97, and reading the quarters in
+ * between (11.27 / 12.42 / 13.71) puts them on a straight line to 0.09 deg.
+ *
+ * So this row carries its own angle and the anchor's position and size — those
+ * two the entrance and the table already agree on, and neither is measured
+ * against the clip yet (V-25). It is the same number as the last key of
+ * `swingOpen`; the two have to match or the handover tears.
+ *
+ * Measured twice through two independently built windows — one from the
+ * entrance's own pose (rotY -4), one from `poseAt` (rotY 0) — which agreed at
+ * 10.04 and 10.03. Window displaced +/-100 px in both axes and re-cropped from
+ * 80 to 220: worst change 0.14 deg.
+ */
+const HANDOVER_ROT = 10.04
+
 // The head and tail rows join the pool BEFORE thinning, so the curve the
 // decimation judges is the curve the runtime draws, ends included.
-allFull.unshift({ t: 6.0, ...ANCHOR[7] })
+allFull.unshift({ t: 6.0, ...ANCHOR[7], rot: HANDOVER_ROT })
 allFull.sort((a, b) => a.t - b.t)
 const keptAll = decimate(allFull)
 for (const r of report)
@@ -315,9 +342,10 @@ const out = keptAll.map(k => [k.t, +k.rot.toFixed(2), +k.scale.toFixed(4), +k.cx
  *
  * At the head: the cover's first measured second is 6.97 — a second after
  * `swingOpen` lands it at 6.0, because the window skips the turn — so a row at
- * 6.0 repeating the pose swingOpen ends on lets the path own the journal from
- * the moment the entrance hands it over. It is not an extra number: the first
- * measured row IS that pose (its own reference, dx = dy = 0, size = 1, rot = 0).
+ * 6.0 lets the path own the journal from the moment the entrance hands it over.
+ * Its POSITION AND SIZE are still not measured, and that is the part that is not:
+ * they repeat the anchor's, as they always did. Its ANGLE now is measured, at
+ * 6.00, off the clip — see HANDOVER_ROT above.
  *
  * THERE IS NO LONGER ONE AT THE TAIL. A hand-written row sat at 83.03 carrying
  * the storyboard's pose for frame 23, because the outro was a `recede` that

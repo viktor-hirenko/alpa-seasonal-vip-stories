@@ -113,6 +113,38 @@ flyInFromFloor.PARAM_SCHEMA = {
  * Keys are ABSOLUTE seconds from `start`, so a key's second is the clip's
  * second minus 3.9333 and can be checked frame by frame against the table in
  * timing.js.
+ *
+ * ROTATION Z IS NOW MEASURED TOO (2026-09-05), on the last three keys, and it
+ * was the one column here that never had been. It came in with the storyboard,
+ * which draws the cover leaning +3.1 from the moment it lands; the clip has it
+ * still ROLLING as it lands, and it does not stop at 6.0 either — the roll runs
+ * on into frame 7 and peaks near +20.7 at 8.97.
+ *
+ * Read off the STEMS of the type printed on the cover, the instrument sessions H
+ * and E used (`--roll`), one frame at a time:
+ *
+ *   t     4.60  4.90  5.00  5.10  5.20  5.35  5.50  5.65  5.75  5.90  6.00
+ *   roll  2.40  4.27  5.00  5.85  6.34  7.21  7.85  8.59  9.03  9.58 10.04
+ *
+ * From 5.10 on those lie on a straight line, 4.644 deg/s, rms 0.081 — so the
+ * three keys below are the measurement itself and not a fit to it.
+ *
+ * THE WINDOW HAS TO BE PUT ON THE TYPE, and before 5.0 our own pose does not do
+ * that: at 4.60 the cover in the clip is far to the left of where we place it,
+ * the default window lands on the astronaut's helmet, and the answer comes back
+ * at conf 0.193 against a rival of 0.976 — a refusal, drawn and looked at. Moved
+ * 250-450 px left onto the type column it reads conf 0.44, rival 0.083, and
+ * holds 2.31-2.52 across every displacement tried. Everywhere the two windows
+ * overlap they agree to 0.22 deg.
+ *
+ * KEYS 0-3 ARE UNCHANGED, and that is a finding rather than a decision: the clip
+ * at 4.60 says 2.40 where this table already said 2.0, which is inside the
+ * instrument's own worst error (0.34 deg, `--selftest`). Behind 4.60 the cover
+ * is edge-on or showing its back and there is no type to read at all.
+ *
+ * THE LAST KEY IS A HANDOVER, not a resting pose. It must equal the first row of
+ * JOURNAL_PATH, because the path is nested at 6.0 and takes the journal from
+ * here — see the head-row note in scripts/journal-path.mjs. Move one, move both.
  */
 export function swingOpen(t, params) {
   const p = P(
@@ -124,9 +156,9 @@ export function swingOpen(t, params) {
         [0.15, -90, 0.5, 0.97, 57.2, 50.0], //   122.5 exactly edge-on
         [0.4, -76.3, 1.6, 0.92, 65.3, 50.0], //  130  front cover swinging into view
         [0.6667, -59.6, 2.0, 0.885, 67.1, 50.0], // 138  fills the canvas
-        [1.0667, -36.5, 2.6, 0.845, 66.6, 50.0], // 150
-        [1.5667, -15.5, 2.9, 0.79, 61.6, 49.2], // 165
-        [2.0667, -4, 3.1, 0.746, 57.7, 48.7], // 180  settled: frame 7's pose
+        [1.0667, -36.5, 5.0, 0.845, 66.6, 50.0], // 150
+        [1.5667, -15.5, 7.85, 0.79, 61.6, 49.2], // 165
+        [2.0667, -4, 10.04, 0.746, 57.7, 48.7], // 180  handover: JOURNAL_PATH's first row
       ],
     },
     params,
@@ -370,9 +402,9 @@ hyperspaceBurst.PARAM_SCHEMA = {
 }
 
 /**
- * THE OUTRO TEXT (21770:4871). It arrives oversized under the white flash,
- * shrinks onto the room, holds, then accelerates past the camera ahead of the
- * hyperspace burst.
+ * THE OUTRO TEXT (21770:4871). It arrives oversized over the dark room, shrinks
+ * onto it, holds, then accelerates past the camera ahead of the hyperspace
+ * burst.
  *
  * Both legs are one preset because they are one layer's life, and the hold
  * between them is not a tween — the element simply keeps the scale the first
