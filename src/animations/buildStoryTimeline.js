@@ -1,13 +1,12 @@
 import { gsap } from 'gsap'
-import { SLIDES, JOURNAL_PATH, RECEDE_POSE } from '@/story/slides.js'
+import { SLIDES, JOURNAL_PATH } from '@/story/slides.js'
 import { FACE } from '@/story/journalGeometry.js'
 import { TIMING, snap } from '@/story/timing.js'
 import {
   swingOpen,
   journalPath,
   pageTurn,
-  recede,
-  whiteFlashExit,
+  journalDissolve,
   hyperspaceBurst,
   outroText,
 } from '@/journal3d/presets.js'
@@ -83,8 +82,8 @@ export function buildStoryTimeline(targets, ctx) {
   // the whole span that needs it.
   //
   // `autoAlpha` goes on `.journal-pos`, never on `.journal-box`: opacity on the
-  // box flattens its faces and the volume pops out of existence. whiteFlashExit
-  // hides it in the same place at the other end of the story.
+  // box flattens its faces and the volume pops out of existence. journalDissolve
+  // fades the same element at the other end of the story.
   tl.set(targets.pos, { autoAlpha: 0 }, 0)
   tl.set(targets.pos, { autoAlpha: 1 }, snap(TIMING.entrance.start))
 
@@ -95,7 +94,7 @@ export function buildStoryTimeline(targets, ctx) {
   // second as swingOpen, whose `set` on the same properties rendered after it.
   nest(tl, swingOpen(targets), snap(TIMING.entrance.start))
 
-  // THE POSE IS ONE CONTINUOUS PATH from the settled cover to the recede, not a
+  // THE POSE IS ONE CONTINUOUS PATH from the settled cover to the flash, not a
   // tween per slide. It is nested at its own first second, and it runs THROUGH
   // the page turns rather than being interrupted by them — which is what the
   // clip does, and what the old one-pose-per-slide model could not express.
@@ -117,12 +116,16 @@ export function buildStoryTimeline(targets, ctx) {
   // Nested at 0 because the flight timeline is already in absolute video time.
   nest(tl, fly.tl, 0)
 
-  // The recede starts from wherever the path leaves the journal, so it is read
-  // off the path's last row rather than restated.
-  const last = JOURNAL_PATH[JOURNAL_PATH.length - 1]
-  const from = { rot: last[1], scale: last[2], cx: last[3], cy: last[4] }
-  nest(tl, recede(targets, from, RECEDE_POSE), snap(TIMING.recede.at))
-  nest(tl, whiteFlashExit(targets), snap(TIMING.flash.at))
+  // NO RECEDE. The outro used to be a five-second tween from the path's last row
+  // to one storyboard pose, hard-`set` at 83.03 — a tenth of a second BEFORE the
+  // final page folds, so the pose it started from had to stay the storyboard's
+  // or the journal would have swung 28 degrees in plain sight. Measured off the
+  // clip 84.03 to 88.03 there is no draw-back to play: the journal stays on the
+  // page, wanders under 100 design px, dips 6 % and comes back. So the outro is
+  // just more path, its roll crosses the fold on the spline like every other page
+  // turn, and there is nothing here to nest. `recede` stays a library preset with
+  // a button in the lab, the way `hover` did when the path replaced it.
+  nest(tl, journalDissolve(targets), snap(TIMING.exit.at))
   nest(tl, hyperspaceBurst(targets), snap(TIMING.speed.at))
   // Nested at the flash, not after it: the text's first frame IS the flash's
   // first frame. Its exit leads the burst by 0.23 s and lives inside the same

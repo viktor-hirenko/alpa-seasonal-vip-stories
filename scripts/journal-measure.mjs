@@ -68,7 +68,7 @@
  * Measured at t = 40.2 / 41.4 / 42.6, thresholds 20/30/45/60.
  */
 import { execFileSync } from 'node:child_process'
-import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs'
 import { pyramid, maskPyramid, register, margin, quadMask, reachMask, offsetQuad } from './lib/gradfit.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
@@ -1144,6 +1144,44 @@ if (has('--motion')) {
     // every second of it is the outro's own move, not a slide's drift.
     : SLIDES.filter(s => s.frame >= 8 && s.frame <= 22)
   const step = Number(val('--step') || 0.5)
+  /**
+   * `--t0`/`--t1` OVERRIDE THE WINDOW, and `--seed` the region it starts from.
+   *
+   * `windowOf` splits the story at every slide row, which is right everywhere a
+   * row means a page turn — and wrong for the OUTRO, where frames 23 and 24 are
+   * the same page and nothing folds between them. Left to itself the sampler
+   * would measure 84.00..84.94 as frame 23 and 85.97..88.04 as frame 24, two
+   * chains each anchored on its own first second, when what is actually there is
+   * one continuous four-second drift. Given the range by hand it measures it as
+   * one.
+   *
+   * `--seed rot,scale,cx,cy` replaces the pose the FIRST region is cut from.
+   * The region is normally seeded with our own table's pose at t0, and past the
+   * table's last row `poseAt` clamps — so on the outro it would cut the window
+   * at a roll of +1.65 while the clip's journal sits at +13.2, putting two of
+   * the four corners a couple of hundred px into the room. It is only the
+   * window, so it may be rough; it just has to contain the journal.
+   */
+  const seed = (val('--seed') || '').split(',').filter(Boolean).map(Number)
+  /**
+   * `--roll-type` TAKES THE `rot` COLUMN OFF THE TYPE INSTEAD OF THE REGISTRATION.
+   *
+   * The registration reports rotation on a coarse grid, which is enough
+   * everywhere a slide turns several degrees and useless where it turns one:
+   * across the whole outro it answers -0.25 on every sample, while the type says
+   * the journal rolls from +13.2 to +14.4 and back to +14.3. A degree and a half
+   * is above this project's own tolerance for roll (0.4 deg in the decimation,
+   * 0.5 in the self-test), so on that stretch the coarse column is not a
+   * measurement, it is a flat line.
+   *
+   * The type is the instrument session H proved for exactly this number
+   * (`--roll`, worst error 0.34 deg against renders whose roll is known), so
+   * with this flag every sample is read through it and the column carries the
+   * drift from the run's first second. Opt-in: the slides measured before it
+   * existed keep the numbers they were measured with.
+   */
+  const rollTyped = has('--roll-type')
+  const ropt = { shrink: Number(val('--shrink') || 150) }
   const out = []
   console.log("THE CLIP'S JOURNAL, MOVING INSIDE ITS OWN SLIDE.")
   console.log('Registered clip-against-clip over the journal region, so neither our')
@@ -1151,7 +1189,12 @@ if (has('--motion')) {
   console.log('1080x1920 canvas, size is a ratio, rot is degrees clockwise.\n')
   console.log('frame page                     t      dx      dy     size      rot   score  rival')
   for (const s of want) {
-    const w = windowOf(s.frame)
+    const w = { ...windowOf(s.frame) }
+    if (has('--t0')) w.t0 = +Number(val('--t0')).toFixed(3)
+    if (has('--t1')) w.t1 = +Number(val('--t1')).toFixed(3)
+    const seedPose = seed.length === 4
+      ? { rot: seed[0], scale: seed[1], cx: seed[2], cy: seed[3] }
+      : poseAt(w.t0)
     // THE CHAIN, not a common reference. Registering every second against the
     // slide's first second looks tidier and measures worse: by the end of a
     // slide the journal has moved 150 design px and turned, and the peak falls
@@ -1164,6 +1207,14 @@ if (has('--motion')) {
     let acc = { dx: 0, dy: 0, size: 1, rot: 0 }
     let prevRgb = clipFrame(w.t0)
     let first = true
+    // The zero the typed roll is reported against: the run's own first second,
+    // so the column stays a DRIFT and the anchor keeps owning the absolute.
+    let roll0 = null
+    if (rollTyped) {
+      const r0 = rollOf(prevRgb, quadOf(seedPose, s.face), ropt)
+      if (!r0.ok) throw new Error(`--roll-type: the type at ${w.t0} is unreadable (${r0.why})`)
+      roll0 = r0.roll
+    }
     for (let t = w.t0; t <= w.t1 + 1e-6; t = +(t + step).toFixed(3)) {
       if (first) {
         out.push({ t: +t.toFixed(3), frame: s.frame, page: s.page, dx: 0, dy: 0,
@@ -1178,8 +1229,8 @@ if (has('--motion')) {
       // The region follows the journal: quad at the pose we have accumulated so
       // far, grown outward, so a slide that drifts 150 px does not end up
       // measuring the room on one side.
-      const here = { rot: poseAt(w.t0).rot + acc.rot, scale: poseAt(w.t0).scale * acc.size,
-        cx: poseAt(w.t0).cx + (acc.dx / W) * 100, cy: poseAt(w.t0).cy + (acc.dy / H) * 100 }
+      const here = { rot: seedPose.rot + acc.rot, scale: seedPose.scale * acc.size,
+        cx: seedPose.cx + (acc.dx / W) * 100, cy: seedPose.cy + (acc.dy / H) * 100 }
       const quad = quadOf(here, s.face)
       const mask = quadMask(quad, -50)
       const piv = [(quad[0][0] + quad[2][0]) / 2, (quad[0][1] + quad[2][1]) / 2]
@@ -1192,6 +1243,18 @@ if (has('--motion')) {
       prevRgb = cur
       acc = { dx: acc.dx + best.dx, dy: acc.dy + best.dy,
         size: acc.size * best.s, rot: acc.rot + best.rot }
+      // Read on the region THIS sample was registered into, and it replaces the
+      // accumulator rather than being reported beside it: the region of the next
+      // sample is cut at `acc.rot`, so leaving the coarse value in would keep
+      // aiming the window with the number this flag exists to distrust.
+      let rollNote = ''
+      if (rollTyped) {
+        const now = { rot: seedPose.rot + acc.rot, scale: seedPose.scale * acc.size,
+          cx: seedPose.cx + (acc.dx / W) * 100, cy: seedPose.cy + (acc.dy / H) * 100 }
+        const rt = rollOf(cur, quadOf(now, s.face), ropt)
+        if (rt.ok) acc.rot = +(rt.roll - roll0).toFixed(2)
+        else rollNote = '  TYPE UNREADABLE, ROT LEFT COARSE'
+      }
       const row = { t: +t.toFixed(3), frame: s.frame, page: s.page,
         dx: +acc.dx.toFixed(1), dy: +acc.dy.toFixed(1), size: +acc.size.toFixed(4),
         rot: +acc.rot.toFixed(2), score: +best.v.toFixed(3), rival: +rival.toFixed(3),
@@ -1204,13 +1267,37 @@ if (has('--motion')) {
           row.score.toFixed(3).padStart(8) + row.rival.toFixed(3).padStart(7) +
           (row.score - row.rival < 0.15 ? '  NO CONFIDENT PEAK' : '') +
           (Math.abs(best.dx) > 78 || Math.abs(best.dy) > 78 ||
-            best.s < 0.945 || best.s > 1.065 ? '  AT THE SEARCH BOUND' : ''),
+            best.s < 0.945 || best.s > 1.065 ? '  AT THE SEARCH BOUND' : '') + rollNote,
       )
     }
   }
   mkdirSync(OUT, { recursive: true })
-  writeFileSync(`${OUT}/motion.json`, JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows: out }, null, 1))
-  console.log(`\n-> ${OUT}/motion.json  (${out.length} samples)`)
+  /**
+   * `--merge` KEEPS THE FRAMES THIS RUN DID NOT MEASURE.
+   *
+   * Without it a `--slide` run overwrites motion.json with its one slide, and
+   * the file stops being the story's measurement and becomes the last command's
+   * scratch. That is survivable while every slide is re-measured together and
+   * ruinous once one of them is not: the outro was measured on its own, months
+   * of frames 8..22 were not, and re-shooting them to keep the file whole would
+   * silently move fifteen shipped slides — the region a run cuts is seeded from
+   * OUR table, and that table has changed since they were measured (frame 14
+   * re-runs today one search cell away, 1 px and 0.25 deg).
+   *
+   * So: rows for the frames in this run replace theirs, every other frame is
+   * carried over untouched, and `measured` records both dates.
+   */
+  const dest = `${OUT}/motion.json`
+  let rows = out
+  let measured = new Date().toISOString().slice(0, 10)
+  if (has('--merge') && existsSync(dest)) {
+    const prev = JSON.parse(readFileSync(dest, 'utf8'))
+    const mine = new Set(want.map(s => s.frame))
+    rows = [...prev.rows.filter(r => !mine.has(r.frame)), ...out].sort((a, b) => a.t - b.t)
+    measured = `${prev.measured}, frame ${[...mine].join('/')} ${measured}`
+  }
+  writeFileSync(dest, JSON.stringify({ measured, rows }, null, 1))
+  console.log(`\n-> ${dest}  (${out.length} samples${rows.length !== out.length ? `, ${rows.length} in the file` : ''})`)
   process.exit(0)
 }
 

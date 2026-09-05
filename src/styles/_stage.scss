@@ -212,8 +212,11 @@
   will-change: transform;
 
   // NEVER put `opacity` here — it would flatten the faces mid-flight and the
-  // volume would pop out of existence. The story's exit is a white flash, not a
-  // fade, so it is never needed. Fade `.journal-pos` if you ever must.
+  // volume would pop out of existence. Fade `.journal-pos` instead, which is
+  // what the story's exit does: `journalDissolve` runs it 1 -> 0 over half a
+  // second at 88.35, by which time the journal is face-on and has no side face
+  // to lose. (Until 2026-09-05 the exit was a full-screen white flash, which
+  // the reference turned out not to have at all.)
 }
 
 ///
@@ -240,15 +243,9 @@
 }
 
 /// Overlays sit ABOVE the 3D scene and are deliberately outside it.
-.stage__flash {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  background: #fff;
-  opacity: 0;
-  pointer-events: none;
-}
-
+///
+/// `.stage__flash` used to sit here, a white div the exit drove to full opacity.
+/// It is gone: the reference has no flash (TIMING.exit).
 .stage__speed {
   position: absolute;
   inset: 0;

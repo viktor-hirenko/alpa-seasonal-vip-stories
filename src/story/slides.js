@@ -49,12 +49,21 @@ const RAW = [
 ]
 
 /**
- * WHERE THE JOURNAL DRAWS BACK TO before the flash, frames 23 -> 24.
+ * THE STORYBOARD'S DRAW-BACK POSE. THE STORY NO LONGER PLAYS IT (2026-09-05).
  *
- * Still one pose rather than a stretch of the path: this is the outro, the clip
- * yaws the journal hard through it, and four numbers do not describe that. It is
- * the storyboard's own value, and _context/35-slide-audit.md records that it
- * misses the mock by 137 px — an open defect, not a measurement.
+ * It was the one pose the outro tweened to over five seconds, taken from the
+ * mock's frame 24, and _context/35-slide-audit.md recorded it as missing that
+ * mock by 137 px. The clip says the miss is not 137 px and not in that
+ * direction: measured 84.03 -> 88.03, its journal does not draw back AT ALL. It
+ * stays on the same page, wanders under 100 design px, dips 6 % in size and
+ * comes back, and rolls one degree — an ordinary levitating slide. This pose
+ * shrinks ours by a third (0.681 -> 0.444) and pushes it 275 px DOWN while the
+ * clip's drifts 90 px UP, so by the flash our journal was half the linear size
+ * of the reference's.
+ *
+ * The outro is JOURNAL_PATH's now, rows 84.03 to 88.03, measured like the rest.
+ * This constant stays for the lab, which still has a `recede` button; nothing in
+ * src/animations reads it.
  */
 export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
 
@@ -109,9 +118,16 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  * carry that. It has no yaw column, and the clip has a yaw of about 8 degrees on
  * a settled slide (V-24). Frame 7's `rot` is the storyboard's, because it is
  * where `swingOpen` lands and the entrance is frozen — the clip's cover is 12
- * degrees off it. Frame 23's `rot` is the storyboard's too, because that row is
- * where `recede` starts rather than a slide pose. All four are the next
- * sessions' work — see _context/90-next-session.md.
+ * degrees off it. Those three are the next sessions' work — see
+ * _context/90-next-session.md.
+ *
+ * FRAME 23 IS NO LONGER ONE OF THEM (2026-09-05). Its row used to be the pose
+ * `recede` started from, so its `rot` was the storyboard's and the outro was a
+ * five-second tween to one hand-picked pose. The outro is measured now, 84.03 to
+ * 88.03 at a quarter-second step, and it is the ordinary kind of row: an anchor
+ * plus a motion. Its `rot` drift is the type's rather than the registration's,
+ * because across those five seconds the journal turns 1.2 degrees and the
+ * registration answers on a quarter-degree grid — see `--roll-type`.
  *
  * The seconds between a slide's last row and the next slide's first are NOT
  * measured: the journal is edge-on through the turn and four numbers do not
@@ -277,12 +293,25 @@ export const JOURNAL_PATH = [
   [82.54, -15.22, 0.7007, 52.37, 43.65],
   [83.01, -15.22, 0.7007, 52.37, 43.65],
   // frame 23 final
-  [83.03, 1.65, 0.6810, 52.00, 50.20],
+  [84.03, 13.21, 0.6810, 52.00, 50.20],
+  [84.28, 13.08, 0.6821, 50.43, 49.63],
+  // frame 24 final
+  [85.03, 13.85, 0.6630, 45.24, 49.00],
+  [85.53, 14.17, 0.6445, 45.24, 50.67],
+  [85.78, 14.28, 0.6417, 45.43, 52.13],
+  [86.03, 14.33, 0.6448, 45.06, 53.17],
+  [86.53, 14.44, 0.6586, 43.85, 53.27],
+  [87.03, 14.37, 0.6719, 43.57, 50.10],
+  [87.28, 14.34, 0.6751, 44.22, 47.96],
+  [87.78, 14.28, 0.6672, 46.54, 45.67],
+  [88.03, 14.27, 0.6592, 47.46, 45.51],
 ]
 
 
 
-/** The white flash: past this the journal is gone and the outro owns the screen. */
+/** Where the last PAGE segment ends for the progress bar: the second the outro
+ *  title arrives (TIMING.outro.at). Not the journal's exit — that is a dissolve
+ *  at 88.35 (TIMING.exit) — and not the path's end, which is 88.03. */
 export const STORY_END = 88.1
 
 /** Timecodes snapped to the 30 fps grid on read (ADR-0009). */

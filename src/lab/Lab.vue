@@ -43,7 +43,6 @@
             <FlyLayer />
           </div>
 
-          <div class="stage__flash" />
           <div class="stage__speed" />
         </div>
       </div>
@@ -206,7 +205,7 @@ const PRESET_NAMES = [
   'pageFlip3D',
   'orbit',
   'recede',
-  'whiteFlashExit',
+  'journalDissolve',
   'hyperspaceBurst',
 ]
 
@@ -351,7 +350,7 @@ function resetPose() {
     cy: slide.value ? poseFor(slide.value.frame).cy : 50,
   })
   if (targets)
-    gsap.set([targets.pos, targets.flash, targets.speed].filter(Boolean), {
+    gsap.set([targets.pos, targets.speed].filter(Boolean), {
       clearProps: 'opacity,visibility',
     })
   applyManualPose()

@@ -38,7 +38,6 @@
         <FlyLayer />
       </div>
 
-      <div class="stage__flash" />
       <div class="stage__speed" />
 
       <div class="stage__ui">

@@ -91,12 +91,24 @@ const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:
  * moving that key would tear the handover, and the entrance is frozen. Recorded
  * as an open defect instead.
  *
- * FRAME 23 IS NOT MEASURED EITHER, for a different reason: its row is not a
- * slide pose but the pose `recede` starts from, and `recede` SETS it at 83.03,
- * a tenth of a second before the page folds. Giving it the clip's +13.2 would
- * put a 28 deg turn on screen while the gift page is still face-on. The outro
- * belongs to its own session, with the measurement waiting for it in
- * _context/36-visual-diff.md.
+ * FRAME 23 IS NOW MEASURED LIKE THE REST (2026-09-05), and the reason it was
+ * not has gone with `recede`.
+ *
+ * It used to be the pose `recede` started from, hard-`set` at 83.03 a tenth of
+ * a second before the page folds, so the clip's +13.2 could not go in: it would
+ * have put a 28 deg turn on screen while the gift page was still face-on. The
+ * outro is no longer a re-pose at all — it is the same page, drifting, for five
+ * seconds, which is what every other row of this table describes. So frame 23
+ * gets an anchor and a motion run like slide 8 does, its samples run 84.03 to
+ * 88.03, and the roll crosses the fold on the spline exactly the way the other
+ * fifteen page turns do.
+ *
+ * Its `rot` anchor is the roll at its first measurable second, read off the type
+ * (+13.21 at 84.03); its motion run carries the drift, and that run was made
+ * with `--roll-type`, so the drift is the type's too and not the registration's
+ * quarter-degree grid. Frame 24 keeps no anchor of its own: it is not a page
+ * change, only the second the storyboard happens to draw, and the samples run
+ * straight through it.
  */
 const ANCHOR = {
   7: { rot: 3.1, scale: 0.746, cx: 57.7, cy: 48.7 },
@@ -115,7 +127,7 @@ const ANCHOR = {
   20: { rot: -24.28, scale: 0.681, cx: 50.25, cy: 53.48 },
   21: { rot: 11.03, scale: 0.681, cx: 50.25, cy: 51.66 },
   22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 },
-  23: { rot: 1.65, scale: 0.681, cx: 52.0, cy: 50.2 },
+  23: { rot: 13.21, scale: 0.681, cx: 52.0, cy: 50.2 },
 }
 
 /** The storyboard's own `rot`, kept so the two can be printed side by side. */
@@ -265,9 +277,17 @@ for (const s of SLIDES) {
    * measured pose at the last instant before the fold: holding is right to about
    * a degree (+15.2 measured against +14.2 held), where interpolating from the
    * last sample is about ten degrees wrong at the same instant.
+   *
+   * ONLY WHERE THE PAGE ACTUALLY FOLDS, which is why the test is on the page and
+   * not on the existence of a next row. Frame 24 is not a page change — it is
+   * the second the storyboard happens to draw of the SAME final page — so frame
+   * 23's samples run straight through it. Left as `next && ...` this row copied
+   * the pose the outro ends on, at 88.03, back to 84.98, and the spline then had
+   * five seconds of measured drift to reach a pose it had already been given.
    */
   const next = SLIDES.find(x => x.at > s.at + 1e-6)
-  if (next && full.length) full.push({ ...full[full.length - 1], t: +(next.at - 0.02).toFixed(2) })
+  const folds = next && next.page !== s.page
+  if (folds && full.length) full.push({ ...full[full.length - 1], t: +(next.at - 0.02).toFixed(2) })
   allFull.push(...full)
   // How far the journal travels over the slide, and how far it wanders from
   // where it started — the second number is the one that says "this slide
@@ -281,7 +301,6 @@ for (const s of SLIDES) {
 // The head and tail rows join the pool BEFORE thinning, so the curve the
 // decimation judges is the curve the runtime draws, ends included.
 allFull.unshift({ t: 6.0, ...ANCHOR[7] })
-allFull.push({ t: 83.03, ...ANCHOR[23] })
 allFull.sort((a, b) => a.t - b.t)
 const keptAll = decimate(allFull)
 for (const r of report)
@@ -292,7 +311,7 @@ for (const r of report)
   }).length
 const out = keptAll.map(k => [k.t, +k.rot.toFixed(2), +k.scale.toFixed(4), +k.cx.toFixed(2), +k.cy.toFixed(2)])
 /**
- * TWO ROWS THAT ARE NOT MEASURED, added to the pool above before thinning.
+ * ONE ROW THAT IS NOT MEASURED, added to the pool above before thinning.
  *
  * At the head: the cover's first measured second is 6.97 — a second after
  * `swingOpen` lands it at 6.0, because the window skips the turn — so a row at
@@ -300,11 +319,11 @@ const out = keptAll.map(k => [k.t, +k.rot.toFixed(2), +k.scale.toFixed(4), +k.cx
  * the moment the entrance hands it over. It is not an extra number: the first
  * measured row IS that pose (its own reference, dx = dy = 0, size = 1, rot = 0).
  *
- * At the tail: frame 23 starts exactly where the recede does, so every second of
- * it belongs to the outro's own move and there is no settled stretch to sample.
- * Without a row the path would stop at frame 22's last measured second and the
- * final page's own pose — 56 design px of cy over frame 22's — would be lost at
- * that cut. `recede` then starts from this row.
+ * THERE IS NO LONGER ONE AT THE TAIL. A hand-written row sat at 83.03 carrying
+ * the storyboard's pose for frame 23, because the outro was a `recede` that
+ * started there and frame 23 had no measured samples to put in its place. It
+ * now has seventeen of them, running 84.03 to 88.03, so the tail of this table
+ * is measured like the rest of it and the path owns the journal until the flash.
  */
 
 console.log(`${rows.length} samples in, ${dropped} dropped as unconfident, ${out.length} keys out.\n`)

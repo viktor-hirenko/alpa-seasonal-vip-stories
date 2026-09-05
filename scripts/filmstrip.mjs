@@ -483,6 +483,50 @@ for (const j of jobs) {
   }
 }
 
+/**
+ * `--stats` — THE FLASH, AS TWO NUMBERS PER FRAME.
+ *
+ * A white-out cannot be judged by eye on a contact sheet: two panels that are
+ * both "very bright" look alike at thumbnail size and differ by half the frame.
+ * So for each captured second this prints, for OURS and for the CLIP, the share
+ * of NEAR-WHITE pixels (every channel over 235) and the frame's MEAN LUMA. That
+ * pair separates the two things a flash can get wrong: the near-white share says
+ * how much of the room the flash has eaten, the mean luma says how bright what
+ * is left has become.
+ *
+ * It is the measurement session F used on the outro text's arrival and left no
+ * tool for; V-37 was found with it and is fixed with it.
+ */
+function frameStats(file) {
+  const raw = sh(['-i', file, '-vf', `scale=${W}:${H}`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
+  let white = 0, sum = 0
+  for (let i = 0; i < raw.length; i += 3) {
+    const r = raw[i], g = raw[i + 1], b = raw[i + 2]
+    if (r > 235 && g > 235 && b > 235) white++
+    sum += 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const n = raw.length / 3
+  return { white: (white / n) * 100, luma: sum / n }
+}
+
+if (has('--stats')) {
+  console.log('\nNEAR-WHITE SHARE (all channels > 235) AND MEAN LUMA, ours against the clip.')
+  console.log('        ------- ours -------   ------- clip -------      difference')
+  console.log('    t    white %       luma     white %       luma    white %    luma')
+  const seen = new Set()
+  const ts = jobs.flatMap(j => j.ts).filter(t => !seen.has(key(t)) && seen.add(key(t)))
+  for (const t of ts) {
+    const o = frameStats(oursPath(t))
+    const c = frameStats(clipPath(t))
+    console.log(
+      t.toFixed(2).padStart(5) +
+        o.white.toFixed(1).padStart(11) + o.luma.toFixed(1).padStart(11) +
+        c.white.toFixed(1).padStart(12) + c.luma.toFixed(1).padStart(11) +
+        (o.white - c.white).toFixed(1).padStart(11) + (o.luma - c.luma).toFixed(1).padStart(8),
+    )
+  }
+}
+
 for (const job of jobs) {
   const cells = []
   for (const t of job.ts) {

@@ -303,7 +303,15 @@ rePose.PARAM_SCHEMA = {
  *  starting point when the real value is a measurement. */
 rePose.PARAM_DEFAULTS = { dur: TIMING.rePose, ...TIMING.flip }
 
-/** The journal draws back and tilts before the flash (frames 23 -> 24). */
+/**
+ * The journal draws back and tilts at the end of the story (frames 23 -> 24).
+ *
+ * A LIBRARY PRESET WITH A BUTTON IN THE LAB, NOT PART OF THE STORY since
+ * 2026-09-05 — the same standing `hover` has. The clip has no draw-back to play:
+ * measured 84.03 to 88.03 its journal stays on the final page and drifts under
+ * 100 design px, so the outro is JOURNAL_PATH's like every other slide. See the
+ * note on RECEDE_POSE in src/story/slides.js.
+ */
 export function recede(t, from, to, params) {
   const p = P({ dur: TIMING.recede.dur, ease: EASE.recede }, params)
   // No flip: frames 23 and 24 are the same page, so there is nothing to turn.
@@ -313,26 +321,37 @@ recede.PARAM_SCHEMA = { dur: { min: 1, max: 10, step: 0.1 } }
 recede.PARAM_DEFAULTS = { dur: TIMING.recede.dur }
 
 /**
- * EXIT. A white flash covers the screen and the journal is simply gone — it is
- * hidden INSIDE the flash, never faded. Do not "improve" this into a fade:
- * fading would need `opacity` on `.journal-box`, which flattens the faces and
- * makes the volume pop out of existence mid-flight.
+ * THE EXIT. The journal DISSOLVES; nothing covers the screen.
+ *
+ * WHAT THIS REPLACES, and why the old comment here was wrong on both counts.
+ * It read: "A white flash covers the screen and the journal is simply gone — it
+ * is hidden INSIDE the flash, never faded. Do not 'improve' this into a fade."
+ * The reference has no flash at all — its brightest outro frame is mean luma
+ * 119.8 against our 235.4, and every dark thing in it stays dark — and its
+ * journal is plainly semi-transparent for half a second, the room showing
+ * through the page. TIMING.exit carries both measurements.
+ *
+ * The old comment's REASON was sound and is honoured: opacity on `.journal-box`
+ * would flatten its faces. So the fade goes on `.journal-pos`, which is the
+ * escape hatch _stage.scss names for exactly this, and it is safe HERE
+ * specifically because of where in the story it happens: the last page turn
+ * ended at 83.96, so the journal is face-on with no side face to lose, and no
+ * flight is in the air after 87 s, so the stacking context this creates cannot
+ * disturb the depth sorting against `.fly-layer` (ADR-0006).
+ *
+ * `set` then `to`, absolutely, never a relative tween: the master timeline is
+ * seeked arbitrarily (ADR-0008).
  */
-export function whiteFlashExit(t, params) {
-  const p = P({ ...TIMING.flash }, params)
+export function journalDissolve(t, params) {
+  const p = P({ dur: TIMING.exit.dur, ease: EASE.dissolve }, params)
   const s = tl()
-  if (!t.flash) return s
-  s.set(t.flash, { opacity: 0 })
-  s.to(t.flash, { opacity: 1, duration: p.in, ease: EASE.flashIn }, 0)
-  s.set(t.pos, { autoAlpha: 0 }, p.in + p.hold * 0.5)
-  s.to(t.flash, { opacity: 0, duration: p.out, ease: EASE.flashOut }, p.in + p.hold)
+  if (!t.pos) return s
+  s.set(t.pos, { autoAlpha: 1 })
+  s.to(t.pos, { autoAlpha: 0, duration: p.dur, ease: p.ease }, 0)
   return s
 }
-whiteFlashExit.PARAM_SCHEMA = {
-  in: { min: 0.02, max: 0.4, step: 0.01 },
-  hold: { min: 0, max: 0.6, step: 0.01 },
-  out: { min: 0.1, max: 1.5, step: 0.05 },
-}
+journalDissolve.PARAM_SCHEMA = { dur: { min: 0.1, max: 2, step: 0.05 } }
+journalDissolve.PARAM_DEFAULTS = { dur: TIMING.exit.dur }
 
 /** Hyperspace burst: the `Speed` overlay scales 1080 -> 2338 px. */
 export function hyperspaceBurst(t, params) {

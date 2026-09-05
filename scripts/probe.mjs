@@ -776,10 +776,25 @@ if (fitMode) {
              cx: num(pos, 'xPercent'), cy: num(pos, 'yPercent') }
   })()`
 
+  /**
+   * GROUPED BY THE ROW'S OWN `frame`, not by re-deriving one from its second.
+   *
+   * Every column in the reference is relative to THE FIRST SAMPLE OF THE RUN
+   * THAT MEASURED IT, and the run is what `frame` names. Re-deriving the frame
+   * from `t` against SLIDES gives the same answer everywhere a run stops at the
+   * next slide's row — which was everywhere, until the outro was measured as one
+   * chain from 84.03 to 88.03 straight through frame 24's row at 85.0. Split
+   * there, the second half was compared against a zero it was never measured
+   * from, and the gate reported 76 design px of error on eleven rows that are
+   * right to a pixel.
+   */
   const bySlide = new Map()
   for (const r of REFP.rows) {
-    let f = SLIDES[0].frame
-    for (const x of SLIDES) if (x.at <= r.t + 1e-6) f = x.frame
+    let f = r.frame
+    if (f === undefined) {
+      f = SLIDES[0].frame
+      for (const x of SLIDES) if (x.at <= r.t + 1e-6) f = x.frame
+    }
     if (!bySlide.has(f)) bySlide.set(f, [])
     bySlide.get(f).push(r)
   }

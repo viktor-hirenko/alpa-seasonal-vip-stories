@@ -126,8 +126,44 @@ export const TIMING = {
   /** Journal recedes before the flash. */
   recede: { at: 83.03, dur: 5 },
 
-  /** Exit: the journal is hidden INSIDE the flash, never faded. */
-  flash: { at: 88.1, in: 0.08, hold: 0.12, out: 0.6 },
+  /**
+   * THE JOURNAL'S EXIT: IT DISSOLVES. THERE IS NO WHITE FLASH (2026-09-05).
+   *
+   * What stood here was `flash: { at: 88.1, in: 0.08, hold: 0.12, out: 0.6 }`,
+   * driving a full-screen white div to opacity 1 and hiding the journal inside
+   * it with a single `set`. The reference does no such thing, and this is not a
+   * matter of degree — measured on EVERY frame from 86.00 to 89.00, the clip's
+   * mean luma never exceeds 119.8, on the frame with the most white in it
+   * (88.233, 37.7 % of pixels over 235 in all three channels). Ours reached
+   * 235.4 with 62.5 % white at 88.30: the screen went white and everything in
+   * the room went with it.
+   *
+   * The clip's brightness is the OUTRO TITLE and nothing else. Its white share
+   * and its mean luma move together frame by frame, exactly as one white
+   * population growing and shrinking over an unchanged dark room does:
+   * predicting luma as `share x 250 + (1 - share) x 20` tracks the measurement
+   * to within 2 grey levels everywhere except the very peak, where it is 13
+   * short — the amount the giant letters' own glow and their antialiased edges
+   * add. A veil of even 0.06 opacity would add 14 more. Opened and looked at:
+   * on 88.233 the room's top-right corner, its floor and the journal's own page
+   * are all still BLACK, and the yellow type on the page is crisp.
+   *
+   * And the journal does not vanish, it FADES. Isolated by the difference mask
+   * `preview` minus `clean bg` inside the page — the giant title's own pixels
+   * excluded, so what is left is the journal against the room — it holds full
+   * strength to 88.40 and reaches the floor of the mask at 88.90:
+   *
+   *   88.40 1.00   88.53 0.71   88.63 0.57   88.73 0.23   88.83 0.11
+   *   88.47 0.82   88.57 0.69   88.67 0.45   88.77 0.16   88.90 0.01
+   *
+   * Fitted over the nineteen standard eases at four starts and five durations,
+   * the best is `sine.inOut` from 88.35 over 0.55 s, rms 0.049 against a
+   * measurement whose own noise is about 0.05; a plain linear from 88.40 over
+   * 0.45 is next at 0.052. The picture agrees with the numbers: at 88.50 the
+   * room's wall panels and its magenta glow are plainly visible THROUGH the
+   * page, and the yellow type on it has gone dim but is still legible.
+   */
+  exit: { at: 88.35, dur: 0.55 },
 
   /** Hyperspace burst: 1080 -> 2338 px = scale 2.165. */
   speed: { at: 92.83, dur: 1.1, scale: 2.165 },

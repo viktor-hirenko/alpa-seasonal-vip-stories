@@ -47,8 +47,13 @@ export const EASE = {
 
   recede: 'power1.inOut',
 
-  flashIn: 'power2.in',
-  flashOut: 'power1.out',
+  /**
+   * The journal's dissolve at the end of the story. Fitted against the clip,
+   * best of nineteen at rms 0.049 — see TIMING.exit for the measurement. It
+   * replaces `flashIn: 'power2.in'` and `flashOut: 'power1.out'`, which drove a
+   * white-out the reference does not have.
+   */
+  dissolve: 'sine.inOut',
 
   /** Camera-ward zoom for the simple preset from the brief. */
   zoom: 'power2.in',

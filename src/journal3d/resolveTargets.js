@@ -8,7 +8,7 @@
  *   pos: HTMLElement, hover: HTMLElement, box: HTMLElement,
  *   front: HTMLElement, back: HTMLElement, spine: HTMLElement, fore: HTMLElement,
  *   faces: HTMLElement[],
- *   flyLayer: HTMLElement|null, flash: HTMLElement|null, speed: HTMLElement|null,
+ *   flyLayer: HTMLElement|null, speed: HTMLElement|null,
  *   outro: HTMLElement|null
  * }} Targets
  */
@@ -31,7 +31,6 @@ export function resolveTargets(root) {
     fore: q('.jedge--fore'),
     faces: qa('.jface, .jedge'),
     flyLayer: q('.fly-layer'),
-    flash: q('.stage__flash'),
     speed: q('.stage__speed'),
     // Scene chrome, not 3D: the outro text is the one piece of `.stage__ui`
     // that moves, so it is the one piece the library needs a handle on.
