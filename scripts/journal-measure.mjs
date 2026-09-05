@@ -69,7 +69,7 @@
  */
 import { execFileSync } from 'node:child_process'
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs'
-import { pyramid, maskPyramid, register, margin, quadMask, reachMask } from './lib/gradfit.mjs'
+import { pyramid, maskPyramid, register, margin, quadMask, reachMask, offsetQuad } from './lib/gradfit.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const CLIP = `${ROOT}_refs/DP-15152 - preview.mp4`
@@ -593,6 +593,303 @@ function drawQuad(rgb, quad, file, colour = [255, 240, 0]) {
 }
 
 // ===========================================================================
+// THE ROLL, FROM THE PAGE'S OWN TYPE
+// ===========================================================================
+//
+// WHY A SECOND INSTRUMENT FOR ONE NUMBER. Everything above measures the pose by
+// the FOUR EDGES of the page, and on the clip those edges lie. The left side
+// offers two parallel candidates 34 design px apart — the face's own edge and
+// the outer edge of the spine, the spine glowing the brighter of the two — and
+// the top edge fits at 4.6 grey levels per pixel against 27 for the bottom,
+// because along the top a dark page meets an unlit room. The score built on
+// them does not rank right above wrong: the highest-scoring second of the whole
+// story (0.650, slide 9) sits 50-80 design px off the page edge, and a second
+// scoring 0.575 sits on all four edges exactly (V-31).
+//
+// The type does not have those problems. The lines are printed on the page, so
+// they turn with it and nothing else; there are hundreds of them; they are the
+// highest-contrast thing in the picture; and they do not care that the right
+// side of the journal has left the frame or that the spine outshines the edge.
+//
+// WHAT IS ACTUALLY MEASURED, and it is not the baselines. Every stroke of the
+// type belongs to one of two families — the STEMS, which run along the page's
+// vertical axis, and the BASELINES and crossbars, which run along its
+// horizontal one. It is tempting to read the roll straight off the baselines,
+// since the roll is what tips them. That is wrong on this clip, and the forward
+// model says by how much:
+//
+//   the journal in the clip is YAWED about 8 degrees (V-24), and a yaw is a
+//   rotation about the page's VERTICAL axis. Under it the baselines stop being
+//   parallel to each other — at rot -7.25 and yaw +8 they run -3.88 deg across
+//   the top of the page and -9.90 deg across the bottom, a spread of 6.0 deg,
+//   and at yaw 20 the spread is 15.6 deg. Their average lands within 0.36 deg
+//   of `rot` only if the type is spread evenly down the page, which is a
+//   property of the copy, not of the geometry.
+//
+//   the STEMS are parallel to the axis the yaw turns about, so they stay
+//   parallel to each other and to nothing else changes. Checked against the
+//   forward model at five rolls (-14, -7.25, 0, +2.75, +20) and four yaws
+//   (0, +8, -8, +16): the stem direction comes out at exactly rot + 90 in all
+//   twenty, to 1e-4 deg, at any point across the width of the page.
+//
+// So the stem family is the estimator and the baseline family is the witness:
+// the gap between them reads out the yaw the picture has, and it is reported
+// but not used. Latin display type is mostly stems, which is the other reason
+// this is the strong measurement rather than the clever one.
+//
+// The two families cannot be confused, because they are picked by ANGLE and not
+// by strength: every roll in the story lies inside +-21 deg, so the stems land
+// in [45, 135) and the baselines outside it, and a peak that reaches the edge
+// of its window is reported as a refusal rather than as a number.
+
+/** Edge-tangent angle of a gradient, folded into [0, 180). */
+const tangentOf = (gx, gy) => {
+  const a = (Math.atan2(gx, -gy) * 180) / Math.PI
+  return ((a % 180) + 180) % 180
+}
+
+/**
+ * Separable Gaussian, and it is the difference between this measurement working
+ * and not working.
+ *
+ * The gradient every other score in this file uses is a raw central difference,
+ * which is what you want for LOCATING an edge and is ruinous for ORIENTING one.
+ * A straight line tilted 7 degrees is drawn by the rasteriser as a staircase, so
+ * a 3x3 difference walking along it reads a direction that jitters by several
+ * degrees from pixel to pixel, and a histogram of those directions is not a
+ * spike at the truth but a PLATEAU about 12 degrees wide with the truth on its
+ * shoulder. That is exactly what the first run produced, and the picture said so
+ * out loud: painted by angle bin, one single straight edge of the game card came
+ * out in stripes of three different colours.
+ *
+ * Blurring first turns the staircase into a ramp. Measured on the five renders
+ * whose roll is known, as the worst error over all five, against the smoothing:
+ *
+ *     sigma      0     1.0    1.5     2.0     3.0
+ *     worst   4.63    0.72   0.43    0.32    0.30    degrees
+ *     peak/floor 3.9  12.6   14.2    12.5     9.2
+ *
+ * Accuracy is bought by sigma 1 and is flat after 2; the peak's contrast against
+ * the floor of the histogram tops out at 1.5 and falls away again as the letters
+ * start merging. 2.0 is taken rather than 1.5 because the clip is a compressed
+ * video and our renders are clean PNGs, so the noise this has to survive there
+ * is larger than anything in the calibration.
+ */
+function blurLuma(g, sigma) {
+  const r = Math.max(1, Math.ceil(sigma * 3))
+  const k = []
+  let s = 0
+  for (let i = -r; i <= r; i++) {
+    const v = Math.exp(-(i * i) / (2 * sigma * sigma))
+    k.push(v)
+    s += v
+  }
+  for (let i = 0; i < k.length; i++) k[i] /= s
+  const t = new Float32Array(W * H)
+  const o = new Float32Array(W * H)
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      let a = 0
+      for (let i = -r; i <= r; i++) a += g[y * W + Math.min(W - 1, Math.max(0, x + i))] * k[i + r]
+      t[y * W + x] = a
+    }
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      let a = 0
+      for (let i = -r; i <= r; i++) a += t[Math.min(H - 1, Math.max(0, y + i)) * W + x] * k[i + r]
+      o[y * W + x] = a
+    }
+  return o
+}
+
+/**
+ * The STORYBOARD's `rot` per slide — what the anchor table held before this
+ * measurement replaced it — mirrored here so a run can print the two side by
+ * side. If it ever drifts from journal-path.mjs the printout is wrong and
+ * nothing else is: it is a comment with a value, not a source of truth.
+ */
+const MOCK_ROT = { 7: 3.1, 8: 3.1, 9: 4.15, 10: 7.1, 11: 12.9, 12: 12.75, 13: 7.05, 14: 2.75,
+  15: 2.75, 16: 6.3, 17: 4.35, 18: 4.35, 19: 4.37, 20: 3.53, 21: 3.53, 22: 1.65, 23: 1.65 }
+
+const ROLL_BINS = 720 // 0.25 deg
+const ROLL_LIMIT = 45 // the roll the window is allowed to describe
+const ROLL_BLUR = 2 // see blurLuma
+
+/**
+ * The roll of the page in one picture, in degrees clockwise, from its type.
+ *
+ * `quad` is only used to say WHERE the page is, and it is shrunk hard before
+ * use: the mask has to survive our own anchor being wrong by the 50-130 design
+ * px the clip disagrees with it by (V-25), and it has to keep the room out,
+ * because the room has verticals of its own. Nothing else about the quad enters
+ * the answer — no edge of it is fitted, so an anchor that is off by 100 px
+ * moves the window the type is read through and not the angle read from it.
+ */
+function rollOf(rgb, quad, opt = {}) {
+  const shrink = opt.shrink ?? 150
+  const keep = opt.keep ?? 0.08
+  const m = quadMask(quad, shrink)
+  const { gx, gy } = gradient(blurLuma(luma(rgb), opt.blur ?? ROLL_BLUR))
+
+  // The threshold is taken INSIDE the mask. A global one would be set by the
+  // glowing rim around the journal and by the room's own lights, and inside a
+  // dark page it would then pass almost nothing.
+  const mags = []
+  for (let i = 0; i < W * H; i++) if (m[i]) mags.push(Math.hypot(gx[i], gy[i]))
+  if (mags.length < 20000) return { ok: false, why: `mask too small (${mags.length} px)` }
+  mags.sort((a, b) => a - b)
+  const th = mags[Math.floor((1 - keep) * (mags.length - 1))]
+
+  const hist = new Float64Array(ROLL_BINS)
+  let n = 0
+  for (let y = 1; y < H - 1; y++)
+    for (let x = 1; x < W - 1; x++) {
+      const i = y * W + x
+      if (!m[i]) continue
+      const g = Math.hypot(gx[i], gy[i])
+      if (g < th) continue
+      hist[Math.min(ROLL_BINS - 1, Math.floor((tangentOf(gx[i], gy[i]) / 180) * ROLL_BINS))] += g
+      n++
+    }
+  if (n < 2000) return { ok: false, why: `too few edge pixels (${n})` }
+
+  // A light circular smoothing, one degree wide. The stems of real type are not
+  // one angle but a narrow spray of them — the sides of a stroke are not exactly
+  // parallel, and the raster quantises both — and an argmax over raw quarter-
+  // degree bins picks the luckiest of those rather than the middle.
+  const sm = new Float64Array(ROLL_BINS)
+  const R = 2
+  for (let b = 0; b < ROLL_BINS; b++) {
+    let s = 0
+    for (let d = -R; d <= R; d++) s += hist[(b + d + ROLL_BINS) % ROLL_BINS]
+    sm[b] = s / (2 * R + 1)
+  }
+
+  const deg = b => (b * 180) / ROLL_BINS
+  const bin = d => Math.round((((d % 180) + 180) % 180 / 180) * ROLL_BINS) % ROLL_BINS
+  /** Strongest bin whose angle lies within `lo..hi` degrees, and its centroid. */
+  const peakIn = (lo, hi) => {
+    let bb = -1,
+      bv = -1
+    for (let b = 0; b < ROLL_BINS; b++) {
+      const d = deg(b)
+      const inside = lo <= hi ? d >= lo && d <= hi : d >= lo || d <= hi
+      if (!inside) continue
+      if (sm[b] > bv) {
+        bv = sm[b]
+        bb = b
+      }
+    }
+    if (bb < 0) return null
+    // Centroid over +-3 deg of the winner, on the RAW histogram: the smoothing
+    // is there to find the peak, not to place it.
+    let w = 0,
+      s = 0
+    const half = Math.round((3 / 180) * ROLL_BINS)
+    for (let d = -half; d <= half; d++) {
+      const b = (bb + d + ROLL_BINS) % ROLL_BINS
+      w += hist[b]
+      s += hist[b] * d
+    }
+    return { at: deg(bb) + (w ? (s / w) * (180 / ROLL_BINS) : 0), peak: bv, bin: bb }
+  }
+
+  // The stems: the window is centred on 90 and is exactly as wide as the rolls
+  // the story is allowed to contain, so the baselines cannot be mistaken for it.
+  const stem = peakIn(90 - ROLL_LIMIT, 90 + ROLL_LIMIT)
+  const base = peakIn(180 - ROLL_LIMIT, ROLL_LIMIT) // wraps through 0
+  if (!stem) return { ok: false, why: 'no stem peak' }
+  const roll = stem.at - 90
+
+  // HOW MUCH TO BELIEVE IT. Two numbers, both from the histogram itself.
+  //   `conf`  — how much of the stem window's weight sits within 5 deg of the
+  //             peak. Type gives a spike; a page that is mostly art gives a
+  //             smear, and this is what tells them apart without opening the
+  //             picture.
+  //   `rival` — the best bin in the stem window at least 8 deg away from the
+  //             winner, over the winner. Near 1 means the window holds two
+  //             candidates and the answer is a coin toss.
+  let inWin = 0,
+    allWin = 0,
+    rival = 0
+  const near = Math.round((5 / 180) * ROLL_BINS)
+  const far = Math.round((8 / 180) * ROLL_BINS)
+  for (let b = 0; b < ROLL_BINS; b++) {
+    const d = deg(b)
+    if (d < 90 - ROLL_LIMIT || d > 90 + ROLL_LIMIT) continue
+    allWin += hist[b]
+    let dist = Math.abs(b - stem.bin)
+    dist = Math.min(dist, ROLL_BINS - dist)
+    if (dist <= near) inWin += hist[b]
+    if (dist >= far) rival = Math.max(rival, sm[b])
+  }
+  return {
+    ok: true,
+    roll: +roll.toFixed(2),
+    stem: +stem.at.toFixed(2),
+    baseline: base ? +(base.at > 90 ? base.at - 180 : base.at).toFixed(2) : null,
+    conf: +(allWin ? inWin / allWin : 0).toFixed(3),
+    rival: +(stem.peak ? rival / stem.peak : 1).toFixed(3),
+    px: n,
+  }
+}
+
+/**
+ * The proof picture: the answer drawn ON the type it was read from.
+ *
+ * A comb along the roll, laid over the lines of text, and a comb along the stem
+ * direction, laid over the uprights of the letters. Whether the answer is right
+ * is then a thing the eye settles in a second — parallel or not parallel — and
+ * not a thing a score is asked about. The region actually sampled is outlined
+ * too, so a mask that has slid off the page cannot pass unnoticed.
+ */
+function drawRoll(rgb, quad, roll, file, shrink = 150) {
+  const b = Buffer.from(rgb)
+  const put = (x, y, c) => {
+    x = Math.round(x)
+    y = Math.round(y)
+    if (x < 0 || y < 0 || x >= W || y >= H) return
+    const q = (y * W + x) * 3
+    b[q] = c[0]
+    b[q + 1] = c[1]
+    b[q + 2] = c[2]
+  }
+  const seg = (x0, y0, x1, y1, c, thick = 1) => {
+    const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0))
+    for (let i = 0; i <= n; i++) {
+      const x = x0 + ((x1 - x0) * i) / n,
+        y = y0 + ((y1 - y0) * i) / n
+      for (let t = -thick; t <= thick; t++) put(x, y + t, c)
+    }
+  }
+  const inner = offsetQuad(quad, shrink)
+  for (let e = 0; e < 4; e++) seg(inner[e][0], inner[e][1], inner[(e + 1) % 4][0], inner[(e + 1) % 4][1], [90, 90, 255], 0)
+
+  const cx = inner.reduce((a, p) => a + p[0], 0) / 4
+  const cy = inner.reduce((a, p) => a + p[1], 0) / 4
+  const R = (Math.PI / 180) * roll
+  // Along the roll (yellow) — must run along the lines of text.
+  // Along the stems (cyan) — must run along the uprights of the letters.
+  for (const [ang, colour, span, step, len] of [
+    [R, [255, 235, 0], 460, 115, 300],
+    [R + Math.PI / 2, [0, 240, 255], 380, 190, 190],
+  ]) {
+    const ux = Math.cos(ang),
+      uy = Math.sin(ang)
+    const px = -uy,
+      py = ux
+    for (let o = -span; o <= span; o += step) {
+      const ax = cx + px * o,
+        ay = cy + py * o
+      seg(ax - ux * len, ay - uy * len, ax + ux * len, ay + uy * len, colour, 1)
+    }
+  }
+  mkdirSync(OUT, { recursive: true })
+  ff(['-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${W}x${H}`, '-i', 'pipe:0',
+    '-frames:v', '1', file], b)
+}
+
+// ===========================================================================
 // THE STORY TABLE
 // ===========================================================================
 
@@ -766,6 +1063,50 @@ if (has('--selftest')) {
     )
   }
 
+
+  console.log('\n3. THE ROLL OFF THE TYPE, on the same renders, whose roll is known.')
+  console.log('   No edge of the journal enters this one — only the print on the page.')
+  // The pose is handed in as the WINDOW the type is read through, not as an
+  // answer: it is shrunk 150 design px before use, so it has to be roughly right
+  // and no more. That is the whole point of the instrument — on the clip our
+  // anchor is out by 50-130 px (V-25) and this still has to work.
+  //
+  // The truth for every case is the roll the render was drawn at, INCLUDING the
+  // two that carry a yaw. That is not an approximation: a yaw turns the page
+  // about its own vertical axis, so the stems stay parallel to it, and the
+  // forward model puts the stem direction at exactly rot + 90 at five rolls
+  // crossed with four yaws, to 1e-4 deg. The baselines do NOT survive the same
+  // test — at yaw 8 they fan out over 6 deg from the top of the page to the
+  // bottom — which is why the stems are the estimator and the baselines are only
+  // printed. The gap between the two is a witness to the yaw and shows here:
+  // it is 0.0 on the three flat renders, +1.15 at yaw +8 and -1.33 at yaw -8.
+  const ROLL_TOL = 0.5
+  for (const c of cases) {
+    let rgb
+    try {
+      rgb = pngFrame(c.png)
+    } catch {
+      console.log(`   ${c.png} missing — run clip-fit --pose first`)
+      fails++
+      continue
+    }
+    const r = rollOf(rgb, quadOf(c.truth, 'page'))
+    if (!r.ok) {
+      console.log(`   ${c.png.split('/').pop().padEnd(20)} refused: ${r.why}   FAIL`)
+      fails++
+      continue
+    }
+    const d = Math.abs(r.roll - c.truth.rot)
+    const ok = d <= ROLL_TOL
+    if (!ok) fails++
+    console.log(
+      `   ${c.png.split('/').pop().padEnd(20)} roll ${r.roll.toFixed(2).padStart(7)} ` +
+        `truth ${c.truth.rot.toFixed(2).padStart(7)} (yaw ${String(c.truth.rotY || 0).padStart(3)})  ` +
+        `d ${d.toFixed(2)}deg  conf ${r.conf.toFixed(2)} rival ${r.rival.toFixed(2)}  ` +
+        `base ${(r.baseline - r.roll).toFixed(2).padStart(6)}  ${ok ? 'ok' : 'FAIL'}`,
+    )
+  }
+
   console.log(`\n${fails} case(s) failed.`)
   process.exit(fails ? 1 : 0)
 }
@@ -870,6 +1211,160 @@ if (has('--motion')) {
   mkdirSync(OUT, { recursive: true })
   writeFileSync(`${OUT}/motion.json`, JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows: out }, null, 1))
   console.log(`\n-> ${OUT}/motion.json  (${out.length} samples)`)
+  process.exit(0)
+}
+
+// ---------------------------------------------------------------- --roll
+//
+//   node scripts/journal-measure.mjs --roll --t 12.04 18.07 --draw
+//   node scripts/journal-measure.mjs --roll --all --draw
+//   node scripts/journal-measure.mjs --roll --png _refs/fit/.pose-1242.png -8.75,0.679,44.5,48
+//
+// The pose after --png is rot,scale,cx,cy[,rotY], the same order --yawscan
+// takes. It is only the window the type is read through, so it may be rough.
+// `--all` reads one second per slide: the middle of the settled window, which
+// is the furthest a sample can be from the page turns on either side of it.
+//
+// `--shrink N` and `--nudge dx,dy` exist to ATTACK the answer rather than to
+// tune it. The window is placed by our own anchor, and on the clip that anchor
+// is out by 50-130 design px (V-25) — visible in the drawing at t = 12.04,
+// where the sampled region hangs about 100 px past the right-hand edge of the
+// page. If the roll moved when the window moved, the number would be a property
+// of the window and worthless. Displacing it on purpose is how that is settled,
+// and the answer is in the log entry for this session.
+if (has('--roll')) {
+  const draw = has('--draw')
+  const nudge = (val('--nudge') || '0,0').split(',').map(Number)
+  const ropt = { shrink: Number(val('--shrink') || 150) }
+  const shift = q => q.map(([x, y]) => [x + nudge[0], y + nudge[1]])
+  const rows = []
+  const png = val('--png')
+  if (png) {
+    const p = (val('--pose') || argv[argv.indexOf('--png') + 2] || '').split(',').map(Number)
+    const pose = { rot: p[0], scale: p[1], cx: p[2], cy: p[3], rotY: p[4] || 0 }
+    const rgb = pngFrame(png.startsWith('/') ? png : `${ROOT}${png}`)
+    const q = shift(quadOf(pose, val('--face') || 'page'))
+    const r = rollOf(rgb, q, ropt)
+    console.log(png, JSON.stringify(r))
+    if (draw && r.ok) drawRoll(rgb, q, r.roll, `${OUT}/roll-png.png`, ropt.shrink)
+    process.exit(0)
+  }
+  // ------------------------------------------------------------ --anchor
+  //
+  // THE ONE NUMBER PER SLIDE THAT THE TABLE ACTUALLY TAKES.
+  //
+  // `journal-path.mjs` builds each row as ANCHOR + MOTION, and the motion of a
+  // slide is measured relative to that slide's FIRST measurable second. So the
+  // anchor's `rot` is not the roll at any convenient moment — it is the roll at
+  // that first second, and everything after it is the drift already measured.
+  //
+  // Reading one frame there would be cheap and brittle: it sits 0.97 s after the
+  // page turn, and a flying object crossing the page at that instant would be
+  // the whole answer. So the roll is read at several seconds ACROSS the slide,
+  // each is carried back to the first second by subtracting the drift the motion
+  // run already recorded for it, and the answer is the median of those. The
+  // SPREAD of them is the honest confidence: five independent frames, corrected
+  // by an independently measured motion, either agree or they do not, and no
+  // histogram statistic has to be believed for that to mean something.
+  if (has('--anchor')) {
+    const motion = JSON.parse(readFileSync(`${OUT}/motion.json`, 'utf8')).rows
+    const byFrame = new Map()
+    for (const r of motion) {
+      if (!byFrame.has(r.frame)) byFrame.set(r.frame, [])
+      byFrame.get(r.frame).push(r)
+    }
+    const N = Number(val('--n') || 5)
+    console.log('THE ROLL AT EACH SLIDE\'S ANCHOR SECOND, from the type on its page.')
+    console.log('Each sample is carried back to the anchor second by subtracting the')
+    console.log('drift `--motion` measured for it, so the columns are comparable and')
+    console.log('their spread is a check on both measurements at once.\n')
+    console.log('frame page                  anchor   mock   samples (roll @ t, corrected)                    median  spread')
+    const outRows = []
+    for (const s of SLIDES.filter(x => byFrame.has(x.frame))) {
+      const rows = byFrame.get(s.frame).slice().sort((a, b) => a.t - b.t)
+      const pick = []
+      for (let i = 0; i < N; i++) pick.push(rows[Math.round((i * (rows.length - 1)) / (N - 1))])
+      const seen = new Set()
+      const vals = []
+      const parts = []
+      for (const r of pick) {
+        if (seen.has(r.t)) continue
+        seen.add(r.t)
+        const rgb = clipFrame(r.t)
+        const m = rollOf(rgb, shift(quadOf(poseAt(r.t), s.face)), ropt)
+        if (!m.ok) {
+          parts.push(`${r.t.toFixed(2)}:refused`)
+          continue
+        }
+        const corrected = m.roll - r.rot
+        vals.push(corrected)
+        parts.push(`${r.t.toFixed(2)}:${corrected >= 0 ? '+' : ''}${corrected.toFixed(2)}`)
+      }
+      vals.sort((a, b) => a - b)
+      const med = vals.length ? vals[(vals.length - 1) >> 1] : null
+      const spread = vals.length ? vals[vals.length - 1] - vals[0] : null
+      outRows.push({ frame: s.frame, page: s.page, t0: rows[0].t, roll: med === null ? null : +med.toFixed(2),
+        spread: spread === null ? null : +spread.toFixed(2), n: vals.length, samples: parts })
+      console.log(
+        String(s.frame).padStart(5) + '  ' + s.page.padEnd(20) +
+          (med === null ? '     --' : med.toFixed(2).padStart(8)) +
+          (MOCK_ROT[s.frame] === undefined ? '     --' : MOCK_ROT[s.frame].toFixed(2).padStart(7)) +
+          '   ' + parts.join(' ').padEnd(46) +
+          (med === null ? '      --' : med.toFixed(2).padStart(8)) +
+          (spread === null ? '      --' : spread.toFixed(2).padStart(8)) +
+          (spread !== null && spread > 3 ? '  SPREAD' : ''),
+      )
+    }
+    mkdirSync(OUT, { recursive: true })
+    writeFileSync(`${OUT}/roll-anchor.json`,
+      JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows: outRows }, null, 1))
+    console.log(`\n-> ${OUT}/roll-anchor.json`)
+    console.log('\nPaste the `median` column into ANCHOR in scripts/journal-path.mjs as `rot`,')
+    console.log('then re-run `npm run journal:path`. Do not hand-edit JOURNAL_PATH.')
+    process.exit(0)
+  }
+
+  const want = []
+  if (has('--t'))
+    for (let i = argv.indexOf('--t') + 1; i < argv.length && !argv[i].startsWith('--'); i++)
+      want.push(Number(argv[i]))
+  else
+    for (const s of SLIDES.filter(s => s.frame >= 7 && s.frame <= 23)) {
+      const w = windowOf(s.frame)
+      want.push(+((w.t0 + w.t1) / 2).toFixed(2))
+    }
+  console.log("THE ROLL OF THE CLIP'S JOURNAL, READ OFF THE TYPE ON ITS PAGE.")
+  console.log('`roll` is what the product needs: degrees clockwise, the angle our')
+  console.log('own journal must be set to. `base` is the baseline family, kept as a')
+  console.log('witness — it is pulled off `roll` by the yaw and by where the copy')
+  console.log('happens to sit on the page, so it is printed and not used.\n')
+  console.log('    t  frame page                    roll    ours    diff    base   conf  rival      px')
+  for (const t of want) {
+    const s = slideAt(t)
+    const rgb = clipFrame(t)
+    const ours = poseAt(t)
+    const quad = shift(quadOf(ours, s.face))
+    const r = rollOf(rgb, quad, ropt)
+    const row = { t, frame: s.frame, page: s.page, ours: +ours.rot.toFixed(2), ...r }
+    rows.push(row)
+    if (!r.ok) {
+      console.log(t.toFixed(2).padStart(5) + String(s.frame).padStart(7) + '  ' + s.page.padEnd(20) + '   ' + r.why)
+      continue
+    }
+    console.log(
+      t.toFixed(2).padStart(5) + String(s.frame).padStart(7) + '  ' + s.page.padEnd(20) +
+        r.roll.toFixed(2).padStart(8) + row.ours.toFixed(2).padStart(8) +
+        (r.roll - row.ours).toFixed(2).padStart(8) +
+        (r.baseline === null ? '     --' : r.baseline.toFixed(2).padStart(8)) +
+        r.conf.toFixed(3).padStart(7) + r.rival.toFixed(3).padStart(7) +
+        String(r.px).padStart(8) +
+        (r.conf < 0.35 || r.rival > 0.8 ? '   WEAK' : ''),
+    )
+    if (draw) drawRoll(rgb, quad, r.roll, `${OUT}/roll-${t.toFixed(2)}.png`, ropt.shrink)
+  }
+  mkdirSync(OUT, { recursive: true })
+  writeFileSync(`${OUT}/roll.json`, JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows }, null, 1))
+  console.log(`\n-> ${OUT}/roll.json  (${rows.length} rows)`)
   process.exit(0)
 }
 

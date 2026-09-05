@@ -57,25 +57,70 @@ const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:
  * ANGLE outright, which is why `rot` is taken from the clip and these three are
  * used only as the zero the measured motion is added to.
  */
+/**
+ * `rot` NO LONGER COMES FROM THE STORYBOARD. It is measured off the clip, and
+ * that is the one change this table has had since it was written.
+ *
+ * The storyboard says the journal leans clockwise on every single frame, from
+ * +1.65 to +12.9. The clip says it ROCKS: the lean changes sign at every page
+ * turn, between about -24 and +15, so on every second slide the storyboard has
+ * the journal tipped the wrong way (V-30). The two disagree because Figma can
+ * only draw a flat rotation and the numbers there were solved from the bounding
+ * box of `Component 17`, whose sign had to be read off the mock by eye — and the
+ * mock is a set of stills, so a rock between stills is invisible in it.
+ *
+ * MEASURED HOW: `npm run journal:pose -- --roll --anchor`, which reads the angle
+ * of the STEMS of the type printed on the page — not the journal's edges, which
+ * on this clip lie (V-31, V-32). Five seconds are read per slide, each carried
+ * back to the slide's anchor second by subtracting the drift `--motion` measured
+ * for it, and the median is taken. Those five are independent frames corrected
+ * by an independent measurement, so their spread is a check on both: it is
+ * 0.2-1.2 deg on fifteen of the sixteen slides and 2.9 on frame 18. The method
+ * itself is proven against five of our own renders whose roll is known exactly
+ * (`npm run journal:selftest`, section 3): worst error 0.34 deg.
+ *
+ * `scale`, `cx` and `cy` are UNCHANGED and still the storyboard's. The clip
+ * disagrees with them too — it puts the journal 50-130 design px further left
+ * (V-25) — but that disagreement cannot yet be separated from our own layout
+ * error, and this session did not try. Only the angle is measured here.
+ *
+ * FRAME 7 IS DELIBERATELY NOT MEASURED. Its row is where `swingOpen` hands the
+ * journal over at t = 6.0, and the entrance ends on exactly this rotationZ of
+ * 3.1 (see the last key of swingOpen). The clip's cover is at +15.2 there, so
+ * the entrance is wrong by 12 deg as well — but moving this number without
+ * moving that key would tear the handover, and the entrance is frozen. Recorded
+ * as an open defect instead.
+ *
+ * FRAME 23 IS NOT MEASURED EITHER, for a different reason: its row is not a
+ * slide pose but the pose `recede` starts from, and `recede` SETS it at 83.03,
+ * a tenth of a second before the page folds. Giving it the clip's +13.2 would
+ * put a 28 deg turn on screen while the gift page is still face-on. The outro
+ * belongs to its own session, with the measurement waiting for it in
+ * _context/36-visual-diff.md.
+ */
 const ANCHOR = {
   7: { rot: 3.1, scale: 0.746, cx: 57.7, cy: 48.7 },
-  8: { rot: 3.1, scale: 0.683, cx: 57.4, cy: 47.8 },
-  9: { rot: 4.15, scale: 0.682, cx: 49.4, cy: 54.9 },
-  10: { rot: 7.1, scale: 0.682, cx: 64.3, cy: 50.8 },
-  11: { rot: 12.9, scale: 0.682, cx: 49.5, cy: 63.1 },
-  12: { rot: 12.75, scale: 0.682, cx: 75.8, cy: 50.8 },
-  13: { rot: 7.05, scale: 0.681, cx: 49.5, cy: 63.1 },
-  14: { rot: 2.75, scale: 0.681, cx: 54.8, cy: 50.0 },
-  15: { rot: 2.75, scale: 0.681, cx: 54.8, cy: 56.5 },
-  16: { rot: 6.3, scale: 0.681, cx: 46.9, cy: 53.9 },
-  17: { rot: 4.35, scale: 0.681, cx: 56.3, cy: 51.0 },
-  18: { rot: 4.35, scale: 0.681, cx: 56.3, cy: 51.0 },
-  19: { rot: 4.37, scale: 0.681, cx: 56.31, cy: 52.48 },
-  20: { rot: 3.53, scale: 0.681, cx: 50.25, cy: 53.48 },
-  21: { rot: 3.53, scale: 0.681, cx: 50.25, cy: 51.66 },
-  22: { rot: 1.65, scale: 0.681, cx: 52.0, cy: 47.3 },
+  8: { rot: -10.94, scale: 0.683, cx: 57.4, cy: 47.8 },
+  9: { rot: 13.96, scale: 0.682, cx: 49.4, cy: 54.9 },
+  10: { rot: -7.59, scale: 0.682, cx: 64.3, cy: 50.8 },
+  11: { rot: -0.25, scale: 0.682, cx: 49.5, cy: 63.1 },
+  12: { rot: -4.72, scale: 0.682, cx: 75.8, cy: 50.8 },
+  13: { rot: 13.2, scale: 0.681, cx: 49.5, cy: 63.1 },
+  14: { rot: -8.43, scale: 0.681, cx: 54.8, cy: 50.0 },
+  15: { rot: 10.28, scale: 0.681, cx: 54.8, cy: 56.5 },
+  16: { rot: -21.89, scale: 0.681, cx: 46.9, cy: 53.9 },
+  17: { rot: 15.07, scale: 0.681, cx: 56.3, cy: 51.0 },
+  18: { rot: -11.58, scale: 0.681, cx: 56.3, cy: 51.0 },
+  19: { rot: 8.36, scale: 0.681, cx: 56.31, cy: 52.48 },
+  20: { rot: -24.28, scale: 0.681, cx: 50.25, cy: 53.48 },
+  21: { rot: 11.03, scale: 0.681, cx: 50.25, cy: 51.66 },
+  22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 },
   23: { rot: 1.65, scale: 0.681, cx: 52.0, cy: 50.2 },
 }
+
+/** The storyboard's own `rot`, kept so the two can be printed side by side. */
+const MOCK_ROT = { 7: 3.1, 8: 3.1, 9: 4.15, 10: 7.1, 11: 12.9, 12: 12.75, 13: 7.05, 14: 2.75,
+  15: 2.75, 16: 6.3, 17: 4.35, 18: 4.35, 19: 4.37, 20: 3.53, 21: 3.53, 22: 1.65, 23: 1.65 }
 
 const slideOf = t => {
   let s = SLIDES[0]
@@ -195,6 +240,34 @@ for (const s of SLIDES) {
   if (!samples) continue
   samples.sort((a, b) => a.t - b.t)
   const full = keysOf(s.frame, samples)
+  /**
+   * HOLD THE POSE UNTIL THE PAGE FOLDS, and this row is why the measured roll
+   * can be shipped at all.
+   *
+   * A slide's last sample sits up to half a second before the next slide starts,
+   * because the sampler steps 0.5 s and stops short of the turn. That gap never
+   * mattered while every anchor leaned the same way — the angle moved three or
+   * four degrees across a turn and the spline could smear it anywhere. With the
+   * roll measured off the clip the angle moves THIRTY degrees across a turn, and
+   * a spline that starts turning at the last sample rotates the journal in plain
+   * sight, half a second before the page begins to fold.
+   *
+   * Where the clip actually puts that change is measured, not assumed. Read
+   * straight through the turn at 78.07 — which the type allows, because the stem
+   * direction is unaffected by yaw right up to edge-on:
+   *
+   *   t     77.54  77.94  78.04 | 78.14  78.24  78.44  78.64 | 78.84  79.04
+   *   roll  +14.2  +15.0  +15.2 | +10.3   +0.2  -12.4  -16.7 | -17.8  -18.3
+   *                       fold -^                            ^- back face-on
+   *
+   * The journal holds +15 until the fold and has done almost all of its turning
+   * by the time the page comes back. So the row below repeats the slide's last
+   * measured pose at the last instant before the fold: holding is right to about
+   * a degree (+15.2 measured against +14.2 held), where interpolating from the
+   * last sample is about ten degrees wrong at the same instant.
+   */
+  const next = SLIDES.find(x => x.at > s.at + 1e-6)
+  if (next && full.length) full.push({ ...full[full.length - 1], t: +(next.at - 0.02).toFixed(2) })
   allFull.push(...full)
   // How far the journal travels over the slide, and how far it wanders from
   // where it started — the second number is the one that says "this slide
@@ -235,14 +308,17 @@ const out = keptAll.map(k => [k.t, +k.rot.toFixed(2), +k.scale.toFixed(4), +k.cx
  */
 
 console.log(`${rows.length} samples in, ${dropped} dropped as unconfident, ${out.length} keys out.\n`)
-console.log('frame page                 n  keys   drot     dcx    dcy   dsize   farthest')
+console.log('frame page                 n  keys   drot     dcx    dcy   dsize   farthest    rot: mock -> clip')
 for (const r of report)
   console.log(
     String(r.frame).padStart(5) + '  ' + r.page.padEnd(20) + String(r.samples).padStart(3) +
       String(r.keys).padStart(6) + r.rotTo.toFixed(2).padStart(8) +
       r.dCx.toFixed(0).padStart(8) + r.dCy.toFixed(0).padStart(7) +
       ((r.dScale >= 0 ? '+' : '') + r.dScale.toFixed(1)).padStart(7) + ' %' +
-      r.span.toFixed(0).padStart(10) + ' px',
+      r.span.toFixed(0).padStart(10) + ' px' +
+      MOCK_ROT[r.frame].toFixed(2).padStart(12) + ' ->' +
+      ANCHOR[r.frame].rot.toFixed(2).padStart(8) +
+      (Math.sign(MOCK_ROT[r.frame]) !== Math.sign(ANCHOR[r.frame].rot) ? '   SIGN' : ''),
   )
 
 writeFileSync(REF, JSON.stringify({ measured: new Date().toISOString().slice(0, 10), src: SRC,
