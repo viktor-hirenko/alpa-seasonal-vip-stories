@@ -145,11 +145,30 @@ flyInFromFloor.PARAM_SCHEMA = {
  * THE LAST KEY IS A HANDOVER, not a resting pose. It must equal the first row of
  * JOURNAL_PATH, because the path is nested at 6.0 and takes the journal from
  * here — see the head-row note in scripts/journal-path.mjs. Move one, move both.
+ *
+ * THE KEYS ARE READ THROUGH THE SPLINE, NOT TWEENED ONE SEGMENT AT A TIME
+ * (2026-09-06). They used to be six chained `.to()`s, each carrying
+ * `power2.inOut` — an ease whose speed is zero at BOTH ends of every segment.
+ * So the entrance stopped dead at every key and set off again: measured on our
+ * own rendered frames, the journal's left edge moved 39, 25, 15, 7.5, 2.8, 0.4,
+ * 0.2 px per frame into the key at 5.00 and 1.6, 4.2, 8.1, 13.3, 19.3, 26.3,
+ * 31.2 out of it. The clip over the same fifteen frames moves 12, 16, 12, 12,
+ * 12, 12, 12, 8, 12, 8, 12, 8, 8, 8 — an even glide. Six keys, six stalls, and
+ * the owner saw it as "the journal enters in jerks" before any gate did,
+ * because no gate samples the entrance: `pose:check` starts at 7.47.
+ *
+ * The fix is the one `hermite.js` was written for and that the flight table and
+ * JOURNAL_PATH already use — a Hermite curve through the measured rows, read by
+ * a playhead that advances at a constant rate. It passes exactly through all
+ * seven keys, so nothing measured moves, and its velocity is continuous, so
+ * nothing stalls between them. `ease` is gone from the params for the same
+ * reason `EASE.flyPath` is `none`: the shape of the motion lives in the rows,
+ * and an ease on top would re-time the clip's own acceleration into something
+ * else.
  */
 export function swingOpen(t, params) {
   const p = P(
     {
-      ease: EASE.swing,
       keys: [
         // [t from start, rotationY, rotationZ, scale, cx, cy]   clip frame
         [0.0, -104, 0.5, 1.02, 54.5, 50.0], //   118  appears, back cover to camera
@@ -160,23 +179,46 @@ export function swingOpen(t, params) {
         [1.5667, -15.5, 7.85, 0.79, 61.6, 49.2], // 165
         [2.0667, -4, 10.04, 0.746, 57.7, 48.7], // 180  handover: JOURNAL_PATH's first row
       ],
+      // The row the PATH reaches one second after the handover, in this
+      // preset's own seconds and without a yaw column — see `next` above.
+      next: null,
     },
     params,
   )
+
+  // The ghost row is never rendered: the playhead stops at the last real key.
+  // It exists so the finite difference at that key is two-sided like every
+  // other one, i.e. so the entrance arrives travelling at the speed the path
+  // leaves at. Yaw has no continuation to lean on — nothing drives rotationY
+  // between the handover and the first page turn — so the ghost holds it.
+  const last = p.keys[p.keys.length - 1]
+  const rows = p.next ? [...p.keys, [p.next[0], last[1], p.next[1], p.next[2], p.next[3], p.next[4]]] : p.keys
+
+  const at = splineReader(rows)
+  const t0 = p.keys[0][0]
+  const t1 = last[0]
+  const head = { t: t0 }
   const s = tl()
-  const base = p.keys[0]
   // The preset only poses. Making the journal appear is the STORY's business and
   // lives on the master timeline: a `set` inside a nested child cannot hide
   // anything before that child starts, which is exactly the frames that need it.
+  const base = p.keys[0]
   s.set(t.box, { rotationX: 0, rotationY: base[1], rotationZ: base[2], scale: base[3], z: 0 }, 0)
   s.set(t.pos, { xPercent: base[4], yPercent: base[5] }, 0)
-
-  p.keys.slice(1).forEach((k, i) => {
-    const prev = p.keys[i]
-    const dur = k[0] - prev[0]
-    s.to(t.box, { rotationY: k[1], rotationZ: k[2], scale: k[3], duration: dur, ease: p.ease }, prev[0])
-    s.to(t.pos, { xPercent: k[4], yPercent: k[5], duration: dur, ease: p.ease }, prev[0])
-  })
+  s.to(
+    head,
+    {
+      t: t1,
+      duration: t1 - t0,
+      ease: 'none',
+      onUpdate() {
+        const time = head.t
+        gsap.set(t.box, { rotationY: at(time, 1), rotationZ: at(time, 2), scale: at(time, 3) })
+        gsap.set(t.pos, { xPercent: at(time, 4), yPercent: at(time, 5) })
+      },
+    },
+    0,
+  )
   return s
 }
 /** No sliders. The times live IN the keys — the second column is the clip's own

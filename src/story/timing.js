@@ -123,7 +123,9 @@ export const TIMING = {
   },
 
 
-  /** Journal recedes before the flash. */
+  /** The retired draw-back, kept for the lab's `recede` button. The story does
+   *  not play it, and there is no flash for it to precede: the journal
+   *  dissolves (TIMING.exit) and the clip has no white-out at all. */
   recede: { at: 83.03, dur: 5 },
 
   /**
@@ -180,11 +182,13 @@ export const TIMING = {
    * 104.0..104.5 px against the mock's 96 x 1.08 = 103.68, which is how we know
    * the mock's type size is the clip's type size.
    *
-   * `at` is the white flash, not a separate cue. The text's first pixels appear
-   * on the same frame the flash does (white area 0.67 % -> 2.98 % at 88.10),
-   * and fitting the zoom with its start pinned there costs almost nothing:
-   * rms 0.107 against 0.089 for a freely-chosen start of 88.03. So the flash
-   * covers the arrival, exactly as it covers the journal's exit.
+   * `at` IS THE TEXT'S OWN FIRST FRAME. It was pinned to 88.10 because the
+   * clip's white area jumps there, 0.67 % -> 2.98 %, and fitting the zoom with
+   * its start held at that second costs almost nothing: rms 0.107 against 0.089
+   * for a freely-chosen start of 88.03. What was read as a white flash covering
+   * the arrival is the arrival — the title is white, and those are its pixels.
+   * There is no flash: session E measured the clip's mean luma on every frame
+   * from 86.00 to 89.00 and it never exceeds 119.8.
    *
    * `exitAt` is NOT `speed.at`. The text starts growing at 92.4333 — the first
    * frame whose pitch leaves the 104.0..104.5 plateau — and the burst only

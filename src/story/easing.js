@@ -20,7 +20,12 @@ export const EASE = {
   /** Floor -> lift. Heavy object, gains speed, settles hard. */
   entrance: 'power3.out',
 
-  /** The swing-open through edge-on. Slow at the extremes, fast through 90deg. */
+  /**
+   * NO LONGER THE ENTRANCE'S EASE. `swingOpen` reads its measured keys through
+   * the Hermite reader on a constant playhead (2026-09-06) — chaining this ease
+   * per segment stopped the journal dead at every key. Kept for `pageFlip3D`,
+   * a library preset that is choreography rather than a measurement.
+   */
   swing: 'power2.inOut',
 
   /** Per-slide re-pose. Short and unobtrusive. */

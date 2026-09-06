@@ -92,9 +92,25 @@ export function buildStoryTimeline(targets, ctx) {
   // which the clip does not contain — there is nothing at all until 3.9333, and
   // then a cover already past edge-on. It was also inert: nested at the same
   // second as swingOpen, whose `set` on the same properties rendered after it.
-  nest(tl, swingOpen(targets), snap(TIMING.entrance.start))
+  //
+  // `next` HANDS THE ENTRANCE THE PATH'S SECOND ROW, in the entrance's own
+  // seconds. The two tables already share a row — swingOpen's last key IS
+  // JOURNAL_PATH[0], and the comment on that key says move one, move both — but
+  // sharing a POSITION is not sharing a SPEED. Without this the entrance's final
+  // tangent is one-sided and it arrives at 6.0 travelling at 23 deg/s of yaw and
+  // -7.8 %/s of cx, into a path that starts flat; with it the tangent is
+  // two-sided like every other one and the seam is 7.8 deg/s and -2.7 %/s.
+  // Nothing is rendered from this row: the entrance's playhead stops at its own
+  // last key.
+  nest(
+    tl,
+    swingOpen(targets, {
+      next: [JOURNAL_PATH[1][0] - TIMING.entrance.start, ...JOURNAL_PATH[1].slice(1)],
+    }),
+    snap(TIMING.entrance.start),
+  )
 
-  // THE POSE IS ONE CONTINUOUS PATH from the settled cover to the flash, not a
+  // THE POSE IS ONE CONTINUOUS PATH from the settled cover to the dissolve, not a
   // tween per slide. It is nested at its own first second, and it runs THROUGH
   // the page turns rather than being interrupted by them — which is what the
   // clip does, and what the old one-pose-per-slide model could not express.
@@ -127,9 +143,10 @@ export function buildStoryTimeline(targets, ctx) {
   // a button in the lab, the way `hover` did when the path replaced it.
   nest(tl, journalDissolve(targets), snap(TIMING.exit.at))
   nest(tl, hyperspaceBurst(targets), snap(TIMING.speed.at))
-  // Nested at the flash, not after it: the text's first frame IS the flash's
-  // first frame. Its exit leads the burst by 0.23 s and lives inside the same
-  // child, so there is one nest here and not two.
+  // Nested at 88.10, the second the title's own first pixels appear — what the
+  // old code called the flash was this arrival (TIMING.outro). Its exit leads
+  // the burst by 0.23 s and lives inside the same child, so there is one nest
+  // here and not two.
   nest(tl, outroText(targets), snap(TIMING.outro.at))
 
   // Pad the timeline to the clip's full length so progress and `reach_end`

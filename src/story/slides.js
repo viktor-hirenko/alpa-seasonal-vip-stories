@@ -58,8 +58,8 @@ const RAW = [
  * stays on the same page, wanders under 100 design px, dips 6 % in size and
  * comes back, and rolls one degree — an ordinary levitating slide. This pose
  * shrinks ours by a third (0.681 -> 0.444) and pushes it 275 px DOWN while the
- * clip's drifts 90 px UP, so by the flash our journal was half the linear size
- * of the reference's.
+ * clip's drifts 90 px UP, so by 88.10 — the second the old code hid the journal
+ * on — ours was half the linear size of the reference's.
  *
  * The outro is JOURNAL_PATH's now, rows 84.03 to 88.03, measured like the rest.
  * This constant stays for the lab, which still has a `recede` button; nothing in
@@ -135,6 +135,19 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  * because across those five seconds the journal turns 1.2 degrees and the
  * registration answers on a quarter-degree grid — see `--roll-type`.
  *
+ * FRAME 7 IS THE SECOND ONE (2026-09-06), for the same reason and after the
+ * same symptom. Its rows came from the registration, and against the type the
+ * product ran 0.00 / 0.13 / 0.35 / 0.40 / 0.39 / 0.23 / 0.13 / 0.10 / 0.00 /
+ * -0.19 / -0.45 / -0.65 / -0.80 degrees behind the clip over 6.00..10.97 — a
+ * lag that grew monotonically rather than scattering, which is the signature of
+ * a column that under-rotates rather than of a noisy one. Re-shot with
+ * `--motion --slide 7 --roll-type --merge`, the roll reads 2.16 / 4.01 / 5.25 /
+ * 5.89 / 5.85 / 5.19 / 4.33 / 3.48 against the registration's 2.00 / 3.75 /
+ * 5.00 / 5.50 / 5.25 / 4.25 / 3.25 / 2.25, i.e. the journal keeps turning to
+ * the end of the slide instead of settling early. Nine rows changed, 7.47 to
+ * 11.05; the handover rows at 6.00 and 6.97 did not, so swingOpen's last key
+ * still equals JOURNAL_PATH[0]. That was V-47.
+ *
  * The seconds between a slide's last row and the next slide's first are NOT
  * measured: the journal is edge-on through the turn and four numbers do not
  * describe it there. The spline interpolates, which is what the old half-second
@@ -145,15 +158,15 @@ export const JOURNAL_PATH = [
   // frame 7 cover
   [6.00, 10.04, 0.7460, 57.70, 48.70],
   [6.97, 15.23, 0.7460, 57.70, 48.70],
-  [7.47, 17.23, 0.7527, 55.76, 48.91],
-  [7.97, 18.98, 0.7382, 55.29, 47.76],
-  [8.47, 20.23, 0.7182, 55.57, 47.14],
-  [8.97, 20.73, 0.7130, 55.01, 47.50],
-  [9.47, 20.48, 0.7261, 52.70, 48.34],
-  [9.97, 19.48, 0.7470, 52.33, 49.27],
-  [10.47, 18.48, 0.7571, 54.83, 49.79],
-  [10.97, 17.48, 0.7515, 57.33, 49.64],
-  [11.05, 17.48, 0.7515, 57.33, 49.64],
+  [7.47, 17.39, 0.7527, 55.76, 48.91],
+  [7.97, 19.24, 0.7382, 55.29, 47.76],
+  [8.47, 20.48, 0.7205, 55.57, 47.14],
+  [8.97, 21.12, 0.7152, 55.01, 47.50],
+  [9.47, 21.08, 0.7283, 52.70, 48.34],
+  [9.97, 20.42, 0.7514, 52.33, 49.22],
+  [10.47, 19.56, 0.7617, 54.83, 49.74],
+  [10.97, 18.71, 0.7561, 57.33, 49.59],
+  [11.05, 18.71, 0.7561, 57.33, 49.59],
   // frame 8 editors_note
   [12.04, -10.94, 0.6830, 57.40, 47.80],
   [12.54, -11.19, 0.6648, 58.23, 46.50],

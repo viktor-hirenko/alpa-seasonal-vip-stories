@@ -268,21 +268,37 @@ const ROUND_ASSETS = new Set(
   (flySrc.match(/export const ROUND_ASSETS = new Set\(\[([^\]]*)\]/)?.[1] || '')
     .split(',').map(x => x.trim().replace(/^'|'$/g, '')).filter(Boolean),
 )
+/**
+ * THE TABLE IS A POLYLINE, and this parse has to read that shape (2026-09-06).
+ * It used to match `size: / t0: / dur: / from: / hold: / to:` — the pose-triple
+ * form the table lost on 2026-09-03 — so it matched NOTHING and `FLIGHTS` was
+ * the empty array. Nothing noticed, because the only reader is `--occlusion`
+ * and `--fly` builds its own list from fly-reference.json; the mode simply
+ * failed with `no flight "pen-1"; try ` and an empty list of suggestions.
+ * That was V-52.
+ *
+ * A record is `{ id, asset, frame, zFlip, keys: [[t, x%, y%, size, rot], ...] }`
+ * and the rows are what `npm run fly:measure` writes. `t0`/`t1` are the first
+ * and last row's second, the way flyObjects.js derives them.
+ */
 const FLIGHTS = [
   ...flySrc.matchAll(
-    /id: '([^']+)', asset: '([^']+)', frame: (\d+), size: (\d+),\s*\n\s*t0: ([\d.]+), dur: ([\d.]+),\s*\n\s*from: \{ x: (-?[\d.]+), y: (-?[\d.]+), z: (-?\d+) \},\s*\n\s*hold: \{ x: (-?[\d.]+), y: (-?[\d.]+), z: (-?\d+) \},\s*\n\s*to: \{ x: (-?[\d.]+), y: (-?[\d.]+), z: (-?\d+) \}/g,
+    /\{ id: '([^']+)', asset: '([^']+)', frame: (\d+), zFlip: ([\d.]+), keys: \[([\s\S]*?)\]\s*\}/g,
   ),
-].map(m => ({
-  id: m[1],
-  asset: m[2],
-  frame: +m[3],
-  size: +m[4],
-  t0: Math.round(+m[5] * 30) / 30,
-  dur: Math.round(+m[6] * 30) / 30,
-  from: { x: +m[7], y: +m[8], z: +m[9] },
-  hold: { x: +m[10], y: +m[11], z: +m[12] },
-  to: { x: +m[13], y: +m[14], z: +m[15] },
-}))
+].map(m => {
+  const keys = [...m[5].matchAll(/\[([^\]]+)\]/g)].map(k =>
+    k[1].split(',').map(v => Number(v.trim())),
+  )
+  return {
+    id: m[1],
+    asset: m[2],
+    frame: +m[3],
+    zFlip: +m[4],
+    keys,
+    t0: keys[0][0],
+    t1: keys[keys.length - 1][0],
+  }
+})
 
 /** Scene anchor -> screen, in design px. The forward form of the inversion the
  *  table was built with; P must match TIMING.persp.base. */
@@ -424,13 +440,14 @@ if (fitMode) {
 } else if (occId) {
   const f = FLIGHTS.find(x => x.id === occId)
   if (!f) throw new Error(`no flight "${occId}"; try ${FLIGHTS.map(x => x.id).join(', ')}`)
-  console.log(`${f.id} — frame ${f.frame}, ${f.t0.toFixed(2)}..${(f.t0 + f.dur).toFixed(2)} s`)
-  console.log(`from z ${f.from.z}  hold z ${f.hold.z}  to z ${f.to.z}\n`)
+  const dur = f.t1 - f.t0
+  console.log(`${f.id} — frame ${f.frame}, ${f.t0.toFixed(2)}..${f.t1.toFixed(2)} s, ${f.keys.length} rows`)
+  console.log(`in front until zFlip ${f.zFlip.toFixed(2)}, behind the page after it\n`)
   // `--step 0.4` walks the reference's own sampling grid, which turns this into
   // the movement comparison: the x%/y%/w% columns are directly the numbers the
   // blob tracker reads off `clean bg.mp4`.
-  const step = Number(flag('--step', 0)) || f.dur / 12
-  const n = Math.round(f.dur / step)
+  const step = Number(flag('--step', 0)) || dur / 12
+  const n = Math.round(dur / step)
   console.log(
     '     t   --fo-z   object cx/cy       w      x%    y%    w%   overlaps journal  painted on top',
   )
