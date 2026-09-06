@@ -116,6 +116,35 @@
   // 700 px frame at anything from 48 % to 88 % of it, which is most of why the
   // first pass came out at roughly half the reference's sizes.
   object-fit: contain;
-  filter: drop-shadow(0 0 du(14) rgba(255, 118, 204, 0.5))
-    drop-shadow(0 0 du(38) rgba(255, 118, 204, 0.28));
+
+  // THE MAGENTA HALO, TAKEN FROM THE MOCKUP INSTEAD OF INVENTED.
+  // The icon nodes carry it as their own shadow — on `21770:2726` ("cash icon",
+  // a 559.54 x 572.43 box):
+  //   box-shadow: 21.579px 21.579px 24.744px rgba(255,0,212,0.13) inset,
+  //               0 21.579px 32.081px rgba(255,0,212,0.27);
+  // Two things were wrong with the pair this replaces. The colour was a soft
+  // pink (255,118,204) where the mockup is pure magenta (255,0,212) — the
+  // reference's objects read rose-gold and ours read yellow-gold, on every
+  // object that has a rim (V-20). And it was CENTRED and FIXED at du(14)/du(38),
+  // while the mockup's is offset DOWNWARD and its px are relative to the node's
+  // own box. So the numbers here are fractions of that box — offset 3.86 %,
+  // blur 5.73 % — applied to the object's own, which is what the box below is
+  // laid out at. Our objects fly at anything from 300 to 480 design px and
+  // shrink as they land, and a fixed du() puts the same halo on a coin as on a
+  // planet.
+  //
+  // `drop-shadow`, not `box-shadow`: the sprite is transparent art inside an
+  // <img>, and box-shadow would trace its BOX — the same square-halo defect the
+  // pages had at V-09..V-11. The mockup's INSET half has no drop-shadow
+  // equivalent and is left out: it tints the art from inside its own lower-right
+  // edge, which a drop shadow cannot reach.
+  //
+  // The offset rides with the object's rotation, since the filter is applied in
+  // the element's own space. At 3.9 % of the box that is a pixel or two on a
+  // coin, and keeping it in screen space would cost a counter-rotation on a
+  // property that is not composited.
+  --fo-glow: calc(var(--fo-base, 400) * var(--fo-ik) * var(--u));
+  filter: drop-shadow(
+    0 calc(var(--fo-glow) * 0.0386) calc(var(--fo-glow) * 0.0573) rgba(255, 0, 212, 0.27)
+  );
 }

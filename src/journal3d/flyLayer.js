@@ -65,11 +65,18 @@ export function buildFlyLayer(layerEl, records) {
       // Depth belongs here for exactly the reason visibility does: it is a pure
       // function of the clock, so it is right after any seek, backwards
       // included. An object flies IN FRONT of the journal and crosses behind it
-      // at `zFlip` — measured off the clip, see flyObjects.js. Held as a single
-      // step rather than a ramp because _fly.scss divides the perspective back
-      // out, so z is only a sort key and a step changes nothing but the order;
-      // and the crossing lands where the page is already covering most of the
-      // object, so there is nothing to see popping.
+      // at `zFlip` — measured off the clip, see flyObjects.js.
+      //
+      // A single step, not a ramp, and now that `zFlip` is the FIRST frame the
+      // page touches the object rather than the middle of the handover, the step
+      // is the honest shape. Ramping z would sweep the page's tilted plane
+      // through the object and wipe it diagonally — a handsome effect that the
+      // reference never performs. What the reference actually does after the
+      // crossing is let the page EDGE ride across an object already behind it,
+      // and that we get for free from the geometry, gradually, provided the step
+      // lands while the page still covers nothing. It used not to: the crossing
+      // sat seconds late, deep inside the page, and the object went from wholly
+      // drawn to half eaten between two frames.
       const front = t < e.rec.zFlip
       if (front !== e.front) {
         e.front = front

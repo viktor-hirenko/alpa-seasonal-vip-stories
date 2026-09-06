@@ -21,3 +21,6 @@ _refs/
 
 # Dev-only video proxies of the reference clips (derived from _refs/).
 public/video/ref-*.mp4
+
+# fly:measure intermediates (2 MB of blob tracks); regenerate with npm run fly:measure
+.fly-cache/

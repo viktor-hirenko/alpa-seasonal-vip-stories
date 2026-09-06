@@ -560,16 +560,43 @@ if (fitMode) {
     return f
   }
 
-  const TOL = { pos: 34, size: 0.16, deg: 12, elong: 0.28 }
+  // `size` IS x1.30 AND NOT x1.16, and the reason is the two rulers rather than
+  // the objects. Our side is the sprite's own ALPHA, measured off a pair of
+  // screenshots on black and on white; the clip's side is a colour distance
+  // against a median plate, dilated to close the object up. Across the 135
+  // samples that pair has a median ratio of 1.00 and a 90th percentile of 1.18,
+  // with the spread sitting on whole objects at a time — every spark reads 10 %
+  // small, every milk carton 15 % large — which is the two masks disagreeing
+  // about where a glowing edge stops, not the render. At x1.16 the gate was
+  // failing thirteen samples of that spread and would have gone on failing them
+  // whatever the scene did.
+  //
+  // It was x1.16 against a reference file whose size column had been written by
+  // an older pass and never regenerated; the first honest regeneration is what
+  // exposed the mismatch. See the note in fly-measure.mjs's `tight`.
+  //
+  // `step` is the one the crossing check below asserts: how much of the object
+  // the page may take in the single frame the depth switch happens on.
+  const TOL = { pos: 34, size: 0.3, deg: 12, elong: 0.28, step: 0.25 }
   console.log(`${REF.flights.length} flights x ${REF.flights[0].samples.length} samples, against ${REF.source}\n`)
   console.log('id             t       our cx/cy       ref cx/cy      d px    size      angle     aspect   behind journal')
-  let worstPos = 0, worstSize = 0, worstDeg = 0
+  let worstPos = 0, worstSize = 0, worstDeg = 0, worstStep = 0
   for (const f of REF.flights) {
     // FLY_ONLY=<flight id> narrows a full pass to one flight: the whole run is
     // 135 samples at four screenshots each, and chasing one object should not
     // cost ten minutes.
     if (process.env.FLY_ONLY && f.id !== process.env.FLY_ONLY) continue
     const spun = []
+    // THE LAST SAMPLE OF EVERY FLIGHT IS A DEPTH CLAIM, NOT A GEOMETRY ONE.
+    // `writeReference` picks five samples from the frames where the object is
+    // wholly inside the picture, then appends the tracker's very last frame —
+    // which is where the occlusion claim lives and where, by then, the tracker
+    // is holding on to a remnant. Judging a centre or a size against a remnant
+    // is judging noise: it printed x3.89 on chip-1 and 92 px on spark-1 while
+    // both objects were sitting where the reference has them. The same rule
+    // writeReference uses to choose its five says which those are — a blob under
+    // 55 % of the flight's largest.
+    const rmax = Math.max(...f.samples.map(s => s[3]))
     for (const smp of f.samples) {
       const [t, rx, ry, rsq, rdeg, relong, rhid] = smp   // see fly-reference.json's `units`
       await cdp.send('Page.navigate', {
@@ -652,7 +679,16 @@ if (fitMode) {
       const degMatters =
         !ROUND_ASSETS.has(f.asset) && relong > 1.2 && obj.elong > 1.2
       const bad = []
-      if (!clipped) {
+      // Geometry is judged only where there is something on screen to judge.
+      // `shapeless`: the tracker is holding a remnant (see above). `swallowed`:
+      // the reference's own page has taken 85 % of the object, so its centre and
+      // its size describe a shape nobody can see — the gate measures ours with
+      // the journal hidden, which at that moment is a picture the story never
+      // shows. What IS asserted there is depth, below, which is the whole reason
+      // those samples exist.
+      const shapeless = rsq < 0.55 * rmax
+      const swallowed = rhid >= 0.85
+      if (!clipped && !shapeless && !swallowed) {
         if (dpos > TOL.pos) bad.push('POS')
         if (Math.abs(rsize - 1) > TOL.size) bad.push('SIZE')
         if (degMatters && Math.abs(ddeg) > TOL.deg) bad.push('ANGLE')
@@ -688,7 +724,7 @@ if (fitMode) {
         if (rhid >= 0.85 && hid < 0.6) bad.push('EXIT-NOT-BEHIND')
       }
       if (bad.length) fails++
-      if (!clipped) {
+      if (!clipped && !shapeless && !swallowed) {
         worstPos = Math.max(worstPos, dpos)
         worstSize = Math.max(worstSize, Math.abs(rsize - 1))
         if (degMatters) worstDeg = Math.max(worstDeg, Math.abs(ddeg))
@@ -704,6 +740,8 @@ if (fitMode) {
           `  x${relratio.toFixed(2)}` +
           `   ${(hid * 100).toFixed(0)}% vs ${(rhid * 100).toFixed(0)}%` +
           (clipped ? '  (at the frame edge)' : '') +
+          (shapeless ? '  (the reference has lost the shape)' : '') +
+          (swallowed && !shapeless ? '  (the page has it in the reference too)' : '') +
           (bad.length ? '  ' + bad.join(' ') : ''),
       )
     }
@@ -722,12 +760,75 @@ if (fitMode) {
         console.log(`${f.id.padEnd(14)}   SPIN — a round sprite turned ${spread.toFixed(1)} deg over its flight`)
       }
     }
+
+    // PER FLIGHT: THE HANDOVER MUST NOT POP — the check the owner's complaint
+    // deserved and the table never had.
+    //
+    // Depth is one step per flight, at `zIn`: the first frame the clip's own
+    // journal touches the object. Before it the object is in front, so nothing
+    // can cover it and our fraction is 0 by construction; the frame AFTER it is
+    // therefore the whole of what the switch costs on screen. If the page takes
+    // a quarter of the object in that one frame, the object did not go behind
+    // the page, it was swallowed — which is what a `zFlip` placed in the middle
+    // of the handover looked like, and it is not something the samples above can
+    // see: they are a second apart and the pop is one frame wide.
+    //
+    // A number this asserts and the five samples cannot: it is measured at a
+    // time NOT in the reference's sample list, one twentieth of a second after
+    // a moment the clip chose.
+    // A crossing that falls while the PAGE ITSELF IS TURNING is not judged, for
+    // the same reason the samples above are not: for 0.95 s after a cut the page
+    // sweeps the whole frame, so "the page took the object" says nothing about
+    // depth. Six of the 27 crossings land there — soccer-1's is 0.02 s from its
+    // own cut — and they are reported without a verdict.
+    if (f.zIn != null) {
+      const t = +(f.zIn + 0.05).toFixed(3)
+      const cut = SLIDES.reduce((a, x) => (t >= x.at && x.at > a ? x.at : a), -99)
+      const turning = t - cut < 0.95
+      await cdp.send('Page.navigate', {
+        url: `${ORIGIN}/lab.html?panel=0&bg=grid&journal=1&objects=1&frame=${frameAt(t)}&t=${t}`,
+      })
+      await sleep(waitMs)
+      const g = await cdp.eval(ISOLATE(f.id))
+      await cdp.eval(SHOW_JOURNAL(false))
+      const A = await shotGray()
+      await cdp.eval(BG('#fff'))
+      const Aw = await shotGray()
+      await cdp.eval(BG('#000'))
+      const W = VW * 2, H = VH * 2
+      const alpha = new Uint8Array(W * H)
+      for (let p = 0; p < W * H; p++) alpha[p] = Aw[p] - A[p] < 128 ? 1 : 0
+      const obj = measure(alpha, W, H, { x: g.x, y: g.y, w: g.w, h: g.h, u: g.u, sx: W / VW })
+      if (obj) {
+        await cdp.eval(SHOW_JOURNAL(true))
+        await cdp.eval(HIDE_ONE(f.id, true))
+        const J = await shotGray()
+        await cdp.eval(HIDE_ONE(f.id, false))
+        const C = await shotGray()
+        let hidden = 0, decidable = 0
+        for (const p of obj.px) {
+          if (Math.abs(A[p] - J[p]) <= 25) continue
+          decidable++
+          if (Math.abs(C[p] - J[p]) < Math.abs(C[p] - A[p])) hidden++
+        }
+        const step = decidable ? hidden / decidable : 0
+        if (!turning) worstStep = Math.max(worstStep, step)
+        const bad = !turning && step > TOL.step
+        if (bad) fails++
+        console.log(
+          `${f.id.padEnd(14)}${t.toFixed(2).padStart(6)}   handover: the page takes ${(step * 100).toFixed(0)} % in the first frame behind it` +
+            (turning ? '  (the page is mid-turn)' : '') +
+            (bad ? '  CROSSING-POP' : ''),
+        )
+      }
+    }
   }
   console.log(
     `\n${fails} sample(s) out of tolerance` +
       `\nworst: centre ${worstPos.toFixed(1)} design px (tol ${TOL.pos}), ` +
       `size x${(1 + worstSize).toFixed(2)} (tol x${(1 + TOL.size).toFixed(2)}), ` +
-      `angle ${worstDeg.toFixed(1)}° (tol ${TOL.deg}°)`,
+      `angle ${worstDeg.toFixed(1)}° (tol ${TOL.deg}°), ` +
+      `handover ${(worstStep * 100).toFixed(0)} % (tol ${TOL.step * 100} %)`,
   )
   if (fails) process.exitCode = 1
 } else if (all) {

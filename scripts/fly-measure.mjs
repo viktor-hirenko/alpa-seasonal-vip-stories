@@ -482,6 +482,87 @@ function stageMerge(tracks, occl) {
   return keep
 }
 
+// ------------------------------------------------------- 3-bis. crossing
+
+/**
+ * THE CLIP'S OWN OCCLUSION CURVE, one reading per tracked frame.
+ *
+ * Stage 2 already measures, at 10 Hz, how much of each blob the journal covers.
+ * What used to reach the table from it was a single number per flight, and a
+ * badly chosen one: `fly-reference.json` keeps five samples per flight, about a
+ * second apart, and `zFlip` was the MIDPOINT between the last of them that read
+ * clear and the first that read covered. A handover that takes 0.7 s therefore
+ * landed anywhere inside a 1.1 s bracket, and it landed late every time — on
+ * all 27 flights the dense curve leaves zero EARLIER than the sparse midpoint,
+ * by 0.3 s at best and 4.5 s at worst (milkpack-1, planet-1, basketball-1).
+ * Those seconds are the defect the owner reports as "everything flies in front
+ * of the journal": the reference has the page holding the object while we are
+ * still drawing it on top of the page.
+ */
+function coverCurves(flights, occl) {
+  const occAll = []
+  for (const arr of Object.values(occl)) occAll.push(...arr)
+  const out = {}
+  for (const f of flights) {
+    const a = ASSIGN[f.key]
+    if (!a) continue
+    const curve = []
+    for (const q of f.pts) {
+      const c = occAll.filter(
+        o => Math.abs(o.t - q.t) < 0.06 && Math.hypot(o.x - q.x, (o.y - q.y) * 0.5625) < 4,
+      )
+      if (c.length) curve.push([+q.t.toFixed(2), c[0].hid])
+    }
+    out[a.id] = curve
+  }
+  return out
+}
+
+/**
+ * WHEN THE OBJECT GOES BEHIND THE PAGE: the first frame the journal touches it.
+ *
+ * Not the middle of the handover, and the difference is the whole point. What
+ * the curve records after that first touch is not depth at all — it is the page
+ * EDGE sweeping across an object that is already behind it, which is why the
+ * fraction climbs, dips and climbs again (cross-3 hovers between 0.2 and 0.8 for
+ * four seconds) instead of stepping. Depth is the one bit the curve does carry:
+ * before the first touch the object is in front, after it, behind. Put the step
+ * there and the covering that follows is drawn by the geometry, gradually, the
+ * way the reference does it — put the step in the middle and the object jumps
+ * from wholly drawn to half eaten in one frame.
+ *
+ * A touch has to LAST 0.3 s to count. The mask reaches into the object's magenta
+ * halo, so a single frame can read a percent or two of contact off a glow that
+ * merely passes near the page.
+ *
+ * `zOut` is the other end — where the page has taken 85 % of the object and
+ * keeps it — and it is written to the reference for the gate, not to the table.
+ */
+const CROSS_ON = 0.02
+function crossing(curve) {
+  if (curve.length < 4) return null
+  const t = curve.map(c => c[0])
+  const h = curve.map((c, i) => {
+    const w = [curve[Math.max(0, i - 1)][1], c[1], curve[Math.min(curve.length - 1, i + 1)][1]]
+    return w.sort((a, b) => a - b)[1]
+  })
+  let zIn = null
+  for (let i = 0; i < h.length && zIn === null; i++) {
+    if (h[i] <= CROSS_ON) continue
+    let held = true
+    for (let j = i; j < h.length && t[j] - t[i] < 0.3; j++) if (h[j] <= CROSS_ON) held = false
+    if (held) zIn = t[i]
+  }
+  let zOut = null
+  for (let i = 0; i < h.length && zOut === null; i++) {
+    if (h[i] < 0.85) continue
+    let held = true
+    for (let j = i; j < h.length; j++) if (h[j] < 0.6) held = false
+    if (held) zOut = t[i]
+  }
+  return zIn === null ? null : { zIn, zOut: zOut ?? t[t.length - 1] }
+}
+
 // ---------------------------------------------------------------- 4. fit
 
 /** sprite -> luminance + alpha on the K grid, and its alpha centroid. */
@@ -731,6 +812,39 @@ function stageFit(flights) {
 const SYMS = [90, 180, 360]
 
 /**
+ * THE ARTWORK'S OWN SYMMETRY, measured off the sprite instead of searched for
+ * in the answers.
+ *
+ * The fold below has to know which rotations of a sprite are the SAME PICTURE,
+ * because those are the ones the fit is free to return interchangeably. Picking
+ * that by "whichever symmetry leaves the tightest spread" cannot work: folding
+ * at 90 can only ever leave a spread as tight as folding at 180, so 90 always
+ * won, and a milk carton — which has no 90 deg symmetry at all — had a quarter
+ * turn quietly taken out of its angle. On the contact sheet for milkpack-3 that
+ * is a carton lying on its side at t = 74.07 where the clip stands it upright.
+ *
+ * So ask the sprite. Rotate it onto itself and score it with the same function
+ * the fit uses — silhouette overlap and luminance together, which is the point:
+ * a carton's OUTLINE nearly survives a half turn, and its cap does not, so a
+ * mask-only test would call it 180-symmetric and lose the cap.
+ */
+function symOf(sp) {
+  for (const sym of [90, 180]) {
+    let worst = 1
+    for (let d = sym; d < 360; d += sym)
+      worst = Math.min(worst, score(sp.g, sp.a, warp(sp, d, 1, sp.cx, sp.cy)))
+    if (worst >= SYM_SAME) return sym
+  }
+  // 180 rather than 360 as the floor: a silhouette and its half turn have the
+  // same principal axis, and the luminance term that tells them apart is the
+  // weakest one in `score` — which is how the pen came back as 77 on one frame
+  // and 257 on the next off art that is only 0.35 similar to its own half turn.
+  return 180
+}
+const SYM_SAME = 0.9
+const ANGLE_OUTLIER = 30
+
+/**
  * Fold a fitted angle series onto one branch.
  *
  * The fit answers modulo the artwork's own symmetry and cannot do better: a
@@ -739,16 +853,34 @@ const SYMS = [90, 180, 360]
  * 257 on the next. Both are the same picture; tweening between them spins the
  * object half a turn it never makes.
  *
- * The branch is chosen by evidence rather than declared per asset: try each
- * symmetry, fold every sample into the half-window around the median, and keep
- * the one that leaves the tightest spread. Every flight in the reference turns
- * by tens of degrees at most, so a fold that collapses a 180 deg spread to 6 is
- * reading the symmetry rather than hiding a real rotation. A flight that will
- * not fold below 45 deg says so on stderr.
+ * WHICH symmetry comes from the SPRITE (symOf above), not from a search over
+ * the answers. Searching for the tightest spread was the old rule and it could
+ * only ever return 90, since folding at 90 leaves a spread no wider than
+ * folding at 180 — so every flight was quietly quantised to quarter turns the
+ * artwork does not have. Measured, none of the seventeen sprites is 90 deg
+ * symmetric, not even the cross or the four-pointed spark: the art is shaded
+ * and lit from one side, and the fit scores that shading. So they all fold at
+ * 180, which is the ambiguity a silhouette correlation genuinely has.
+ *
+ * Every flight in the reference turns by tens of degrees at most, so a fold
+ * that collapses a 180 deg spread to 6 is reading the symmetry rather than
+ * hiding a real rotation. A flight that will not fold below 45 deg says so on
+ * stderr.
+ *
+ * FOLDING IS ROUND THE FLIGHT'S OWN MEDIAN, not along the flight. Chaining each
+ * sample to its neighbours reads better on paper — a branch ought to be
+ * continuous in time — and it was tried here: on these objects it drifts. Their
+ * silhouettes are round enough that the fitted angle is noisy, an unwrap adds
+ * every noise step to its running total, and half the flights walked a whole
+ * 180 deg branch away over their length (report-1 ended at a median of -228,
+ * milkpack-3 at -227). A window round the median cannot drift, which on a
+ * measurement this noisy is worth more than continuity between neighbours.
+ * Outliers are dealt with in stageTable instead, where the fit's own score says
+ * which keys to believe.
  */
-function fold(rots) {
+function fold(rots, only = null) {
   let best = null
-  for (const sym of SYMS) {
+  for (const sym of only ? [only] : SYMS) {
     const c = med(rots)
     const f = rots.map(r => {
       let d = r - c
@@ -794,7 +926,7 @@ function dp(ks, get, tol) {
   return keep
 }
 
-function stageTable(fit) {
+function stageTable(fit, covers) {
   const CUT = Object.fromEntries(CUTS)
   const out = []
   for (const f of fit) {
@@ -811,7 +943,10 @@ function stageTable(fit) {
     }))
     // The fitter rotates the SPRITE onto the frame; CSS rotates the element the
     // other way round, so the angle changes sign on the way into the table.
-    const fd = fold(sm.map(k => -k.rot))
+    const fd = fold(
+      sm.map(k => -k.rot),
+      symOf(sprite(f.asset)),
+    )
     if (fd.spread > 45)
       console.error(
         `!! ${f.id}: angle spans ${fd.spread.toFixed(0)} deg after folding at ${fd.sym}`,
@@ -819,6 +954,43 @@ function stageTable(fit) {
     sm.forEach((k, i) => {
       k.rot = fd.g[i]
     })
+    // AN ANGLE FITTED ON A SILHOUETTE THE FRAME CUTS IN HALF IS NOT A MEASUREMENT.
+    //
+    // Every flight enters past an edge and most of them hover against one, and
+    // while the object is half outside the picture the correlation has half a
+    // shape to match — it answers, with a decent score, about a shape that is
+    // not the object's. milkpack-3 is the case that made this visible: its
+    // first five keys read 86-93 deg where the settled flight reads 47, and on
+    // the contact sheet that is a carton lying on its side at t = 74.07 where
+    // the clip stands it up (V-07). pen-1 and milkpack-1 have the same defect on
+    // their entry key.
+    //
+    // The flight's own confident keys are the better estimate, so anything far
+    // enough from their median is replaced by it. FAR ENOUGH IS 30 DEG, and that
+    // comes off the reference rather than off taste: read the clip's own
+    // principal axis across a whole flight and it moves 31 deg on milkpack-1,
+    // 37 on milkpack-2, 18 on coin-1. Nothing in this story turns further than
+    // that in six seconds, so a key a third of a turn from its flight's median
+    // is not the object turning, it is the fit answering about the half of a
+    // silhouette the frame has cut off. At 45 deg the rule missed exactly the
+    // keys it was written for — milkpack-3 keeps -85.5 against a median of -47,
+    // and that pair of frames IS the carton on its side.
+    //
+    // Position and size are untouched: those the tracker measures off the blob,
+    // and a blob clipped by the frame still has a centre.
+    const scs = sm.map(k => k.sc).sort((a, b) => a - b)
+    const cut = scs[Math.floor(scs.length / 2)]
+    const trend = med(sm.filter(k => k.sc >= cut).map(k => k.rot))
+    let fixed = 0
+    for (const k of sm)
+      if (Math.abs(k.rot - trend) > ANGLE_OUTLIER) {
+        k.rot = trend
+        fixed++
+      }
+    if (fixed)
+      console.error(
+        `!! ${f.id}: ${fixed} of ${sm.length} angles were more than ${ANGLE_OUTLIER} deg off the flight's own median (${trend.toFixed(0)}) and were replaced by it`,
+      )
     // Angle keeps a 5-frame median; POSITION IS LEFT ALONE. The tracker's
     // centroid wanders a pixel or two between frames, and an earlier cut of
     // this script smoothed it — but the runtime reads these rows through a
@@ -845,9 +1017,12 @@ function stageTable(fit) {
     // flight's own end. Without this the object is switched off while the
     // reference still has it on screen — which is the "objects vanish instead of
     // going behind the journal" this table was rebuilt to fix.
+    // ...and it runs to the tracker's own last frame, not to within a tenth of
+    // it. The gate reads the clip's last frame as the flight's occlusion claim,
+    // so a flight that stops 0.1 s short answers NOT RENDERED to it.
     const z1 = ks[ks.length - 1],
       z2 = ks[ks.length - 2]
-    if (f.t1 > z1.t + 0.12 && z2) {
+    if (f.t1 > z1.t + 0.01 && z2) {
       const dt2 = z1.t - z2.t,
         ex = f.t1 - z1.t
       ks.push({
@@ -875,10 +1050,13 @@ function stageTable(fit) {
       size: a.size,
       rot: a.rot,
     }
+    const cr = crossing(covers[f.id] ?? [])
+    if (!cr) console.error(`!! ${f.id}: no occlusion curve, zFlip left at the flight's end`)
     out.push({
       id: f.id,
       asset: f.asset,
       frame: f.frame,
+      zFlip: cr ? cr.zIn : +f.t1.toFixed(2),
       keys: [entry, ...ks].map(k => [
         +k.t.toFixed(2),
         +k.x.toFixed(1),
@@ -897,7 +1075,9 @@ function printTable(table) {
     console.log(
       `  // ${f.id} — frame ${f.frame}, ${f.keys[0][0].toFixed(2)}..${f.keys[f.keys.length - 1][0].toFixed(2)} s`,
     )
-    console.log(`  { id: '${f.id}', asset: '${f.asset}', frame: ${f.frame}, keys: [`)
+    console.log(
+      `  { id: '${f.id}', asset: '${f.asset}', frame: ${f.frame}, zFlip: ${f.zFlip}, keys: [`,
+    )
     for (const k of f.keys)
       console.log(
         `    [${k[0].toFixed(2).padStart(5)}, ${k[1].toFixed(1).padStart(6)}, ${k[2].toFixed(1).padStart(6)}, ${String(k[3]).padStart(4)}, ${k[4].toFixed(1).padStart(6)}],`,
@@ -917,7 +1097,7 @@ function printTable(table) {
  * round. The occlusion fraction still comes from the loose mask, where reaching
  * a little wide is harmless.
  */
-function writeReference(flights, occl) {
+function writeReference(flights, occl, covers) {
   const occAll = []
   for (const arr of Object.values(occl)) occAll.push(...arr)
   const hidAt = q => {
@@ -941,9 +1121,37 @@ function writeReference(flights, occl) {
           db = fr[p + 2] - plate[p + 2]
         if (dr * dr + dg * dg + db * db > 70 * 70) px.push(y * FW + x)
       }
-    if (px.length < 80) return [+((q.sq / W) * 100).toFixed(2), q.deg, q.elong]
+    // SIZE COMES OFF THE TRACKER'S OWN BLOB, in design px, and only the angle and
+    // the elongation come off the tight mask. Two corrections in one line, both
+    // found by re-running a measurement nobody had re-run in three days:
+    //
+    //  - PX, NOT PER CENT. `fly:check` measures our silhouette on the 1080-wide
+    //    canvas and divides one by the other. This had been changed to a
+    //    percentage of the stage on the writing side only, and the file on disk
+    //    still held the px of an older pass, so nothing complained until the
+    //    first re-run printed size ratios of x23.
+    //  - THE TIGHT MASK CANNOT MEASURE SIZE. A colour distance of 70 hugs the
+    //    lit part of an object and drops the rest of it into the corridor: it
+    //    reads the football at 101 px where the blob reads 190 and the sprite is
+    //    180 across. Our side of the comparison is measured off the sprite's
+    //    ALPHA, which is the whole object, so the two are not the same quantity.
+    //    The blob is: its 190 against our 180 is the 5 % the gate is for.
+    //  - AND IT CANNOT MEASURE ELONGATION EITHER, for the same reason and in the
+    //    other direction: keeping only the lit core of a shape makes it thinner
+    //    than it is. The pen reads 11.6-12.2 tight, 8.4-8.8 loose, and its own
+    //    sprite is 8.31 — the blob has it, the core does not. Only `deg` comes
+    //    off the tight mask now, where hugging the body IS the point.
+    //
+    // What the old file on disk carried in this column was neither: it was the
+    // SPRITE's own elongation, constant down every flight (8.31 for the pen,
+    // 1.69 for coin-2), so the aspect check was asking whether our render had
+    // squashed the sprite — a question it could only answer yes to. That is how
+    // the coins were re-assigned by elongation against numbers that were never
+    // measured off the clip at all: coin-2's own silhouette measures 3.2-3.9
+    // there, which is `coin-edge` (3.95) and not the 1.69 of `coin-d`.
+    if (px.length < 80) return [+(q.sq * (FW / W)).toFixed(1), q.deg, q.elong]
     const m = moments(px, FW)
-    return [+((Math.sqrt(px.length) / FW) * 100).toFixed(2), +m.deg.toFixed(1), +m.elong.toFixed(2)]
+    return [+(q.sq * (FW / W)).toFixed(1), +m.deg.toFixed(1), q.elong]
   }
 
   const N = 5
@@ -978,11 +1186,20 @@ function writeReference(flights, occl) {
     const last = f.pts[f.pts.length - 1]
     if (samples.length && samples[samples.length - 1][0] < last.t - 0.2)
       samples.push([+last.t.toFixed(2), last.x, last.y, ...tight(last), hidAt(last)])
+    const cr = crossing(covers[a.id] ?? [])
     out.push({
       id: a.id,
       asset: a.asset,
       frame: a.frame,
+      // The crossing the runtime is built on, so the gate judges our depth
+      // against the same measurement rather than against our own table.
+      zIn: cr ? cr.zIn : null,
+      zOut: cr ? cr.zOut : null,
       samples: samples.filter(s => s[6] !== null),
+      // The whole curve, decimated to 10 Hz: five samples cannot say whether
+      // the page takes the object gradually or in one step, and that shape is
+      // exactly what the owner judges the flights by.
+      cover: (covers[a.id] ?? []).filter((c, i) => i % 3 === 0).map(c => [c[0], +c[1].toFixed(2)]),
     })
   }
   writeFileSync(
@@ -991,7 +1208,7 @@ function writeReference(flights, occl) {
       {
         source: '_refs/DP-15152 - clean bg.mp4 + preview.mp4, measured by scripts/fly-measure.mjs',
         units:
-          '[t seconds, cx % of stage, cy % of stage, sqrt(area) % of stage width, principal angle deg, elongation, fraction the journal covers] — geometry on a tight mask (colour distance 70), which hugs the object body rather than its magenta halo; the occlusion fraction still comes from the loose mask the tracker uses',
+          '[t seconds, cx % of stage, cy % of stage, sqrt(area) in design px, principal angle deg, elongation, fraction the journal covers] — geometry on a tight mask (colour distance 70), which hugs the object body rather than its magenta halo; the occlusion fraction still comes from the loose mask the tracker uses',
         flights: out,
       },
       null,
@@ -1047,13 +1264,25 @@ const ASSIGN = {
 
 // ------------------------------------------------------------------ main
 
+// `--syms`: what each sprite thinks its own symmetry is, which is what the
+// fold trusts. Prints and exits, touching no cache.
+if (args.includes('--syms')) {
+  for (const name of [...new Set(Object.values(ASSIGN).map(a => a.asset))].sort()) {
+    const sp = sprite(name)
+    const at = d => score(sp.g, sp.a, warp(sp, d, 1, sp.cx, sp.cy)).toFixed(3)
+    console.log(`${name.padEnd(12)} 90:${at(90)} 180:${at(180)} 270:${at(270)} -> ${symOf(sp)}`)
+  }
+  process.exit(0)
+}
+
 const tracks = cache('tracks', stageTracks)
 if (stopAfter === 'tracks') process.exit(0)
 const occl = cache('occlusion', () => stageOcclusion(tracks))
 if (stopAfter === 'occlusion') process.exit(0)
 const flights = cache('flights', () => stageMerge(tracks, occl))
 if (stopAfter === 'merge') process.exit(0)
+const covers = coverCurves(flights, occl)
 const fit = cache('fit', () => stageFit(flights))
 if (stopAfter === 'fit') process.exit(0)
-writeReference(flights, occl)
-printTable(stageTable(fit))
+writeReference(flights, occl, covers)
+printTable(stageTable(fit, covers))
