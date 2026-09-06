@@ -19,11 +19,13 @@
  *   seconds: same artwork, same renderer, same lighting on both sides. Score
  *   0.45-0.95 against a rival of 0.22-0.30 on every slide.
  *
- *   ANCHOR — NOT measured against the clip. It is the pose table as it stood
- *   before, solved from the storyboard's own `Component 17` AABB and agreeing
- *   with the mock to 0-2 design px. The clip does not agree with it, and this
- *   table does not pretend otherwise: see the note on JOURNAL_PATH in slides.js
- *   for the three ways it differs and what it would take to measure them.
+ *   ANCHOR — measured against the clip on fourteen slides of seventeen since
+ *   2026-09-07, and the storyboard's on the other three. Where a row says
+ *   `storyboard` it is the old number, solved from `Component 17`'s AABB; where
+ *   it says `clip` it came from `clip-fit --t <the slide's first measured
+ *   second>` and was written only after two windows of different size agreed on
+ *   it. See the block above ANCHOR itself, and the note on JOURNAL_PATH in
+ *   slides.js.
  *
  * WHY THE MOTION IS NOT TAKEN FROM clip-fit, which reports a pose directly.
  * That instrument registers OUR render against the clip, so its answer is only
@@ -45,17 +47,40 @@ const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:
   .map(m => ({ frame: +m[1], at: +m[2], page: m[3] }))
 
 /**
- * THE ANCHORS — the pose table as it stood before this path replaced it.
+ * THE ANCHORS — the pose each slide's measured motion is added to.
  *
- * Solved analytically from the `Component 17` AABB in each 1080x1920 storyboard
- * frame, residual <= 3e-5, and checked by `npm run audit`: our settled poses sit
- * within 0-2 design px of the mock on every one. They are kept here, in the
- * reduction script rather than in the runtime, because that is exactly their
- * standing now — the origin of a number, not the number itself. The clip
- * disagrees with them in POSITION and SIZE, by an amount no instrument in this
- * repo can yet separate from our own layout error, and it disagrees with them in
- * ANGLE outright, which is why `rot` is taken from the clip and these three are
- * used only as the zero the measured motion is added to.
+ * WHERE THEY CAME FROM UNTIL 2026-09-07, and why that was wrong. They were
+ * solved analytically from the `Component 17` AABB in each 1080x1920 storyboard
+ * frame, residual <= 3e-5, and `npm run audit` confirmed our settled poses sit
+ * within 0-2 design px of the mock on every one. Agreeing with the mock is not
+ * the claim the product makes, though: since session B the journal's movement is
+ * taken from the CLIP, and the clip holds the journal somewhere else. Measured
+ * on sixteen anchor seconds, the disagreement runs to 208 design px and changes
+ * direction from slide to slide, so it is not one offset anybody could have
+ * carried in their head. The owner saw it without any instrument at all: "so on
+ * every slide".
+ *
+ * WHERE THEY COME FROM NOW. `clip-fit --t <second>` registers our render against
+ * the clip and reports the difference in exactly these units. Each second was
+ * measured through TWO windows — the whole front face, and an automatic window
+ * on the page's ART, which is the one thing that is the same image file on both
+ * sides — and a number was written only where the two agreed to within 20 design
+ * px in position and 0.025 in size. Position agreed on thirteen of sixteen, most
+ * of them under ten pixels and four to the pixel; size on eleven.
+ *
+ * WHAT IS STILL THE STORYBOARD'S, and why:
+ *   - frame 7, because its first row is where `swingOpen` hands the journal over
+ *     and the two cannot move apart without tearing the handover at 6.0;
+ *   - frames 9 and 22, because the two windows disagreed by 76 design px — an
+ *     answer that depends on the window is not an answer;
+ *   - frame 23, the outro, which is out of this session's scope;
+ *   - the SIZE of frames 19, 20 and 21, where the two windows agreed on position
+ *     to 3-18 px but differed on size by 3-6 %.
+ *
+ * WHAT NO INSTRUMENT HERE CAN STILL SEE: a similarity transform has no way to
+ * express the clip's yaw (V-24, about 8 degrees on a settled slide) or a
+ * keystone, so a residual of a few per cent in SIZE is expected to survive this
+ * and does.
  */
 /**
  * `rot` NO LONGER COMES FROM THE STORYBOARD. It is measured off the clip, and
@@ -117,23 +142,25 @@ const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:
  * straight through it.
  */
 const ANCHOR = {
-  7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 },
-  8: { rot: -10.94, scale: 0.683, cx: 57.4, cy: 47.8 },
-  9: { rot: 13.96, scale: 0.682, cx: 49.4, cy: 54.9 },
-  10: { rot: -7.59, scale: 0.682, cx: 64.3, cy: 50.8 },
-  11: { rot: -0.25, scale: 0.682, cx: 49.5, cy: 63.1 },
-  12: { rot: -4.72, scale: 0.682, cx: 75.8, cy: 50.8 },
-  13: { rot: 13.2, scale: 0.681, cx: 49.5, cy: 63.1 },
-  14: { rot: -8.43, scale: 0.681, cx: 54.8, cy: 50.0 },
-  15: { rot: 10.28, scale: 0.681, cx: 54.8, cy: 56.5 },
-  16: { rot: -21.89, scale: 0.681, cx: 46.9, cy: 53.9 },
-  17: { rot: 15.07, scale: 0.681, cx: 56.3, cy: 51.0 },
-  18: { rot: -11.58, scale: 0.681, cx: 56.3, cy: 51.0 },
-  19: { rot: 8.36, scale: 0.681, cx: 56.31, cy: 52.48 },
-  20: { rot: -24.28, scale: 0.681, cx: 50.25, cy: 53.48 },
-  21: { rot: 11.03, scale: 0.681, cx: 50.25, cy: 51.66 },
-  22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 },
-  23: { rot: 13.21, scale: 0.681, cx: 52.0, cy: 50.2 },
+  // MEASURED OFF THE CLIP 2026-09-07 where the row says so, storyboard where it
+  // does not. `rot` is the clip's on every row and has been since 05.09.
+  7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 },      // storyboard — the handover
+  8: { rot: -10.94, scale: 0.6871, cx: 53.0, cy: 53.24 },   // clip: position and size
+  9: { rot: 13.96, scale: 0.682, cx: 49.4, cy: 54.9 },      // storyboard — the two windows disagreed
+  10: { rot: -7.59, scale: 0.6673, cx: 48.1, cy: 50.17 },   // clip: position and size
+  11: { rot: -0.25, scale: 0.6206, cx: 60.89, cy: 52.27 },  // clip: position and size
+  12: { rot: -4.72, scale: 0.6551, cx: 58.11, cy: 48.51 },  // clip: position and size
+  13: { rot: 13.2, scale: 0.6631, cx: 50.94, cy: 54.51 },   // clip: position and size
+  14: { rot: -8.43, scale: 0.6985, cx: 50.17, cy: 53.65 },  // clip: position and size
+  15: { rot: 10.28, scale: 0.6498, cx: 51.37, cy: 48.01 },  // clip: position and size
+  16: { rot: -21.89, scale: 0.6016, cx: 54.96, cy: 51.61 }, // clip: position and size
+  17: { rot: 15.07, scale: 0.6561, cx: 59.68, cy: 49.98 },  // clip: position and size
+  18: { rot: -11.58, scale: 0.6602, cx: 54.36, cy: 59.02 }, // clip: position and size
+  19: { rot: 8.36, scale: 0.681, cx: 46.08, cy: 54.33 },    // clip: position only
+  20: { rot: -24.28, scale: 0.681, cx: 52.84, cy: 47.0 },   // clip: position only
+  21: { rot: 11.03, scale: 0.681, cx: 51.41, cy: 52.21 },   // clip: position only
+  22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 },    // storyboard — the two windows disagreed
+  23: { rot: 13.21, scale: 0.681, cx: 52.0, cy: 50.2 },     // storyboard — the outro, out of scope
 }
 
 /** The storyboard's own `rot`, kept so the two can be printed side by side. */

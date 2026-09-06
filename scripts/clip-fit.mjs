@@ -37,9 +37,10 @@
  * three answers known in advance before any of its numbers are used:
  *
  *   1. a synthetic warp of a real CLIP frame, glow and all, by a known amount;
- *   2. our render against the FIGMA storyboard frame, where the answer is known
- *      to be 1.000 / 0 px from exact geometry on both sides (0-2 design px,
- *      _context/35-slide-audit.md section 1);
+ *   2. our render against the CLIP — two genuinely different renders — with the
+ *      clip frame then MOVED by an amount we choose, because the absolute
+ *      answer there is the open question of V-25 and is not the self-test's to
+ *      assert, while the CHANGE in it is known to the pixel;
  *   3. our render against ITSELF with the journal deliberately mis-scaled by a
  *      known factor, which is the only test that exercises the whole pipeline
  *      — park, screenshot, mask, register — end to end.
@@ -58,7 +59,6 @@ import {
 const ROOT = new URL('..', import.meta.url).pathname
 const CLIP = `${ROOT}_refs/DP-15152 - preview.mp4`
 const CLEAN = `${ROOT}_refs/DP-15152 - clean bg.mp4`
-const SB = `${ROOT}_refs/storyboard`
 const OUT = process.env.FIT_OUT || `${ROOT}_refs/fit`
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const PORT = Number(process.env.FIT_PORT || 9377)
@@ -88,6 +88,20 @@ const ORIGIN = process.env.PROBE_ORIGIN || 'http://localhost:5173'
  * — is stable: two window sizes 40 % apart agree to a pixel on the shift for
  * seven pages of eight. See _context/36-visual-diff.md, V-25.
  */
+
+/**
+ * The clip's own print, as a query string. Read off the preview at 19.5 / 24.5 /
+ * 28.5 / 32.5 / 37.0 / 42.0 / 47.0 / 51.5 / 55.5 / 59.5 s — see the note above.
+ * The SELF-TEST navigates with it by default, because there the two pictures are
+ * staged deliberately and a five-digit tile against a three-digit one is noise
+ * nobody asked for; a MEASUREMENT does not, because the product's own demo
+ * values are what ships and a gate that rewrites the page it measures is a gate
+ * that can agree with itself. Either way `FIT_QUERY` in the environment wins.
+ */
+const CLIP_QUERY = '?days=257&points=120&level=SILVER&total_wins=257' +
+  '&biggest_win=257&biggest_win_game=Dragon%20Coins%20Jackpot&top_multiplier=257' +
+  '&top_multiplier_game=Tiger%20Jackpots&favorite_game_name=Tiger%20Jackpots' +
+  '&bonuses=257&sports_wins=257&sports_multiplier=257'
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const ff = (a, stdin) => execFileSync('ffmpeg', ['-v', 'error', ...a], { maxBuffer: 1 << 30, input: stdin })
@@ -232,6 +246,53 @@ const QUAD = `(() => {
            centre: [(quad[0][0] + quad[2][0]) / 2, (quad[0][1] + quad[2][1]) / 2], pose }
 })()`
 
+/**
+ * THE PAGE'S ART, AS A RECTANGLE ON THE CANVAS.
+ *
+ * WHY A WINDOW ON THE ART AND NOT ON THE WHOLE FACE. Registering the whole
+ * front face mixes the journal's POSE with our page's own LAYOUT, and the answer
+ * then follows whichever of the two filled more of the window: measured over
+ * nine slides it wandered from -120/+201 to +191/+43 with weak confidence
+ * (_context/36-visual-diff.md, V-25, session M-2). Worse, over the sixteen
+ * anchor seconds it simply goes quiet on half of them — eight of sixteen had no
+ * peak that beat its own neighbourhood, and all but two of those eight are in
+ * the second half of the story. The art is the one thing on the page that is
+ * the SAME IMAGE FILE in both renders: our type is a different edition of the
+ * copy (the clip's slide 8 reads "LET'S TAKE A LOOK" where ours reads "READY TO
+ * TAKE A LOOK?"), our digits are a different number, but the galaxy, the cow
+ * and the helmet are the very PNGs the clip was rendered from.
+ *
+ * WHICH RECTANGLE, and why it is picked by the machine rather than by hand. The
+ * largest `<img>` inside the front face, clipped to the face's own box. Session
+ * M-2 chose its windows by eye and got numbers nobody else can reproduce; this
+ * picks the same kind of window from the DOM every time, so a re-run a month
+ * from now measures the same thing. A page with no art of its own — seasonal
+ * power is one — has no such rectangle and falls back to the whole face, which
+ * is stated in its row rather than hidden.
+ */
+const ART = `(() => {
+  const face = document.querySelector('.jface--front')
+  if (!face) return null
+  const dpr = 2
+  const f = face.getBoundingClientRect()
+  const fx0 = f.left * dpr, fy0 = f.top * dpr, fx1 = f.right * dpr, fy1 = f.bottom * dpr
+  let best = null
+  for (const im of face.querySelectorAll('img')) {
+    const st = getComputedStyle(im)
+    if (st.visibility === 'hidden' || st.display === 'none' || Number(st.opacity) < 0.2) continue
+    const r = im.getBoundingClientRect()
+    const x0 = Math.max(r.left * dpr, fx0), y0 = Math.max(r.top * dpr, fy0)
+    const x1 = Math.min(r.right * dpr, fx1), y1 = Math.min(r.bottom * dpr, fy1)
+    if (x1 - x0 < 120 || y1 - y0 < 120) continue
+    const a = (x1 - x0) * (y1 - y0)
+    if (!best || a > best.a) best = { a, box: [x0, y0, x1 - x0, y1 - y0] }
+  }
+  // A window smaller than a seventh of the face is a detail, not the art, and a
+  // detail is where the register finds coincidences.
+  if (!best || best.a < (fx1 - fx0) * (fy1 - fy0) / 7) return null
+  return best.box
+})()`
+
 // ===========================================================================
 // REPORTING
 // ===========================================================================
@@ -305,6 +366,29 @@ function fitJournal(rgbA, rgbB, geo, opt = {}) {
     { sRange: SRANGE, ...opt, reach: reachMask(geo.quad, piv, 2.0) })
 }
 
+/**
+ * Resample a picture through a similarity we choose: a feature at `p` ends up
+ * at `piv + s0 * (p - piv) + d`. Inverse sampling, bilinear — nearest-neighbour
+ * would stamp a staircase onto every edge, and a method that reads edge
+ * DIRECTION would then be graded on the staircase rather than on the picture.
+ */
+function warpRgb(src, piv, s0, dx0, dy0) {
+  const b = Buffer.alloc(W * H * 3)
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const sx = piv[0] + (x - piv[0] - dx0) / s0
+      const sy = piv[1] + (y - piv[1] - dy0) / s0
+      const ix = Math.floor(sx), iy = Math.floor(sy)
+      if (ix < 0 || iy < 0 || ix >= W - 1 || iy >= H - 1) continue
+      const fx = sx - ix, fy = sy - iy
+      const o = (y * W + x) * 3, q = (iy * W + ix) * 3
+      for (let c = 0; c < 3; c++)
+        b[o + c] = src[q + c] * (1 - fx) * (1 - fy) + src[q + 3 + c] * fx * (1 - fy) +
+                   src[q + W * 3 + c] * (1 - fx) * fy + src[q + W * 3 + 3 + c] * fx * fy
+    }
+  return b
+}
+
 const HEAD = '   ours/clip     size      shift(px)     rot   score  rival'
 /** A fit whose peak barely beats its own neighbourhood is a coincidence. Say so
  *  in the row rather than leaving the reader to compare two columns. */
@@ -359,7 +443,8 @@ await cdp.send('Emulation.setDeviceMetricsOverride', { width: 540, height: 960, 
 // the tiles are one of the strongest gradient features on the page. Pass the
 // clip's own values with FIT_QUERY so the template and the reference carry the
 // same text. It changes what is COMPARED, never how.
-await cdp.send('Page.navigate', { url: `${ORIGIN}/index.html${process.env.FIT_QUERY || ''}` })
+const QUERY = process.env.FIT_QUERY ?? (argv.includes('--selftest') ? CLIP_QUERY : '')
+await cdp.send('Page.navigate', { url: `${ORIGIN}/index.html${QUERY}` })
 await sleep(7000)
 
 /**
@@ -408,9 +493,20 @@ async function ourFrame(t, file) {
   await cdp.eval(PARK(t))
   await sleep(320)
   const g = await cdp.eval(QUAD)
+  const art = await cdp.eval(ART)
   const shot = await cdp.send('Page.captureScreenshot', { format: 'png' })
   writeFileSync(file, Buffer.from(shot.data, 'base64'))
-  return { rgb: rgbOfPng(file), geo: g }
+  return { rgb: rgbOfPng(file), geo: g && { ...g, art } }
+}
+
+/** The fit through the art window when there is one, through the whole face
+ *  when there is not. `--face` forces the old behaviour for comparison. */
+function fitPage(rgbA, rgbB, geo, opt = {}) {
+  if (!geo.art || argv.includes('--face')) return { r: fitJournal(rgbA, rgbB, geo, opt), win: 'face' }
+  const [x, y, w, h] = geo.art
+  const r = fitPair(rgbA, rgbB, boxMask(x, y, w, h), geo.centre,
+    { sRange: SRANGE, ...opt, reach: boxMask(x - w / 2, y - h / 2, w * 2, h * 2) })
+  return { r, win: 'art' }
 }
 
 const slidesSrc = readFileSync(`${ROOT}src/story/slides.js`, 'utf8')
@@ -435,24 +531,9 @@ if (argv.includes('--selftest')) {
   ]
   for (const [t, s0, dx0, dy0] of CASES) {
     const base = rgbOfVideo(CLIP, t)
-    // Build B(q) = base(p) with q = piv + s0*(p - piv) + d0, by inverse sampling.
+    // B(q) = base(p) with q = piv + s0*(p - piv) + d0.
     const piv = [W / 2, H / 2]
-    const b = Buffer.alloc(W * H * 3)
-    for (let y = 0; y < H; y++)
-      for (let x = 0; x < W; x++) {
-        const sx = piv[0] + (x - piv[0] - dx0) / s0
-        const sy = piv[1] + (y - piv[1] - dy0) / s0
-        // Bilinear, not nearest: nearest-neighbour resampling stamps a
-        // staircase onto every edge, and a method that reads edge DIRECTION
-        // would then be graded on the staircase rather than on the picture.
-        const ix = Math.floor(sx), iy = Math.floor(sy)
-        if (ix < 0 || iy < 0 || ix >= W - 1 || iy >= H - 1) continue
-        const fx = sx - ix, fy = sy - iy
-        const o = (y * W + x) * 3, q = (iy * W + ix) * 3
-        for (let c = 0; c < 3; c++)
-          b[o + c] = base[q + c] * (1 - fx) * (1 - fy) + base[q + 3 + c] * fx * (1 - fy) +
-                     base[q + W * 3 + c] * (1 - fx) * fy + base[q + W * 3 + 3 + c] * fx * fy
-      }
+    const b = warpRgb(base, piv, s0, dx0, dy0)
     const mask = boxMask(260, 480, 560, 900)
     const r = fitPair(base, b, mask, piv, { reach: boxMask(120, 260, 840, 1340) })
     const errS = Math.abs(1 / r.ratio - s0) / s0 * 100
@@ -465,22 +546,51 @@ if (argv.includes('--selftest')) {
       `     ${errS.toFixed(2)} %`.padStart(12) + `${errD.toFixed(1)} px`.padStart(10) + (bad ? '   FAIL' : ''))
   }
 
-  // 2. Cross-source, against the Figma storyboard renders.
+  // 2. Cross-render, with an increment we choose ourselves.
   //
-  //    THE ASSERTION HERE IS NOT "ZERO", and getting that wrong cost an hour.
-  //    The register establishes that our journal's BOX matches the mock's to
-  //    0-2 design px; it says nothing about the artwork inside it, and this fit
-  //    measures the artwork. What is known in advance is weaker and still worth
-  //    testing: whatever the answer is, it must be the SAME on every slide (a
-  //    method with a slide-dependent bias could not manage that) and it must
-  //    report no rotation, because there is none.
+  //    THE PREMISE OF 2b WAS REWRITTEN 2026-09-06 (session J). It used to
+  //    compare our render with the FIGMA STORYBOARD render and assert that the
+  //    two AGREE — one size on all six slides, no rotation. Two things are
+  //    wrong with that, and the gate lied in both directions because of them.
   //
-  //    2a is the control that makes 2b readable. The mock renders arrive at
-  //    540x960 and are blown up to the canvas; run our own frame through that
-  //    same trip and the fit must come back at 1.000. Then whatever 2b reports
-  //    over and above it belongs to the pictures, not to the pipeline.
-  console.log('\n2a. CONTROL — our own frame through the mock\'s 540x960 round trip.')
-  console.log('    Whatever the resampling costs, it is this. Expect 1.000 / 0 px.\n')
+  //    First, since session B the pose the story ships is measured from the
+  //    CLIP. The storyboard is the reference for what is DRAWN on a page, not
+  //    for where the journal is held, so a per-slide difference against it is
+  //    the expected state of a healthy build. The gate cried FAIL on six
+  //    correct slides, and it would have gone quiet the day someone dragged our
+  //    pose back onto the storyboard's.
+  //
+  //    Second, and this is why the storyboard is gone from the self-test
+  //    altogether rather than merely re-asserted: PUT THE TWO PICTURES SIDE BY
+  //    SIDE AND THEY ARE NOT THE SAME PROJECTION. `_refs/storyboard/fr08.png`
+  //    draws the journal flat and square to the frame; our slide 8 holds it
+  //    tilted and perspective-divided, its right edge visibly nearer. A
+  //    similarity transform cannot express a keystone, so no answer exists for
+  //    that pair, and the register duly railed against its own +/-14 degree
+  //    limit on three slides of six while calling one of them confident.
+  //    Measured, before it was removed: four slides recovered an imposed
+  //    increment exactly, two had no peak at all, and slide 8 was confidently
+  //    wrong by 71 px.
+  //
+  //    WHAT REPLACES IT is the same demand made of the pair the tool actually
+  //    exists to measure — our render against the CLIP. The absolute answer
+  //    there is unknown; that is the open question of V-25 and it is not the
+  //    self-test's business. What IS known in advance is that moving the clip
+  //    frame by an amount we choose must move the answer by exactly that
+  //    amount. Case 1 makes the same demand of the clip against a warp of
+  //    itself, and case 3 of our render against a warp of itself; only this one
+  //    puts two GENUINELY DIFFERENT renders in front of the estimator, which is
+  //    the only situation it is ever used in.
+  //
+  //    THE WINDOW IS THE SHIPPING ONE. 2b registers through fitJournal — the
+  //    same mask and the same pivot the measurement path uses — because a
+  //    self-test that invents its own window tests a road nobody drives. A blind
+  //    box on the middle of the face was tried first and went silent on three
+  //    slides of six; every answer it did give recovered its increment to within
+  //    1.4 px, so what was quiet there was the window, not the estimator.
+  console.log('\n2a. CONTROL — our own frame through a 540x960 round trip.')
+  console.log('    A picture against a resampled copy of itself: the answer is 1.000 / 0 px')
+  console.log('    by construction, so whatever 2b reports above this is the pictures.\n')
   console.log(' ' + HEAD)
   let ctl = 0
   {
@@ -494,30 +604,72 @@ if (argv.includes('--selftest')) {
     console.log(fmtOne('8 round trip', r) + (bad ? '   FAIL' : ''))
   }
 
-  console.log('\n2b. OUR render against the FIGMA storyboard renders, six slides.')
-  console.log('    The size must land in the same place on all six; the spread is the test.\n')
-  console.log(' ' + HEAD)
-  const pcts = []
-  for (const n of [7, 8, 10, 14, 19, 22]) {
+  console.log('\n2b. CROSS-RENDER, KNOWN INCREMENT — ours against the CLIP.')
+  console.log('    The plain answer is printed as information and is NOT asserted: what the')
+  console.log('    clip does differently from us is the open question of V-25, not a fault.')
+  console.log('    What IS asserted: move the clip frame by a chosen amount and the answer')
+  console.log('    must move by that amount. Window: fitJournal, the shipping one.\n')
+  const INCREMENTS = [
+    [7, 1.00, 40, -25], [8, 1.06, 0, 0], [10, 1.00, -30, 18],
+    [14, 0.94, 0, 0], [19, 1.00, 12, 55], [22, 1.05, -20, -40],
+  ]
+  let spoke = 0, mute = 0
+  for (const [n, k, ddx, ddy] of INCREMENTS) {
     const sl = SLIDES.find(x => x.frame === n)
-    const mock = `${SB}/fr${String(n).padStart(2, '0')}.png`
-    if (!existsSync(mock)) continue
-    const { rgb, geo } = await ourFrame(sl.at + LEAD, `${OUT}/.ours${n}.png`)
+    const t = +(sl.at + LEAD).toFixed(3)
+    const { rgb, geo } = await ourFrame(t, `${OUT}/.ours${n}.png`)
     if (!geo) { console.log(`   ${n}: no journal`); continue }
     if (argv.includes('--mask')) dumpMask(rgb, pageMask(geo.quad), `${OUT}/mask-${n}.png`)
-    const r = fitJournal(rgb, rgbOfPng(mock), geo)
-    pcts.push(r.pct)
-    const bad = Math.abs(r.rot) > 1 || shaky(r)
+    const piv = geo.centre
+    const clip = rgbOfVideo(CLIP, t)
+    const r0 = fitJournal(rgb, clip, geo)
+    const tag = `${n} ${sl.page}`.slice(0, 20).padEnd(20)
+    console.log(`   ${tag} plain ` + fmtRow(r0) + r0.rival.toFixed(3).padStart(7))
+    if (shaky(r0)) {
+      mute++
+      console.log('                        no confident peak on the plain pair — nothing to move   SKIP')
+      continue
+    }
+    spoke++
+    const r1 = fitJournal(rgb, warpRgb(clip, piv, k, ddx, ddy), geo)
+    // A reference k times bigger makes ours k times smaller against it; the
+    // scaling happens about the very pivot the register uses, so the shift the
+    // register already reported is scaled by k before the translation comes off
+    // it. The two compose in that order and nothing here is fitted twice.
+    const wantRatio = r0.ratio / k
+    const wantDx = k * r0.dx - ddx, wantDy = k * r0.dy - ddy
+    const errS = Math.abs(r1.ratio - wantRatio) / wantRatio * 100
+    const errD = Math.hypot(r1.dx - wantDx, r1.dy - wantDy)
+    const bad = errS > 1.0 || errD > 6 || shaky(r1)
     if (bad) fails++
-    console.log(fmtOne(`${n} ${sl.page}`.slice(0, 20), r) + (bad ? '   FAIL' : ''))
+    console.log(`                        moved x${k.toFixed(2)} ${String(ddx).padStart(4)}/${String(ddy).padStart(4)}` +
+      `   got x${(r0.ratio / r1.ratio).toFixed(3)} ${(k * r0.dx - r1.dx).toFixed(0).padStart(4)}/${(k * r0.dy - r1.dy).toFixed(0).padStart(4)}` +
+      `   ${errS.toFixed(2)} %`.padStart(12) + `${errD.toFixed(1)} px`.padStart(10) + (bad ? '   FAIL' : ''))
   }
-  const spread = Math.max(...pcts) - Math.min(...pcts)
-  const bad2 = spread > 0.8
-  if (bad2) fails++
-  console.log(`   spread ${spread.toFixed(2)} % across ${pcts.length} slides` +
-    (bad2 ? '   FAIL' : '   — one systematic offset, not a per-slide error') +
-    `\n   of which ${Math.abs(ctl).toFixed(2)} % is the round trip (2a); the rest is our` +
-    ` page rendering that\n   much larger than Figma\'s inside a box the register puts at 0-2 px.`)
+  // WHAT SILENCE MEANS, AND WHY IT IS NOT COUNTED AS A FAILURE.
+  //
+  // A pair with no confident peak is a fact about that pair — those two renders
+  // share too little edge for the register to find one place that beats its own
+  // neighbourhood — and the row above says so in words. Reading it as a fault of
+  // the estimator would be the same mistake the old 2b made in the other
+  // direction. What the estimator owes is this: wherever it DOES speak, moving
+  // the reference must move the answer with it, and that is asserted per slide.
+  //
+  // So the only thing left to fail on is the estimator going quiet everywhere,
+  // which is what a broken mask, a broken park or a wrong LEAD would look like.
+  // Two speaking slides is the floor. The COUNT is the thing to watch rather
+  // than the pass: on 2026-09-06 three of six spoke — 7, 10 and 14 — and 8, 19
+  // and 22 did not. That number is recorded in _context/90-next-session.md, so a
+  // drift from it is visible even on a green run.
+  const badMute = spoke < 2
+  if (badMute) fails++
+  console.log(`\n   ${spoke} slide(s) moved and recovered, ${mute} with no confident peak to move.` +
+    (badMute
+      ? '\n   FAIL — fewer than two slides spoke at all. That is the estimator, not the pages.'
+      : '\n   Silence on a pair is a fact about that pair and is printed in its own row; it is' +
+        '\n   not held against the estimator, which is graded only where it speaks. Compare the' +
+        '\n   count with the one recorded in _context/90-next-session.md: on 06.09 it was 3 of 6.') +
+    `\n   The round trip (2a) costs ${Math.abs(ctl).toFixed(2)} % of size; everything above is the pictures.`)
 
   // 3. End to end: our render against our own render with the journal scaled by
   //    a known factor. This is the only case that exercises park -> screenshot
@@ -810,16 +962,16 @@ for (const { label, t } of times) {
   ff(['-y', '-ss', String(t), '-i', CLIP, '-frames:v', '1', clipPng])
   const clipRgb = rgbOfVideo(CLIP, t)
   drawQuad(clipRgb, geo.quad, `${OUT}/outline-${t}.png`)
-  const r = fitJournal(rgb, clipRgb, geo, { dSpan: Number(process.env.FIT_SPAN || 240) })
+  const { r, win } = fitPage(rgb, clipRgb, geo, { dSpan: Number(process.env.FIT_SPAN || 240) })
   const implied = impliedClipPose(geo.pose, r)
-  rows.push({ label, t, fit: r, ours: geo.box, pose: geo.pose, implied })
+  rows.push({ label, t, fit: r, win, art: geo.art, ours: geo.box, pose: geo.pose, implied })
   // A blend of the two, always: the number says how much and the picture says
   // whether the number is about the right thing.
   ff(['-y', '-i', `${OUT}/.ours-${t}.png`, '-i', clipPng, '-filter_complex',
     '[0][1]blend=all_mode=average', '-update', '1', '-frames:v', '1', `${OUT}/blend-${t}.png`])
   const p = geo.pose
   console.log(label)
-  console.log(fmtOne('fit', r))
+  console.log(fmtOne(`fit ${win}`, r))
   if (!p || !Number.isFinite(p.rot)) { console.log('  (pose unreadable)'); continue }
   console.log(`  ours { rot: ${p.rot.toFixed(2)}, scale: ${p.scale.toFixed(3)}, ` +
     `cx: ${p.cx.toFixed(1)}, cy: ${p.cy.toFixed(1)} }  rotX ${p.rotX.toFixed(1)} rotY ${p.rotY.toFixed(1)}`)
