@@ -9,6 +9,7 @@ import {
   journalDissolve,
   hyperspaceBurst,
   outroText,
+  HANDOVER_YAW,
 } from '@/journal3d/presets.js'
 import { setPose } from '@/journal3d/poseTween.js'
 import { buildFlyLayer } from '@/journal3d/flyLayer.js'
@@ -120,13 +121,22 @@ export function buildStoryTimeline(targets, ctx) {
   // swingOpen; every cut from 8 to 23 turns the journal out to edge-on and back.
   // Measured at five separate cuts, including the cover -> page handover at
   // 11.07 (TIMING.flip).
-  SLIDES.filter(s => s.frame >= 8 && s.frame <= 23).forEach(slide => {
+  //
+  // THE FIRST TURN STARTS FROM THE YAW THE ENTRANCE LEFT, not from zero. Nothing
+  // drives rotationY between the handover at 6.0 and this fold, so the journal
+  // stands at HANDOVER_YAW for five seconds; the turn's head `set` used to throw
+  // those four degrees away in one frame, and one frame before its own motion
+  // started, so it read as a twitch of its own rather than as the start of the
+  // turn — 18 design px of silhouette width and 7 px of position, where the
+  // neighbouring frames were moving under 2.5. Every later turn already begins
+  // at zero, so they pass 0 and nothing changes for them.
+  SLIDES.filter(s => s.frame >= 8 && s.frame <= 23).forEach((slide, i) => {
     const at = snap(slide.at)
     // The face swap (cover 1465x1868 -> page 1564x1911) is a 6 % size change,
     // so it goes where the content cut goes: the edge-on instant, where the
     // front face is a hairline and nothing about it can be seen.
     tl.call(() => setFace(slide.face), null, snap(at + TIMING.flip.out))
-    nest(tl, pageTurn(targets), at)
+    nest(tl, pageTurn(targets, { from: i === 0 ? HANDOVER_YAW : 0 }), at)
   })
 
   // Nested at 0 because the flight timeline is already in absolute video time.

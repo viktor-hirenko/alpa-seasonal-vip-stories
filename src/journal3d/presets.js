@@ -166,6 +166,16 @@ flyInFromFloor.PARAM_SCHEMA = {
  * and an ease on top would re-time the clip's own acceleration into something
  * else.
  */
+/**
+ * THE YAW THE ENTRANCE LANDS ON, and hands to the first page turn.
+ *
+ * It is the last key's rotationY below, named because a second reader needs it:
+ * nothing drives yaw between the handover at 6.0 and the first fold at 11.07,
+ * so the journal sits at this angle for five seconds and the turn has to take
+ * it from HERE rather than from zero. See the `from` param on `pageTurn`.
+ */
+export const HANDOVER_YAW = -4
+
 export function swingOpen(t, params) {
   const p = P(
     {
@@ -177,7 +187,7 @@ export function swingOpen(t, params) {
         [0.6667, -59.6, 2.0, 0.885, 67.1, 50.0], // 138  fills the canvas
         [1.0667, -36.5, 5.0, 0.845, 66.6, 50.0], // 150
         [1.5667, -15.5, 7.85, 0.79, 61.6, 49.2], // 165
-        [2.0667, -4, 10.04, 0.746, 57.7, 48.7], // 180  handover: JOURNAL_PATH's first row
+        [2.0667, HANDOVER_YAW, 10.04, 0.746, 57.7, 48.7], // 180  handover: JOURNAL_PATH's first row
       ],
       // The row the PATH reaches one second after the handover, in this
       // preset's own seconds and without a yaw column — see `next` above.
@@ -278,19 +288,30 @@ journalPath.PARAM_SCHEMA = {}
  * preset — and the path underneath it keeps moving through the turn instead of
  * being frozen by it.
  *
- * rotationY is written ABSOLUTELY — a `set` to 0 at the head, then out, then
- * back — never as a relative `+=`. The master timeline is seeked arbitrarily
+ * rotationY is written ABSOLUTELY — a `set` at the head, then out, then back —
+ * never as a relative `+=`. The master timeline is seeked arbitrarily
  * (ADR-0008), and a relative tween would freeze whatever value it happened to
  * find on its first render, so scrubbing backwards would accumulate garbage.
- * That head `set` is also what normalises the -4 deg of yaw the entrance leaves
- * behind, at the first page turn.
+ *
+ * `from` IS THE YAW THIS TURN STARTS AT, and it exists because that head `set`
+ * used to be a hard zero (2026-09-06). The entrance lands at HANDOVER_YAW and
+ * nothing drives yaw for the next five seconds, so the first turn's `set`
+ * discarded four degrees in a single frame, one frame BEFORE the turn's own
+ * motion began. Measured on our rendered frames: the journal's silhouette lost
+ * 18 design px of width and slid 7 px left between 11.033 and 11.067, where the
+ * frames either side of it were moving 1.6 and 2.4 px — and differencing those
+ * two frames draws the whole cover twice, type, art and edges. Starting the
+ * out-leg from `from` puts those four degrees inside the swing, where the page
+ * is on its way to edge-on and no one can see them. The turn still ENDS at an
+ * absolute zero, so every later turn is unaffected and a backwards seek is
+ * still exact.
  *
  * The measurement behind `peak`, `out` and `back` is in TIMING.flip.
  */
 export function pageTurn(t, params) {
-  const p = P({ ...TIMING.flip, easeOut: EASE.flipOut, easeBack: EASE.flipBack }, params)
+  const p = P({ ...TIMING.flip, from: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack }, params)
   const s = tl()
-  s.set(t.box, { rotationY: 0 }, 0)
+  s.set(t.box, { rotationY: p.from }, 0)
   s.to(t.box, { rotationY: p.peak, duration: p.out, ease: p.easeOut }, 0)
   s.to(t.box, { rotationY: 0, duration: p.back, ease: p.easeBack }, p.out)
   return s
