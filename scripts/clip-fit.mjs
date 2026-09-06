@@ -64,6 +64,31 @@ const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const PORT = Number(process.env.FIT_PORT || 9377)
 const ORIGIN = process.env.PROBE_ORIGIN || 'http://localhost:5173'
 
+/**
+ * FIT_QUERY MAKES OUR PRINT THE CLIP'S PRINT, and the values below are read off
+ * the clip rather than guessed (2026-09-06). The register works on the printed
+ * page, so every digit we print that the clip does not costs it confidence:
+ * SAMPLE in params.js carries deliberately wide test numbers (2572257, 2222577)
+ * where the clip's demo run used 257 everywhere, 120 seasonal points, SILVER,
+ * `Tiger Jackpots` and `Dragon Coins Jackpot`. Read at 19.5 / 24.5 / 28.5 /
+ * 32.5 / 37.0 / 42.0 / 47.0 / 51.5 / 55.5 / 59.5 s of the preview clip.
+ *
+ *   export FIT_QUERY='?days=257&points=120&level=SILVER&total_wins=257 *     &biggest_win=257&biggest_win_game=Dragon%20Coins%20Jackpot&top_multiplier=257 *     &top_multiplier_game=Tiger%20Jackpots&favorite_game_name=Tiger%20Jackpots *     &bonuses=257&sports_wins=257&sports_multiplier=257'
+ *
+ * It is NOT the default: the product's own demo values are what `npm run dev`
+ * should show, and a gate that quietly rewrites the page it measures is a gate
+ * that can agree with itself. Matching the print raised the confident-peak count
+ * from 4 of 9 slides to 6 of 9 and moved no answer by more than 0.2 %, so it
+ * helps and it is not what was blocking V-25.
+ *
+ * WHAT WAS BLOCKING IT, measured the same day: registering the WHOLE front face
+ * mixes the journal's pose with our page's own layout, and the answer then
+ * depends on which of the two dominates the window. Registering a window placed
+ * on the page's ART — the one thing that is the same image file in both renders
+ * — is stable: two window sizes 40 % apart agree to a pixel on the shift for
+ * seven pages of eight. See _context/36-visual-diff.md, V-25.
+ */
+
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const ff = (a, stdin) => execFileSync('ffmpeg', ['-v', 'error', ...a], { maxBuffer: 1 << 30, input: stdin })
 
