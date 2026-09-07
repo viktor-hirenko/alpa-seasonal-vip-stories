@@ -62,7 +62,7 @@
   </head>
   <body>
     <div id="wrap">
-      <iframe id="app" src="./index.html"></iframe>
+      <iframe id="app"></iframe>
       <video id="clip" src="./video/ref-preview.mp4" muted playsinline></video>
     </div>
 
@@ -98,6 +98,19 @@
 
       let story = null
       let playing = false
+
+      /** OUR PRINT HAS TO BE THE CLIP'S PRINT, or every page carrying a number
+       *  reads as two numbers stacked and the blend stops being legible on the
+       *  half of the pages that matter most. This page's own query string is
+       *  forwarded to the player, so `review.html?days=257&...` prints the clip's
+       *  own demo values in our pages; `lang` stays owned by the select below.
+       *  With no query string the player falls back to SAMPLE, which is
+       *  deliberately NOT the clip's print — see FIT_QUERY in clip-fit.mjs. */
+      function playerUrl(lang) {
+        const q = new URLSearchParams(location.search)
+        q.set('lang', lang)
+        return `./index.html?${q}`
+      }
 
       const win = () => app.contentWindow
       const doc = () => app.contentDocument
@@ -180,7 +193,7 @@
       }
 
       document.getElementById('lang').onchange = e => {
-        app.src = `./index.html?lang=${e.target.value}`
+        app.src = playerUrl(e.target.value)
         app.onload = attach
       }
 
@@ -196,6 +209,7 @@
 
       addEventListener('resize', fit)
       app.onload = attach
+      app.src = playerUrl(document.getElementById('lang').value)
       setInterval(() => { fit(); if (playing) seek(clip.currentTime) }, playing ? 200 : 400)
       attach()
     </script>
