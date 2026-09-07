@@ -535,14 +535,41 @@ function coverCurves(flights, occl) {
  * way the reference does it — put the step in the middle and the object jumps
  * from wholly drawn to half eaten in one frame.
  *
- * A touch has to LAST 0.3 s to count. The mask reaches into the object's magenta
- * halo, so a single frame can read a percent or two of contact off a glow that
- * merely passes near the page.
+ * THE TOUCH HAS TO BE THE ONE THAT LASTS, and lasting 0.3 s is not enough to
+ * prove it. Four flights pass CLOSE to the page long before they go behind it,
+ * and the mask reaches into their magenta halo, so the curve lifts to 3–8 % for
+ * a second or two and then falls back to zero for another one and a half:
+ * calendar-1 lifts at 18.0 and is back at 2 % by 18.9 while the clip still draws
+ * the whole clock face; chip-1 lifts at 27.6 and reads a flat ZERO from 28.5 to
+ * 29.9; coin-2 lifts at 31.7 and is at zero from 33.1 to 34.0; milkpack-3 lifts
+ * at 73.7 and is at zero from 74.6 to 75.4. Taking the first lasting touch put
+ * the handover 1.2 to 2.6 s early on those four, and the owner sees exactly
+ * that: the object dives under the page while the clip still has it in front.
+ *
+ * So the crossing is found from the END of the story backwards. First the
+ * COMMITMENT — the frame where the page holds a quarter of the body and does
+ * not give it back within half a second. That is unmistakable: a graze never
+ * reaches a quarter. The crossing is then the frame after the LAST time before
+ * that commitment on which the page was clear of the object, so a graze that
+ * returns to zero is skipped by construction: the clear stretch between it and
+ * the real handover is what the search lands on.
+ *
+ * "Clear" has to LAST 0.2 s, and that clause is the whole difference between a
+ * measurement and a coin toss. The tracker drops a frame now and then, and a
+ * dropped frame reads as zero contact: milkpack-2 reads 20 % covered, then one
+ * 10 Hz sample of zero, then 64 %. Without the duration that single hole is
+ * "the page was clear", and the flight's handover jumps 3.3 s late. The holes
+ * are one sample wide; the real gap in calendar-1 is 0.36 s wide, so 0.2 s
+ * separates them with room on both sides.
  *
  * `zOut` is the other end — where the page has taken 85 % of the object and
  * keeps it — and it is written to the reference for the gate, not to the table.
  */
-const CROSS_ON = 0.02
+const CROSS_ON = 0.02       // contact at all, above the halo's own reading
+const CROSS_COMMIT = 0.25   // the page has really taken the body
+const CROSS_KEEP = 0.1      // ...and has not handed it back
+const CROSS_KEEP_S = 0.5
+const CROSS_CLEAR_S = 0.2   // ...and a hole in the track is not a clearance
 function crossing(curve) {
   if (curve.length < 4) return null
   const t = curve.map(c => c[0])
@@ -550,12 +577,25 @@ function crossing(curve) {
     const w = [curve[Math.max(0, i - 1)][1], c[1], curve[Math.min(curve.length - 1, i + 1)][1]]
     return w.sort((a, b) => a - b)[1]
   })
-  let zIn = null
-  for (let i = 0; i < h.length && zIn === null; i++) {
-    if (h[i] <= CROSS_ON) continue
+  let commit = -1
+  for (let i = 0; i < h.length && commit < 0; i++) {
+    if (h[i] < CROSS_COMMIT) continue
     let held = true
-    for (let j = i; j < h.length && t[j] - t[i] < 0.3; j++) if (h[j] <= CROSS_ON) held = false
-    if (held) zIn = t[i]
+    for (let j = i; j < h.length && t[j] - t[i] < CROSS_KEEP_S; j++)
+      if (h[j] < CROSS_KEEP) held = false
+    if (held) commit = i
+  }
+  let zIn = null
+  if (commit >= 0) {
+    let last = -1
+    for (let i = commit - 1; i >= 0 && last < 0; i--) {
+      if (h[i] > CROSS_ON) continue
+      let a = i
+      while (a > 0 && h[a - 1] <= CROSS_ON) a--
+      if (t[i] - t[a] >= CROSS_CLEAR_S) last = i
+      else i = a
+    }
+    zIn = last < 0 ? t[0] : t[Math.min(last + 1, commit)]
   }
   let zOut = null
   for (let i = 0; i < h.length && zOut === null; i++) {

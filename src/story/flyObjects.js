@@ -217,7 +217,7 @@ const RAW = [
     [18.17,   50.1,   35.0,  182,  -78.0],
   ] },
   // calendar-1 — frame 9, 17.13..23.67 s
-  { id: 'calendar-1', asset: 'calendar', frame: 9, zFlip: 18.03, keys: [
+  { id: 'calendar-1', asset: 'calendar', frame: 9, zFlip: 19.37, keys: [
     [17.13,   64.3,  110.7,  395,   40.5],
     [17.63,   56.4,   96.3,  395,   40.5],
     [17.83,   55.6,   93.4,  395,   39.0],
@@ -342,7 +342,7 @@ const RAW = [
     [26.87,   50.6,   69.3,   91,  -37.5],
   ] },
   // chip-1 — frame 11, 25.74..31.63 s
-  { id: 'chip-1', asset: 'points-b', frame: 11, zFlip: 27.54, keys: [
+  { id: 'chip-1', asset: 'points-b', frame: 11, zFlip: 30.03, keys: [
     [25.74,   69.0,   -8.2,  312,   46.5],
     [26.14,   65.3,    4.0,  312,   46.5],
     [26.40,   65.6,    6.8,  312,   31.5],
@@ -412,7 +412,7 @@ const RAW = [
     [34.94,   54.6,   31.2,   59,  -64.5],
   ] },
   // coin-2 — frame 12, 30.17..35.37 s
-  { id: 'coin-2', asset: 'coin-edge', frame: 12, zFlip: 31.67, keys: [
+  { id: 'coin-2', asset: 'coin-edge', frame: 12, zFlip: 34.07, keys: [
     [30.17,    7.9,   -9.3,  335,   34.5],
     [30.43,    9.6,   -2.2,  335,   34.5],
     [30.47,   12.0,   -1.4,  335,   34.5],
@@ -766,7 +766,7 @@ const RAW = [
     [74.57,   49.0,   66.9,  181,   36.0],
   ] },
   // milkpack-3 — frame 21, 73.04..79.57 s
-  { id: 'milkpack-3', asset: 'milkpack', frame: 21, zFlip: 73.74, keys: [
+  { id: 'milkpack-3', asset: 'milkpack', frame: 21, zFlip: 75.64, keys: [
     [73.04,   38.4,  112.2,  432,  -48.0],
     [73.57,   45.2,   95.8,  432,  -48.0],
     [73.84,   49.6,   94.0,  432,  -48.0],

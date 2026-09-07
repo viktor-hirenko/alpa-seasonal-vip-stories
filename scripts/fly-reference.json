@@ -391,7 +391,7 @@
    "id": "calendar-1",
    "asset": "calendar",
    "frame": 9,
-   "zIn": 18.03,
+   "zIn": 19.37,
    "zOut": 22.27,
    "samples": [
     [
@@ -2112,7 +2112,7 @@
    "id": "chip-1",
    "asset": "points-b",
    "frame": 11,
-   "zIn": 27.54,
+   "zIn": 30.03,
    "zOut": 31.13,
    "samples": [
     [
@@ -3059,7 +3059,7 @@
    "id": "coin-2",
    "asset": "coin-edge",
    "frame": 12,
-   "zIn": 31.67,
+   "zIn": 34.07,
    "zOut": 34.47,
    "samples": [
     [
@@ -8023,7 +8023,7 @@
    "id": "milkpack-3",
    "asset": "milkpack",
    "frame": 21,
-   "zIn": 73.74,
+   "zIn": 75.64,
    "zOut": 78.64,
    "samples": [
     [
