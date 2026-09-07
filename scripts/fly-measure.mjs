@@ -270,6 +270,10 @@ const cache = (name, make) => {
   const f = `${CACHE}/${name}.json`
   if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'))
   const v = make()
+  // A `--only` run answers about one frame of the story. Writing that to the
+  // cache would leave the next full run reading a table with twenty six flights
+  // missing and no sign of why.
+  if (only) return v
   mkdirSync(CACHE, { recursive: true })
   writeFileSync(f, JSON.stringify(v))
   return v
@@ -623,8 +627,18 @@ function warp(sp, deg, s, cx, cy) {
  * Silhouette overlap AND luminance correlation, in that proportion.
  * Neither alone is enough: overlap says nothing about a round object's angle,
  * and luminance alone drifts on a low-contrast sprite over a busy corridor.
+ *
+ * `tv` marks WHICH CELLS OF THE GRID ARE INSIDE THE PICTURE. Without it a
+ * sprite that hangs off the frame is scored against black: the half of the
+ * template beyond the edge is counted as "the sprite says yes, the clip says
+ * no", which is the whole of an entering object's silhouette and drives the
+ * overlap term to nothing. That is why the fit answered `size: 47` about a
+ * basketball 321 px across on the frame it first appears — it shrank the
+ * template until it fitted the visible arc. Skipping the cells the picture
+ * does not cover asks the only answerable question: does the part of the
+ * template that IS in frame look like what is in frame there.
  */
-function score(tg, tm, w) {
+function score(tg, tm, w, tv) {
   let n = 0,
     sa = 0,
     sb = 0,
@@ -632,6 +646,7 @@ function score(tg, tm, w) {
     ua = 0,
     ub = 0
   for (let p = 0; p < K * K; p++) {
+    if (tv && !tv[p]) continue
     const m = tm[p] > 0.5,
       s = w.a[p] > 0.5
     if (m) ua++
@@ -650,6 +665,7 @@ function score(tg, tm, w) {
     da = 0,
     db = 0
   for (let p = 0; p < K * K; p++) {
+    if (tv && !tv[p]) continue
     if (!(tm[p] > 0.5 || w.a[p] > 0.5)) continue
     const A = tg[p] - ma,
       B = w.g[p] - mb
@@ -714,8 +730,141 @@ function keepCentral(m) {
   for (let p = 0; p < K * K; p++) if (!keep[p]) m[p] = 0
 }
 
+/**
+ * Per-pixel temporal median of a stack of frames — the background plate.
+ *
+ * Same answer as `fs.map(x => x[i]).sort()` per pixel, and about fifteen times
+ * quicker: that form allocated a fresh array and ran a comparator sort for each
+ * of six million subpixels, which put a single flight's plate at minutes and a
+ * full re-measure at hours. One scratch buffer and an insertion sort over a few
+ * dozen bytes does the same work without the garbage.
+ */
+function medianPlate(fs) {
+  const out = Buffer.alloc(FW * FH * 3)
+  const k = fs.length,
+    c = new Uint8Array(k),
+    h = k >> 1
+  for (let i = 0; i < FW * FH * 3; i++) {
+    for (let j = 0; j < k; j++) {
+      const v = fs[j][i]
+      let q = j - 1
+      while (q >= 0 && c[q] > v) {
+        c[q + 1] = c[q]
+        q--
+      }
+      c[q + 1] = v
+    }
+    out[i] = c[h]
+  }
+  return out
+}
+
 const oneFrame = t =>
   sh(['-ss', String(t), '-i', CLEAN, '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
+
+/**
+ * The K grid under a crop of side L centred on (px, py), plus `tv` — which of
+ * its cells fall inside the picture at all. The crop is allowed to hang off
+ * the frame: that is the point, because an entering object's centre is out
+ * there and a crop that refused to leave the picture could never hold it.
+ */
+function cropAt(fr, plate, px, py, L) {
+  const x0 = Math.round(px) - (L >> 1),
+    y0 = Math.round(py) - (L >> 1)
+  const tg = new Float32Array(K * K),
+    tm = new Float32Array(K * K),
+    tv = new Uint8Array(K * K)
+  let n = 0,
+    edge = 0
+  for (let y = 0; y < K; y++)
+    for (let x = 0; x < K; x++) {
+      const sx = x0 + Math.round((x * L) / K),
+        sy = y0 + Math.round((y * L) / K)
+      if (sx < 0 || sx >= FW || sy < 0 || sy >= FH) continue
+      tv[y * K + x] = 1
+      const s = (sy * FW + sx) * 3
+      const dr = fr[s] - plate[s],
+        dg = fr[s + 1] - plate[s + 1],
+        db = fr[s + 2] - plate[s + 2]
+      tg[y * K + x] = 0.299 * fr[s] + 0.587 * fr[s + 1] + 0.114 * fr[s + 2]
+      if (Math.sqrt(dr * dr + dg * dg + db * db) > 34) {
+        tm[y * K + x] = 1
+        n++
+        if (sx < 2 || sx >= FW - 2 || sy < 2 || sy >= FH - 2) edge++
+      }
+    }
+  return { tg, tm, tv, n, edge, x0, y0, L }
+}
+
+/** How much of a placed sprite the picture actually shows. */
+function visFrac(w, tv) {
+  let all = 0,
+    seen = 0
+  for (let p = 0; p < K * K; p++)
+    if (w.a[p] > 0.5) {
+      all++
+      if (tv[p]) seen++
+    }
+  return all ? seen / all : 0
+}
+
+/**
+ * WHERE THE WHOLE OBJECT IS, given only the part of it the frame kept.
+ *
+ * The forward fit never asks this: it takes the tracker's blob centroid as the
+ * answer and searches angle and scale about it. A blob the edge has cut in half
+ * still has a centre, but it is not the OBJECT's centre — it is dragged inward
+ * by exactly the part the frame threw away, and that is what puts an entering
+ * basketball two thirds of the way into the picture on its very first frame.
+ *
+ * So search the centre too, over the cells the picture covers, and let it land
+ * outside the frame. Scale is GIVEN, never searched — see the note at the call
+ * site for why an entry is the one place it has to be held. `degs` is the list
+ * of angles to try: the whole circle on the frame that shows most of the body,
+ * one held angle on every frame after it.
+ */
+function solveCut(sp, cr, degs, s, R) {
+  let best = { sc: -2, cx: K / 2, cy: K / 2, s, deg: degs[0] }
+  const at = (cx, cy, deg) => {
+    const w = warp(sp, deg, s, cx, cy)
+    const v = score(cr.tg, cr.tm, w, cr.tv)
+    if (v > best.sc) best = { sc: v, cx, cy, s, deg, w }
+  }
+  for (let dy = -R; dy <= R; dy += 2)
+    for (let dx = -R; dx <= R; dx += 2) at(K / 2 + dx, K / 2 + dy, degs[0])
+  for (let pass = 0; pass < 2; pass++) {
+    if (degs.length > 1) {
+      const b = best
+      for (const d of degs) at(b.cx, b.cy, d)
+      const c = best
+      for (let d = c.deg - 6; d <= c.deg + 6; d += 1.5) at(c.cx, c.cy, d)
+    }
+    const b = best
+    for (let dy = -2.5; dy <= 2.5; dy += 0.5)
+      for (let dx = -2.5; dx <= 2.5; dx += 0.5) at(b.cx + dx, b.cy + dy, b.deg)
+  }
+  if (!best.w) return null
+  return {
+    sc: best.sc,
+    px: cr.x0 + (best.cx * cr.L) / K,
+    py: cr.y0 + (best.cy * cr.L) / K,
+    size: best.s * cr.L,
+    rot: +(((best.deg + 180) % 360) - 180).toFixed(1),
+    vis: visFrac(best.w, cr.tv),
+  }
+}
+
+/** Does a box of side `size` centred on (px, py) still touch the picture? */
+const touchesFrame = (px, py, size) =>
+  px + size / 2 > 0 && px - size / 2 < FW && py + size / 2 > 0 && py - size / 2 < FH
+
+// The bars for an entry key, decided here rather than asked about. 0.25 is one
+// notch above the 0.22 the forward fit is trusted at, because a cut silhouette
+// has fewer cells to be right about and so a noisier score; 0.12 of the body is
+// where a centre stops being placeable — below it the visible arc is a few
+// dozen cells and the search wanders along the edge for free.
+const ENTRY_OK = 0.25
+const ENTRY_VIS = 0.12
 
 function stageFit(flights) {
   const out = []
@@ -725,14 +874,11 @@ function stageFit(flights) {
       console.log(`fit: no asset for ${f.key} — dropped`)
       continue
     }
+    if (only && a.frame !== only) continue
     const sp = sprite(a.asset)
     const fs = []
     for (let t = Math.max(0, f.t0 - 9); t <= Math.min(94, f.t1 + 9); t += 0.5) fs.push(oneFrame(t))
-    const pl = Buffer.alloc(FW * FH * 3)
-    for (let i = 0; i < FW * FH * 3; i++) {
-      const c = fs.map(x => x[i]).sort((p, q) => p - q)
-      pl[i] = c[c.length >> 1]
-    }
+    const pl = medianPlate(fs)
     const ks = []
     for (let i = 0; i < f.pts.length; i += 8) {
       const q = f.pts[i]
@@ -740,29 +886,10 @@ function stageFit(flights) {
       // crop may hang off the frame — pad rather than skip, which is what
       // dropped two thirds of every high-hovering flight in an earlier pass.
       const L = Math.round(Math.max(40, q.sq * 2) * 2.7)
-      const x0 = Math.round((q.x / 100) * FW) - (L >> 1),
-        y0 = Math.round((q.y / 100) * FH) - (L >> 1)
-      const fr = oneFrame(q.t)
-      const tg = new Float32Array(K * K),
-        tm = new Float32Array(K * K)
-      let n = 0,
-        edge = 0
-      for (let y = 0; y < K; y++)
-        for (let x = 0; x < K; x++) {
-          const sx = x0 + Math.round((x * L) / K),
-            sy = y0 + Math.round((y * L) / K)
-          if (sx < 0 || sx >= FW || sy < 0 || sy >= FH) continue
-          const s = (sy * FW + sx) * 3
-          const dr = fr[s] - pl[s],
-            dg = fr[s + 1] - pl[s + 1],
-            db = fr[s + 2] - pl[s + 2]
-          tg[y * K + x] = 0.299 * fr[s] + 0.587 * fr[s + 1] + 0.114 * fr[s + 2]
-          if (Math.sqrt(dr * dr + dg * dg + db * db) > 34) {
-            tm[y * K + x] = 1
-            n++
-            if (sx < 2 || sx >= FW - 2 || sy < 2 || sy >= FH - 2) edge++
-          }
-        }
+      const cr = cropAt(oneFrame(q.t), pl, (q.x / 100) * FW, (q.y / 100) * FH, L)
+      const { tg, tm } = cr
+      let n = cr.n
+      const edge = cr.edge
       if (n < 60) continue
       keepCentral(tm)
       n = 0
@@ -801,10 +928,312 @@ function stageFit(flights) {
         clip: edge > 0.01 * n,
       })
     }
-    out.push({ ...a, t0: f.t0, t1: f.t1, slide: f.slide, ks })
+    out.push({ ...a, t0: f.t0, t1: f.t1, slide: f.slide, ks: withEntry(sp, a, ks, pl) })
     console.log(`fit: ${a.id} ${ks.length} keys`)
   }
   return out
+}
+
+/**
+ * THE FLIGHT'S FIRST FRAMES, MEASURED INSTEAD OF INVENTED.
+ *
+ * What was here before was one synthesised row, the first measured leg run
+ * 0.1 s backwards. Three frames is not an entry: a basketball crossing the
+ * picture at 5 px a frame needs 235 px to clear the top edge, which is 47
+ * frames, so the row landed well inside the picture and the object switched on
+ * two thirds drawn. Twenty four flights of twenty seven began that way.
+ *
+ * Running the same straight line further back is not the fix either. In the
+ * clip the object arrives FAST and brakes, and the first leg the forward fit
+ * catches is already the slow end of that; extended, it makes the object drift
+ * in at half the clip's speed. The clip HAS these frames — the object is in
+ * them, cut by the edge — so the honest answer is to measure them, which needs
+ * two things the forward fit does not do: score only the cells inside the
+ * picture (`score`'s `tv`), and search for the centre rather than take the
+ * clipped blob's own (`solveCut`).
+ *
+ * Walk backwards a frame at a time from the flight's first confident key,
+ * predicting each next centre from the two already solved, until the object is
+ * gone. Then one row that carries it clear of the edge along the speed just
+ * MEASURED off those frames — not off the settled leg.
+ */
+function withEntry(sp, a, ks, pl) {
+  const conf = ks.filter(k => k.sc >= 0.22)
+  if (conf.length < 2) return ks
+  const step = 1 / 30
+  const crop = s => Math.round(s * 2.6)
+  // Radius of the centre search, in grid cells: rather over half the body, so
+  // it reaches the centre of an object the frame has left a tenth of, and still
+  // well inside the crop's own margin — the template never leaves the crop, and
+  // `tv` therefore only ever means "outside the picture".
+  // Radius of the centre search, in grid cells. The SEED needs a wide one: its
+  // only guess is the tracker's centroid, dragged inward by however much of the
+  // body the frame threw away. Every step after it predicts from measured
+  // frames and so gets a tight one, and that is not a saving but a correction —
+  // at the seed's radius the search slid along the edge and returned the ball
+  // wandering 85, 85, 83, 79 across four frames where it travels smoothly.
+  const R_SEED = Math.round(0.55 * K * (1 / 2.6)),
+    R_WALK = Math.round(0.15 * K * (1 / 2.6))
+
+  // THE SIZE THE ENTRY IS FLOWN AT is the median of the flight's first five
+  // confident keys, not the anchor's own. The anchor is itself a frame the edge
+  // is cutting, and its size came off the forward fit, which answers about a cut
+  // silhouette by shrinking or swelling the template: the basketball's anchor
+  // reads 371 where the four settled frames right after it read 328, 328, 328,
+  // 329. Flying the entry at 371 would have the ball arrive an eighth too big
+  // and shrink as it lands.
+  const size = med(conf.slice(0, 5).map(k => k.size))
+  const L = crop(size)
+  // THE ANGLE IS HELD AT THE FIRST CONFIDENT KEY'S, and is never searched here.
+  // Two other things were tried and both are worse, for the same reason: on a
+  // silhouette the edge has cut, a WRONG angle scores HIGHER than the right one
+  // — it can turn the template until its in-frame sliver matches, wherever that
+  // leaves the rest. Searching the circle on the entry's best frame put the
+  // basketball at 19 % visible where it is four fifths drawn, and flying the
+  // flight's own folded median (which IS the better measurement) cost the walk
+  // most of its frames. Note what this angle is being used for: not as a
+  // measurement — stageTable replaces every entry angle with the flight's
+  // median anyway — but as the template pose that most resembles what the clip
+  // shows on THAT frame, which is what makes the search for the centre
+  // well posed.
+  const degs = [conf[0].rot]
+  const expect = sp.n * (size / L) ** 2
+
+  /** Place the body on one frame, given where it is expected. */
+  const place = (t, qx, qy, R, degs) => {
+    const cr = cropAt(oneFrame(t), pl, qx, qy, L)
+    if (cr.n < 20) return { fail: `nothing above the plate near the prediction at ${t.toFixed(2)}` }
+    keepCentral(cr.tm)
+    let m = 0
+    for (let p = 0; p < K * K; p++) if (cr.tm[p] > 0.5) m++
+    if (m < Math.max(12, 0.06 * expect))
+      return {
+        fail: `only ${m} cells of object at ${t.toFixed(2)} against a whole body of ${Math.round(expect)}`,
+      }
+    // POSITION ONLY. Scale and angle are held, and that is a decision rather
+    // than a shortcut: the entry lasts a third of a second, over which the
+    // clip's own size column moves a couple of per cent (the ball reads 341,
+    // 328, 328, 328, 329 across it), while a scale free to move can buy overlap
+    // by GROWING and pushing the surplus out past the edge, where nothing
+    // contradicts it. Let free once and it did exactly that — the ball went
+    // 341 -> 382 on the frame it was 56 % visible, and the walk lost every
+    // frame after it. The angle is held for the reason stageTable already
+    // gives: read off a third of a silhouette it is not a measurement.
+    const r = solveCut(sp, cr, degs, size / L, R)
+    if (!r) return { fail: `no overlap at all at ${t.toFixed(2)}` }
+    if (r.sc < ENTRY_OK)
+      return { fail: `score ${r.sc.toFixed(2)} under ${ENTRY_OK} at ${t.toFixed(2)}` }
+    if (r.vis < ENTRY_VIS)
+      return { fail: `${(r.vis * 100) | 0}% of the body left in the picture at ${t.toFixed(2)}` }
+    return r
+  }
+
+  const row = r => ({
+    t: r.t,
+    x: +((r.px / FW) * 100).toFixed(2),
+    y: +((r.py / FH) * 100).toFixed(2),
+    size,
+    rot: r.rot,
+    sc: +r.sc.toFixed(3),
+    clip: r.vis < 0.995,
+    vis: +r.vis.toFixed(2),
+    entry: true,
+  })
+
+  // WHERE THE WALK STARTS is the first frame the body can be PLACED on, which
+  // is not the same as the first frame the tracker sees something. On the
+  // milkpacks the tracker opens its flight on four per cent of a carton — too
+  // little to say where the carton is — and the forward fit answered anyway,
+  // with the row that drops a half-drawn carton into the picture. So step
+  // forward from the flight's first confident key until a placement holds, and
+  // let everything before that seed be replaced by the walk's own rows.
+  let seed = null,
+    why = ''
+  for (let i = 0; i <= 18 && !seed; i++) {
+    const t = +(conf[0].t + i * step).toFixed(3)
+    // The tracker's centroid is the only guess available here and it is dragged
+    // inward by the part the frame threw away, which is what the search radius
+    // is sized to cover.
+    const g = conf.reduce((b, k) => (Math.abs(k.t - t) < Math.abs(b.t - t) ? k : b), conf[0])
+    const r = place(t, (g.x / 100) * FW, (g.y / 100) * FH, R_SEED, degs)
+    if (r.fail) why = r.fail
+    else seed = { ...r, t }
+  }
+  if (!seed) {
+    console.error(`!! ${a.id}: the entry walk found no frame it could place the body on — ${why}`)
+    return ks
+  }
+
+  const solved = [row(seed)]
+  let px = seed.px,
+    py = seed.py,
+    vis = seed.vis
+  // Seed the backward step with the flight's own next leg. It is the slow end
+  // of the entry and so an underestimate, but it is only the search's starting
+  // guess: after two solved frames the prediction runs on measured speed.
+  const B = conf.find(k => k.t > seed.t + 0.01) ?? conf[conf.length - 1]
+  const vx0 = ((B.x / 100) * FW - px) / (B.t - seed.t),
+    vy0 = ((B.y / 100) * FH - py) / (B.t - seed.t)
+  let vx = vx0,
+    vy = vy0
+
+  why = 'the walk ran out of frames'
+  for (let i = 1; i <= 40; i++) {
+    const t = +(seed.t - i * step).toFixed(3)
+    if (t < 0) break
+    const r = place(t, px - vx * step, py - vy * step, R_WALK, degs)
+    if (r.fail) {
+      why = r.fail
+      break
+    }
+    // TWO CONTINUITY RULES, because a cut silhouette gives the search room to
+    // wander along the edge and a wandering answer is worse than none.
+    // Going BACK through an entry the object can only become less visible, and
+    // it cannot jump: coin-2 without these produced a frame that sent the whole
+    // entry off sideways, out of the picture on the wrong side.
+    if (r.vis > vis + 0.08) {
+      why = `going back it got MORE visible at ${t.toFixed(2)} (${(r.vis * 100) | 0}% after ${(vis * 100) | 0}%), which an entry cannot do`
+      break
+    }
+    const jump = Math.hypot(px - r.px, py - r.py)
+    if (jump > Math.max(0.35 * size, 3.5 * Math.hypot(vx, vy) * step)) {
+      why = `it moved ${Math.round(jump)} px in one frame at ${t.toFixed(2)}, which the flight's own speed does not allow`
+      break
+    }
+    vx = (px - r.px) / step
+    vy = (py - r.py) / step
+    px = r.px
+    py = r.py
+    vis = r.vis
+    solved.push(row({ ...r, t }))
+    if (r.vis < ENTRY_VIS + 0.03) {
+      why = `down to ${(r.vis * 100) | 0}% of the body at ${t.toFixed(2)}`
+      break
+    }
+  }
+
+  const last = solved[solved.length - 1]
+
+  // AN ENTRY THE CLIP NEVER SHOWED IS NOT AN ENTRY.
+  //
+  // If the earliest frame the walk could measure still holds more than half the
+  // body, the clip did not show this object crossing anything: either it is
+  // switched on with the slide cut, or the measurement lost it. Three flights
+  // end up here — soccer-1, spark-1, spark-2 — and all three fail on the same
+  // trap: a slide cut repaints the whole picture, so for a few frames after one
+  // EVERYTHING stands above the background plate, and a template dropped on that
+  // noise scores as well as it does on an object. soccer-1's first key is such a
+  // frame; opened at 57.10 and 57.13 the clip's top left corner is empty room,
+  // and the ball's first arc does not cross the edge until 57.17.
+  //
+  // Extrapolating a crossing out of that answer is worse than not trying: the
+  // speed available is the flight's settled leg, and carried far enough back to
+  // clear the edge it made the football creep in over a second and a third.
+  // These flights keep what they had, which is the row stageTable synthesises.
+  if (last.vis > 0.5) {
+    console.error(
+      `!! ${a.id}: the clip never shows it crossing an edge — its earliest measurable frame already holds ${(last.vis * 100) | 0}% of the body, so the entry is left to the old synthesised row`,
+    )
+    return ks
+  }
+
+  // THE ENTRY IS FLOWN DOWN A STRAIGHT LINE, fitted through the measured frames
+  // and weighted by how much of the body each of them shows.
+  //
+  // Not a tidying-up: perpendicular to the edge a cut body's centre is well
+  // determined — the visible cap's depth says where it is — but ALONG the edge
+  // it is not, and the raw frames wander. basketball-1 measures 91.0, 85.3,
+  // 85.2, 83.5, 79.1, 77.7 across x where nothing in the clip moves in steps
+  // like that: 40 px of jitter over a quarter of a second, which is a shudder
+  // on the way in. Down the same eight frames the object's own speed shows no
+  // trend to lose — y steps 1.5, 2.5, 1.5, 0.6, 1.8 per cent, all noise around
+  // 1.5 — because the braking happens AFTER the entry, out where the forward
+  // fit measures it properly. So a line over this window describes the clip and
+  // drops the jitter, and the row that carries the body clear of the edge is
+  // the same line extended rather than a separate guess.
+  //
+  // Under three measured frames there is no line to fit: the rows stand as
+  // measured and the flight's own first leg gives the direction out. It is the
+  // slow end of the entry, but a body already most of the way out has only its
+  // own last sliver left to travel.
+  if (solved.length >= 3) {
+    const t0 = solved[0].t
+    const line = get => {
+      let sw = 0,
+        st = 0,
+        sv = 0
+      for (const q of solved) {
+        const w = Math.max(q.vis, 0.05)
+        sw += w
+        st += w * (q.t - t0)
+        sv += w * get(q)
+      }
+      const mt = st / sw,
+        mv = sv / sw
+      let num = 0,
+        den = 0
+      for (const q of solved) {
+        const w = Math.max(q.vis, 0.05),
+          d = q.t - t0 - mt
+        num += w * d * (get(q) - mv)
+        den += w * d * d
+      }
+      const b = den ? num / den : 0
+      return t => mv + b * (t - t0 - mt)
+    }
+    const fx = line(q => (q.x / 100) * FW),
+      fy = line(q => (q.y / 100) * FH)
+    for (const q of solved) {
+      q.x = +((fx(q.t) / FW) * 100).toFixed(2)
+      q.y = +((fy(q.t) / FH) * 100).toFixed(2)
+    }
+    vx = (fx(t0 + 1) - fx(t0)) / 1
+    vy = (fy(t0 + 1) - fy(t0)) / 1
+  } else {
+    vx = vx0
+    vy = vy0
+  }
+  px = (last.x / 100) * FW
+  py = (last.y / 100) * FH
+  let out = null
+  for (let k = 1; k <= 45 && !out; k++) {
+    const dt = k * step
+    const ox = px - vx * dt,
+      oy = py - vy * dt
+    if (!touchesFrame(ox, oy, size))
+      out = {
+        t: +(last.t - dt).toFixed(3),
+        x: +((ox / FW) * 100).toFixed(2),
+        y: +((oy / FH) * 100).toFixed(2),
+        size,
+        rot: last.rot,
+        sc: 1,
+        clip: false,
+        vis: 0,
+        entry: true,
+      }
+  }
+  if (out && last.t - out.t > 0.4)
+    console.error(
+      `!! ${a.id}: the clear-of-edge row is ${Math.round((last.t - out.t) * 30)} frames beyond the last frame the clip gave a measurement on — that stretch is extrapolation, not measurement`,
+    )
+  if (!out)
+    console.error(
+      `!! ${a.id}: the measured entry speed never carries it clear of the edge — left with ${(last.vis * 100) | 0}% of the body in the picture`,
+    )
+  const head = solved.slice().reverse()
+  if (out) head.unshift(out)
+  console.error(
+    `   ${a.id}: entry ${head.length} rows over ${head[0].t.toFixed(2)}..${seed.t.toFixed(2)}, ` +
+      `earliest measured frame shows ${(last.vis * 100) | 0}% of the body` +
+      (out ? `, clear of the edge at ${out.t.toFixed(2)}` : '') +
+      ` — stopped because ${why}`,
+  )
+  if (only) for (const q of head) console.error(`      ${JSON.stringify(q)}`)
+  // The walk re-answered every frame up to and including the seed, so the
+  // forward pass keeps only what comes after it — dropping the keys the fit
+  // produced by shrinking or swelling the template onto a cut silhouette.
+  return [...head, ...ks.filter(k => k.t > seed.t + 1e-6)]
 }
 
 // -------------------------------------------------------------- 5. table
@@ -926,11 +1355,29 @@ function dp(ks, get, tol) {
   return keep
 }
 
+/** The old entry row, kept for the flights the clip never shows crossing. */
+function synthEntry(ks, cut) {
+  const a = ks[0],
+    b = ks[1]
+  const t0 = Math.min(a.t - 0.1, cut ?? a.t),
+    dt = a.t - t0
+  return {
+    t: t0,
+    x: a.x - ((b.x - a.x) / (b.t - a.t)) * dt,
+    y: a.y - ((b.y - a.y) / (b.t - a.t)) * dt,
+    size: a.size,
+    rot: a.rot,
+  }
+}
+
 function stageTable(fit, covers) {
   const CUT = Object.fromEntries(CUTS)
   const out = []
   for (const f of fit) {
-    const good = f.ks.filter(k => k.sc >= 0.22)
+    // Entry keys carry their own bar (ENTRY_OK, on the cells inside the
+    // picture) and are already past it; judging them again by a score computed
+    // over the whole template would throw away exactly the frames measured here.
+    const good = f.ks.filter(k => k.entry || k.sc >= 0.22)
     if (good.length < 4) {
       console.error(`!! ${f.id}: only ${good.length} usable keys`)
       continue
@@ -1037,19 +1484,14 @@ function stageTable(fit, covers) {
       })
     }
 
-    // Entry: the object slides in from beyond a frame edge, where the fit has
-    // nothing to measure. Extrapolate the first measured leg back to the cut.
-    const a = ks[0],
-      b = ks[1]
-    const t0 = Math.min(a.t - 0.1, CUT[f.frame] ?? a.t),
-      dt = a.t - t0
-    const entry = {
-      t: t0,
-      x: a.x - ((b.x - a.x) / (b.t - a.t)) * dt,
-      y: a.y - ((b.y - a.y) / (b.t - a.t)) * dt,
-      size: a.size,
-      rot: a.rot,
-    }
+    // Entry: measured in `withEntry`, off the frames where the picture's edge
+    // cuts the object, and nothing is synthesised for the twenty four flights
+    // that have it. The three the clip never shows crossing keep the row this
+    // block has always made — the first measured leg run 0.1 s backwards, no
+    // further than the slide's own cut. It is a poor entry, and it is what
+    // shipped; what it is NOT is an invention carried over a second, which is
+    // where extrapolating a measurement that does not exist ends up.
+    const ks2 = ks[0].entry ? ks : [synthEntry(ks, CUT[f.frame]), ...ks]
     const cr = crossing(covers[f.id] ?? [])
     if (!cr) console.error(`!! ${f.id}: no occlusion curve, zFlip left at the flight's end`)
     out.push({
@@ -1057,7 +1499,7 @@ function stageTable(fit, covers) {
       asset: f.asset,
       frame: f.frame,
       zFlip: cr ? cr.zIn : +f.t1.toFixed(2),
-      keys: [entry, ...ks].map(k => [
+      keys: ks2.map(k => [
         +k.t.toFixed(2),
         +k.x.toFixed(1),
         +k.y.toFixed(1),
@@ -1170,11 +1612,7 @@ function writeReference(flights, occl, covers) {
       const fs = []
       for (let t = Math.max(0, f.t0 - 9); t <= Math.min(94, f.t1 + 9); t += 0.7)
         fs.push(oneFrame(t))
-      plate = Buffer.alloc(FW * FH * 3)
-      for (let i = 0; i < FW * FH * 3; i++) {
-        const c = fs.map(x => x[i]).sort((p, q) => p - q)
-        plate[i] = c[c.length >> 1]
-      }
+      plate = medianPlate(fs)
     }
     const samples = []
     for (let i = 0; i < N; i++) {
@@ -1208,7 +1646,7 @@ function writeReference(flights, occl, covers) {
       {
         source: '_refs/DP-15152 - clean bg.mp4 + preview.mp4, measured by scripts/fly-measure.mjs',
         units:
-          '[t seconds, cx % of stage, cy % of stage, sqrt(area) in design px, principal angle deg, elongation, fraction the journal covers] — geometry on a tight mask (colour distance 70), which hugs the object body rather than its magenta halo; the occlusion fraction still comes from the loose mask the tracker uses',
+          "[t seconds, cx % of stage, cy % of stage, sqrt(area) in design px, principal angle deg, elongation, fraction the journal covers] — size and elongation off the tracker's own blob, the angle off a tight mask (colour distance 70) that hugs the lit body; the occlusion fraction comes from the blob too",
         flights: out,
       },
       null,
@@ -1284,5 +1722,8 @@ if (stopAfter === 'merge') process.exit(0)
 const covers = coverCurves(flights, occl)
 const fit = cache('fit', () => stageFit(flights))
 if (stopAfter === 'fit') process.exit(0)
-writeReference(flights, occl, covers)
+// `--stage table` prints the rows and skips the reference, whose own plates
+// cost as much again as the whole fit. For a trial on one flight that is the
+// difference between minutes and an afternoon; a real run leaves it out.
+if (stopAfter !== 'table') writeReference(flights, occl, covers)
 printTable(stageTable(fit, covers))
