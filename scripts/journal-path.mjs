@@ -94,10 +94,34 @@ const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:
  * windows differ on size by 4 %, which is V-24 and not something a better run
  * fixes.
  *
+ * THE SIZE OF FRAMES 9, 19, 20 AND 21 IS MEASURED SINCE 2026-09-07 (session Q),
+ * and what had blocked it was neither the instrument nor the yaw. `--anchor`
+ * reads a slide at every second, and on these four the readings fall into TWO
+ * groups: one whose `rot` lands on the independently measured typographic roll
+ * and one that misses it by three degrees. Those are two local maxima of the
+ * same search, and only one of them can be the journal. Dropping the readings
+ * whose `rot` misses the type by more than ONE DEGREE leaves the two windows
+ * agreeing on size to 0.2-1.5 % on all four, where before they stood 4-6 %
+ * apart. See the note on the rule below.
+ *
+ * THE ONE-DEGREE RULE IS THE SUM OF THREE MEASURED ERRORS, not a tuned knob.
+ * The typographic roll is proven to 0.34 deg (`journal:selftest`, section 3);
+ * the registration reports `rot` on a 0.25 deg grid; the motion drift subtracted
+ * from each reading carries a quarter degree of its own. 0.34 + 0.25 + 0.25 =
+ * 0.84, rounded up to 1.0. Widening it to 1.5 lets the three-degree group back
+ * in on frame 20 and pushes the two windows from 0.2 % apart to 2.6 %; narrowing
+ * it to 0.5 leaves frame 21 with too few readings to take a median of.
+ *
+ * AND THE YAW IS NOT WHAT THAT RESIDUAL WAS. A constant yaw makes the clip's
+ * page narrower on EVERY slide, so it can only ever read as "the clip is
+ * smaller". Measured, the sign alternates: the clip is 4.5 % smaller than the
+ * storyboard on frame 9 and 2.0 % smaller on 21, but 1.1 % LARGER on 19 and
+ * 4.0 % larger on 20. That is an unmeasured column, which these four rows now
+ * are, and not a projection our transform cannot express. V-24 may still be
+ * true about the clip; it was not what these numbers were.
+ *
  * WHAT NO INSTRUMENT HERE CAN STILL SEE: a similarity transform has no way to
- * express the clip's yaw (V-24, about 8 degrees on a settled slide) or a
- * keystone, so a residual of a few per cent in SIZE is expected to survive this
- * and does.
+ * express a yaw or a keystone, so some residual in SIZE can still survive this.
  */
 /**
  * `rot` NO LONGER COMES FROM THE STORYBOARD. It is measured off the clip, and
@@ -163,7 +187,7 @@ const ANCHOR = {
   // does not. `rot` is the clip's on every row and has been since 05.09.
   7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 },      // storyboard — the handover
   8: { rot: -10.94, scale: 0.6871, cx: 53.0, cy: 53.24 },   // clip: position and size
-  9: { rot: 13.96, scale: 0.682, cx: 53.01, cy: 49.02 },    // clip: position only
+  9: { rot: 13.96, scale: 0.6505, cx: 53.01, cy: 49.02 },   // clip: position and size
   10: { rot: -7.59, scale: 0.6673, cx: 48.1, cy: 50.17 },   // clip: position and size
   11: { rot: -0.25, scale: 0.6206, cx: 60.89, cy: 52.27 },  // clip: position and size
   12: { rot: -4.72, scale: 0.6551, cx: 58.11, cy: 48.51 },  // clip: position and size
@@ -173,9 +197,9 @@ const ANCHOR = {
   16: { rot: -21.89, scale: 0.6016, cx: 54.96, cy: 51.61 }, // clip: position and size
   17: { rot: 15.07, scale: 0.6561, cx: 59.68, cy: 49.98 },  // clip: position and size
   18: { rot: -11.58, scale: 0.6602, cx: 54.36, cy: 59.02 }, // clip: position and size
-  19: { rot: 8.36, scale: 0.681, cx: 46.08, cy: 54.33 },    // clip: position only
-  20: { rot: -24.28, scale: 0.681, cx: 52.84, cy: 47.0 },   // clip: position only
-  21: { rot: 11.03, scale: 0.681, cx: 51.41, cy: 52.21 },   // clip: position only
+  19: { rot: 8.36, scale: 0.6885, cx: 46.08, cy: 54.33 },   // clip: position and size
+  20: { rot: -24.28, scale: 0.7083, cx: 52.84, cy: 47.0 },  // clip: position and size
+  21: { rot: 11.03, scale: 0.6677, cx: 51.41, cy: 52.21 },  // clip: position and size
   22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 },    // storyboard — the two windows disagreed
   23: { rot: 13.21, scale: 0.681, cx: 52.0, cy: 50.2 },     // storyboard — the outro, out of scope
 }

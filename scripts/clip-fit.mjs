@@ -490,8 +490,28 @@ function dumpMask(rgb, mask, file) {
     '-frames:v', '1', file], b)
 }
 
+/**
+ * AN EXTRA YAW ON OUR JOURNAL, FOR LOOKING AT V-24 AND NOTHING ELSE.
+ *
+ *   node scripts/clip-fit.mjs --t 18.07 --yaw 8
+ *
+ * `rotationY` on a settled slide is zero in the product: the page turn owns it
+ * and leaves it at zero. V-24 says the clip's journal is not face-on there but
+ * turned about eight degrees about its vertical. A similarity transform cannot
+ * express that, so no fit in this file can measure it — but a PICTURE can show
+ * it, and this flag makes the picture: park, then turn our journal by hand, then
+ * blend against the clip exactly as usual. Absent, nothing here runs and every
+ * other mode behaves as it always did.
+ */
+const YAW = Number(flag('--yaw') || 0)
+
 async function ourFrame(t, file) {
   await cdp.eval(PARK(t))
+  if (YAW) await cdp.eval(`(() => {
+    const g = (window.__story && window.__story.gsap) || window.gsap
+    g.set(document.querySelector('.journal-box'), { rotationY: ${YAW} })
+    return true
+  })()`)
   await sleep(320)
   const g = await cdp.eval(QUAD)
   const art = await cdp.eval(ART)
