@@ -99,15 +99,36 @@
       let story = null
       let playing = false
 
-      /** OUR PRINT HAS TO BE THE CLIP'S PRINT, or every page carrying a number
-       *  reads as two numbers stacked and the blend stops being legible on the
-       *  half of the pages that matter most. This page's own query string is
-       *  forwarded to the player, so `review.html?days=257&...` prints the clip's
-       *  own demo values in our pages; `lang` stays owned by the select below.
-       *  With no query string the player falls back to SAMPLE, which is
-       *  deliberately NOT the clip's print — see FIT_QUERY in clip-fit.mjs. */
+      /** THE CLIP'S OWN PRINT, read off the preview at 19.5 / 24.5 / 28.5 / 32.5 /
+       *  37.0 / 42.0 / 47.0 / 51.5 / 55.5 / 59.5 s. Same table as FIT_QUERY in
+       *  clip-fit.mjs, and it exists here for the same reason: the demo run in
+       *  the reference printed 257 everywhere and 120 seasonal points, while the
+       *  player's own SAMPLE carries deliberately wide values (2257 days,
+       *  1200000 points). Blend the two and every page with a number reads as
+       *  two different numbers stacked — which is half the pages, and the half
+       *  worth looking at. THIS PAGE IS A COMPARISON, so here the clip's print
+       *  is the default; in the player itself SAMPLE stays the default, because
+       *  a gate that rewrites the page it measures is a gate that can agree with
+       *  itself. Anything in this page's own query string overrides a row. */
+      const CLIP_PRINT = {
+        name: 'Mariannaa!',
+        days: '257',
+        points: '120',
+        level: 'SILVER',
+        total_wins: '257',
+        biggest_win: '257',
+        biggest_win_game: 'Dragon Coins Jackpot',
+        top_multiplier: '257',
+        top_multiplier_game: 'Tiger Jackpots',
+        favorite_game_name: 'Tiger Jackpots',
+        bonuses: '257',
+        sports_wins: '257',
+        sports_multiplier: '257',
+      }
+
       function playerUrl(lang) {
-        const q = new URLSearchParams(location.search)
+        const q = new URLSearchParams(CLIP_PRINT)
+        for (const [k, v] of new URLSearchParams(location.search)) q.set(k, v)
         q.set('lang', lang)
         return `./index.html?${q}`
       }
@@ -141,14 +162,26 @@
         tRange.value = String(t)
         clip.currentTime = t
         if (story) {
-          story.seek(t)
-          // seek() hands control back to a PLAYING video; when we are parked we
-          // want it parked too, on the exact second asked for.
-          if (!playing) {
+          if (playing) {
+            story.seek(t)
+          } else {
+            // PARKED: DO NOT GO THROUGH THE APP'S SEEK.
+            // `__story.seek` is `seekBoth(time, !isPaused)`, so on a player that
+            // is playing it RESUMES, and it resumes asynchronously — on the
+            // video's own `seeked`, up to SEEK_FALLBACK_MS later. Pausing right
+            // after it is a race this page loses: measured 2026-09-07, parking
+            // on 25.0 left the video at 27.803 and our panel showed `vip_status`
+            // against the clip's `seasonal_power`. A whole page out, and it
+            // reads as a timing defect that does not exist.
+            // Parking by hand is exact, and the app's sync loop keeps out of the
+            // way on its own — `syncToVideo` returns early while the video is
+            // paused. `applySegment` last, for the reason its own note in
+            // installStoryDebugHook.js gives: nothing else puts the PAGE back.
             story.video.pause()
             story.tl.pause()
             story.video.currentTime = t
             story.tl.seek(t, false)
+            story.applySegment?.(t)
           }
         }
         read.textContent =
