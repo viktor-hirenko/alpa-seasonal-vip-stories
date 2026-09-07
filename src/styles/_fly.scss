@@ -143,8 +143,61 @@
   // the element's own space. At 3.9 % of the box that is a pixel or two on a
   // coin, and keeping it in screen space would cost a counter-rotation on a
   // property that is not composited.
+
+  // THE ROOM'S LIGHT ON THE METAL, MEASURED (V-05, V-06).
+  // The sprites are the icons as Figma renders them: a studio shot, on nothing.
+  // In the video the same objects stand in a magenta room, and their metal
+  // comes back a different colour for it -- what the registry called "our thick
+  // gold rim instead of a thin pink one" on the heart and "our gold is more
+  // saturated" on the report. It is not two defects and it is not the art:
+  // every object with a rim is off, and off in the same direction.
+  //
+  // MEASURED 2026-09-07 ON THE SHIPPED RENDER, not on the sprite file. Eight
+  // flights, four moments each, off `filmstrip.mjs --panel 520` so both panels
+  // are 1:1 crops of the same window of the same frame: our build over
+  // `ref-clean.mp4` on the left, `preview.mp4` on the right. The metal is
+  // "bright enough not to be the room" (luma > 140), the same rule on both
+  // sides, so the rule cannot presuppose the colour being asked about.
+  //
+  //   flight      ours metal       clip metal       blue short of, over luma
+  //   chip-2      222 164  73      213 166 124        0.301
+  //   coin-3      218 162  69      202 164 137        0.399
+  //   cross-1     217 166  97      218 168 145        0.269
+  //   heart-1     214 160  86      212 161 146        0.338
+  //   report-1    226 164  63      199 159 122        0.346
+  //   soccer-1    225 173  96      219 182 143        0.258
+  //   spark-3     206 163 126      223 180 168        0.250
+  //   calendar-1  193 164 114      200 174 140        0.163
+  //
+  // RED AND GREEN ARE ALREADY RIGHT -- 0.94 to 1.03 of the reference on every
+  // one of them. Only BLUE is short, and by an amount that follows the art's
+  // own brightness, so this is one matrix and not a colour per object: add
+  // 0.28 x luma to blue, leave red, green and alpha alone. 0.28 is the MEDIAN
+  // of the eight numbers above, not their mean -- `calendar` is the one object
+  // whose gold the reference keeps yellow (it flies at the very bottom of the
+  // frame, out of the side wall's light) and a mean would let it pull the other
+  // seven. After the matrix the metal is within 0.02-0.15 of the reference on
+  // seven flights and 0.10 PAST it on `calendar`; that overshoot is deliberate
+  // and is the price of one number.
+  //
+  // `color-interpolation-filters="sRGB"` is not optional: the SVG default is
+  // linearRGB, and the numbers above were read off sRGB pixels.
+  // Alpha is untouched, so the silhouette `fly:check` measures is untouched.
+  //
+  // The defs live in FlyLayer.vue rather than here, because a `url()` filter
+  // that resolves to nothing DROPS THE ELEMENT rather than falling back.
   --fo-glow: calc(var(--fo-base, 400) * var(--fo-ik) * var(--u));
-  filter: drop-shadow(
-    0 calc(var(--fo-glow) * 0.0386) calc(var(--fo-glow) * 0.0573) rgba(255, 0, 212, 0.27)
-  );
+  filter: url(#fly-room-light)
+    drop-shadow(
+      0 calc(var(--fo-glow) * 0.0386) calc(var(--fo-glow) * 0.0573) rgba(255, 0, 212, 0.27)
+    );
+}
+
+// The filter defs carried by FlyLayer.vue. Zero-sized and out of flow: it is a
+// definition, not a picture, and it must not join the 3D scene it sits in.
+.fly-layer__defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }

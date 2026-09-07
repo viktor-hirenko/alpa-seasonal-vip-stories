@@ -1,5 +1,24 @@
 <template>
   <div class="fly-layer">
+    <!-- THE ROOM'S LIGHT ON THE METAL. V-05 / V-06, measured 2026-09-07.
+         Why it lives here rather than in a stylesheet: `filter: url(#id)` is a
+         reference into the DOCUMENT, and a filter reference that resolves to
+         nothing does not degrade to `none` — the element is dropped. Keeping
+         the defs inside the layer that uses them means the two cannot be
+         mounted apart, in the player or in the lab.
+         The matrix itself is explained in _fly.scss, next to the property. -->
+    <svg class="fly-layer__defs" aria-hidden="true" focusable="false">
+      <filter id="fly-room-light">
+        <feColorMatrix
+          type="matrix"
+          color-interpolation-filters="sRGB"
+          values="1      0      0      0 0
+                  0      1      0      0 0
+                  0.0595 0.2003 1.0202 0 0
+                  0      0      0      1 0"
+        />
+      </filter>
+    </svg>
     <FlyObject v-for="rec in flights" :key="rec.id" :rec="rec" />
   </div>
 </template>
