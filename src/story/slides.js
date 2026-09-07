@@ -119,9 +119,26 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  *     through TWO windows of different size and content — the whole front face
  *     and an automatic window on the page's ART — and written only where the two
  *     agreed within 20 px. They agreed on thirteen of sixteen, most of them to
- *     under ten pixels and four of them to the pixel. Frames 9 and 22 kept the
- *     storyboard because the two windows disagreed by 76 px, frame 7 because its
- *     first row is `swingOpen`'s handover, and frame 23 because it is the outro.
+ *     under ten pixels and four of them to the pixel. Frame 7 keeps the
+ *     storyboard because its first row is `swingOpen`'s handover, and frame 23
+ *     because it is the outro.
+ *
+ *     FRAME 9 IS MEASURED TOO SINCE 2026-09-07, and what had been blocking it
+ *     was our own print. Its digit tiles read 2257 — four tiles 350 design px
+ *     tall in the middle of the page — where the clip's run printed 257 and
+ *     three, and the tiles are the strongest gradient feature that page has, so
+ *     neither window could lock. Print the clip's own numbers and the two
+ *     windows agree to 7 px in cx and to the pixel in cy. The anchor is also no
+ *     longer read from one second: `clip-fit --anchor` reads it at every second
+ *     of the slide and carries each back through the measured motion, the way
+ *     the `rot` column has always been read.
+ *
+ *     FRAME 22 STILL KEEPS THE STORYBOARD, and it is not going to stop. The
+ *     clip's `gift` page is a different edition of the page ENTIRELY — "ENJOY A
+ *     SPECIAL REWARD FOR YOUR NEXT CHAPTER." over a gold heart tag against our
+ *     "YOU TURNED THIS VIP JOURNEY..." over the helmet — so there is almost no
+ *     shared content to register. `clip:selftest` says the same thing from the
+ *     other side: slide 22 is the one slide where it reports no confident peak.
  *
  *   - `scale`'s anchor is measured on eleven of those fourteen. On frames 19, 20
  *     and 21 the two windows disagreed on SIZE by 3-6 % while agreeing on
@@ -197,15 +214,15 @@ export const JOURNAL_PATH = [
   [17.04, -16.44, 0.6576, 48.09, 49.75],
   [17.08, -16.44, 0.6576, 48.09, 49.75],
   // frame 9 days_in_spotlight
-  [18.07, 13.96, 0.6820, 49.40, 54.90],
-  [18.57, 12.71, 0.6791, 53.29, 54.48],
-  [19.07, 11.21, 0.6618, 53.10, 54.80],
-  [19.57, 9.71, 0.6470, 50.05, 56.41],
-  [20.07, 8.71, 0.6470, 45.14, 58.18],
-  [20.57, 8.46, 0.6636, 41.53, 58.75],
-  [21.07, 8.71, 0.6826, 40.79, 58.08],
-  [21.57, 9.21, 0.6870, 41.81, 57.56],
-  [22.05, 9.21, 0.6870, 41.81, 57.56],
+  [18.07, 13.96, 0.6820, 53.01, 49.02],
+  [18.57, 12.71, 0.6791, 56.90, 48.60],
+  [19.07, 11.21, 0.6618, 56.71, 48.92],
+  [19.57, 9.71, 0.6470, 53.66, 50.53],
+  [20.07, 8.71, 0.6470, 48.75, 52.30],
+  [20.57, 8.46, 0.6636, 45.14, 52.87],
+  [21.07, 8.71, 0.6826, 44.40, 52.20],
+  [21.57, 9.21, 0.6870, 45.42, 51.68],
+  [22.05, 9.21, 0.6870, 45.42, 51.68],
   // frame 10 seasonal_power
   [23.04, -7.59, 0.6673, 48.10, 50.17],
   [23.54, -7.34, 0.6764, 45.97, 49.08],

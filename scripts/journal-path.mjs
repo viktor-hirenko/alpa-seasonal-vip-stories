@@ -71,11 +71,28 @@ const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:
  * WHAT IS STILL THE STORYBOARD'S, and why:
  *   - frame 7, because its first row is where `swingOpen` hands the journal over
  *     and the two cannot move apart without tearing the handover at 6.0;
- *   - frames 9 and 22, because the two windows disagreed by 76 design px — an
- *     answer that depends on the window is not an answer;
+ *   - frame 22, because the clip's `gift` page is a different EDITION of the
+ *     page — "ENJOY A SPECIAL REWARD FOR YOUR NEXT CHAPTER." over a gold heart
+ *     tag against our "YOU TURNED THIS VIP JOURNEY..." over the helmet. There is
+ *     almost no shared content to register, the two windows sit 26/47 px apart,
+ *     and `clip:selftest` reports no confident peak on that slide and no other.
+ *     This one is not waiting for a better run; it needs a different instrument;
  *   - frame 23, the outro, which is out of this session's scope;
- *   - the SIZE of frames 19, 20 and 21, where the two windows agreed on position
- *     to 3-18 px but differed on size by 3-6 %.
+ *   - the SIZE of frames 9, 19, 20 and 21, where the two windows agreed on
+ *     position to 0-18 px but differed on size by 3-6 %.
+ *
+ * FRAME 9 IS MEASURED SINCE 2026-09-07 (session O), and what had blocked it was
+ * our own print rather than the instrument. `days` = 2257 in SAMPLE draws FOUR
+ * digit tiles 350 design px tall in the middle of that page where the clip's run
+ * printed 257 and three, and those tiles are the strongest gradient feature the
+ * page has: with our print neither window found a peak that beat its own
+ * neighbourhood and they answered 77 px apart; with the clip's print they agree
+ * to 7 px in cx and to the pixel in cy. The anchor is also no longer read from
+ * one second — see `clip-fit --anchor`, which reads every second of the slide
+ * and carries each back through the measured motion, exactly as the `rot`
+ * column has been read since 05.09. Its `scale` stays the storyboard's: the two
+ * windows differ on size by 4 %, which is V-24 and not something a better run
+ * fixes.
  *
  * WHAT NO INSTRUMENT HERE CAN STILL SEE: a similarity transform has no way to
  * express the clip's yaw (V-24, about 8 degrees on a settled slide) or a
@@ -146,7 +163,7 @@ const ANCHOR = {
   // does not. `rot` is the clip's on every row and has been since 05.09.
   7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 },      // storyboard — the handover
   8: { rot: -10.94, scale: 0.6871, cx: 53.0, cy: 53.24 },   // clip: position and size
-  9: { rot: 13.96, scale: 0.682, cx: 49.4, cy: 54.9 },      // storyboard — the two windows disagreed
+  9: { rot: 13.96, scale: 0.682, cx: 53.01, cy: 49.02 },    // clip: position only
   10: { rot: -7.59, scale: 0.6673, cx: 48.1, cy: 50.17 },   // clip: position and size
   11: { rot: -0.25, scale: 0.6206, cx: 60.89, cy: 52.27 },  // clip: position and size
   12: { rot: -4.72, scale: 0.6551, cx: 58.11, cy: 48.51 },  // clip: position and size

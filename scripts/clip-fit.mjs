@@ -443,7 +443,8 @@ await cdp.send('Emulation.setDeviceMetricsOverride', { width: 540, height: 960, 
 // the tiles are one of the strongest gradient features on the page. Pass the
 // clip's own values with FIT_QUERY so the template and the reference carry the
 // same text. It changes what is COMPARED, never how.
-const QUERY = process.env.FIT_QUERY ?? (argv.includes('--selftest') ? CLIP_QUERY : '')
+const QUERY = process.env.FIT_QUERY ??
+  (argv.includes('--selftest') || argv.includes('--anchor') ? CLIP_QUERY : '')
 await cdp.send('Page.navigate', { url: `${ORIGIN}/index.html${QUERY}` })
 await sleep(7000)
 
@@ -907,6 +908,131 @@ if (argv.includes('--trace')) {
   }
   writeFileSync(`${OUT}/trace.json`, JSON.stringify({ ref: p, tRef, rows: out }, null, 1))
   console.log(`\n-> ${OUT}/trace.json`)
+  process.exit(0)
+}
+
+// ---------------------------------------------------------------- --anchor
+//
+// THE SLIDE'S ANCHOR POSE, READ AT SEVERAL SECONDS AND CARRIED BACK TO ONE.
+//
+//   node scripts/clip-fit.mjs --anchor 9 22 [--n 5] [--face]
+//
+// WHY THIS EXISTS. `journal-path.mjs` builds every row as ANCHOR + MOTION, and
+// a slide's motion is measured relative to its FIRST measurable second. So the
+// anchor is the pose at that one second — and until now it was read there, from
+// ONE pair of pictures. That is cheap and brittle in exactly the way session J
+// discovered: on 18.07 and 79.04 the registration found no peak that beat its
+// own neighbourhood, the two windows answered 76 design px apart, and session J
+// rightly refused to write a number whose value depended on the window.
+//
+// A second is not the only place the anchor can be read from. `--motion`
+// already knows, from clip against clip, how far the journal moved between the
+// anchor second and every other second of the slide, at scores of 0.52-0.75
+// against a rival of 0.25-0.31. So a reading at ANY second of the slide can be
+// carried back to the anchor by undoing that drift, and the anchor is then the
+// median of eight readings rather than the value of one. Their SPREAD is the
+// honest confidence: eight independent frames, corrected by an independently
+// measured motion, either agree or they do not.
+//
+// This is not a new idea in this repo — it is exactly how the `rot` column's
+// anchor is read (`journal-measure --roll --anchor`, five seconds, carried back
+// by the same motion, median taken). This applies it to the other three.
+//
+// THE PAGE PRINTS THE CLIP'S OWN NUMBERS HERE, unlike a plain measurement. On
+// slide 9 the page's digit tiles are the largest gradient feature it has, and
+// our demo value is 2257 where the clip's run showed 257 — four tiles against
+// three, in the middle of the page. Measured both ways on 18.07: with our own
+// print the two windows answer 77 px apart and neither locks; with the clip's
+// print they answer 2/9 px apart. The pose is not a function of the print, so
+// matching it changes only WHAT IS COMPARED. FIT_QUERY still wins if set.
+if (argv.includes('--anchor')) {
+  const motion = JSON.parse(readFileSync(`${ROOT}_refs/pose/motion.json`, 'utf8')).rows
+  const byFrame = new Map()
+  for (const r of motion) {
+    if (!byFrame.has(r.frame)) byFrame.set(r.frame, [])
+    byFrame.get(r.frame).push(r)
+  }
+  const i = argv.indexOf('--anchor')
+  const want = []
+  for (let k = i + 1; k < argv.length && !argv[k].startsWith('--'); k++) want.push(Number(argv[k]))
+  const frames = (want.length ? want : [...byFrame.keys()]).filter(f => byFrame.has(f))
+  const N = Number(flag('--n') || 0)
+  const med = a => { const s = a.slice().sort((x, y) => x - y); return s[(s.length - 1) >> 1] }
+  const spread = a => Math.max(...a) - Math.min(...a)
+
+  console.log('THE ANCHOR POSE OF A SLIDE, from several seconds of it at once.')
+  console.log('Each second is registered against the clip, turned into the clip\'s pose in')
+  console.log('slides.js terms, then carried back to the slide\'s first second by undoing')
+  console.log('the drift `--motion` measured for it. The median is the anchor; the spread')
+  console.log('says whether the readings agree.\n')
+
+  const out = []
+  for (const frame of frames) {
+    const rows = byFrame.get(frame).slice().sort((a, b) => a.t - b.t)
+    const pick = N > 1
+      ? [...new Set(Array.from({ length: N }, (_, k) => rows[Math.round((k * (rows.length - 1)) / (N - 1))]))]
+      : rows
+    const s = SLIDES.find(x => x.frame === frame)
+    console.log(`frame ${frame} ${s ? s.page : ''}   anchor second ${rows[0].t.toFixed(3)}`)
+    console.log('      t     win     size      shift(px)     rot   score  rival    ' +
+      '-> anchor  scale     cx     cy     rot')
+    const got = []
+    for (const m of pick) {
+      const { rgb, geo } = await ourFrame(m.t, `${OUT}/.anchor-${frame}-${m.t}.png`)
+      if (!geo) { console.log(`  ${m.t.toFixed(2)}  (no journal on screen)`); continue }
+      const clipPng = `${OUT}/.clip-${m.t}.png`
+      ff(['-y', '-ss', String(m.t), '-i', CLIP, '-frames:v', '1', clipPng])
+      const clipRgb = rgbOfVideo(CLIP, m.t)
+      drawQuad(clipRgb, geo.quad, `${OUT}/outline-${m.t}.png`)
+      ff(['-y', '-i', `${OUT}/.anchor-${frame}-${m.t}.png`, '-i', clipPng, '-filter_complex',
+        '[0][1]blend=all_mode=average', '-update', '1', '-frames:v', '1', `${OUT}/blend-${m.t}.png`])
+      const { r, win } = fitPage(rgb, clipRgb, geo, { dSpan: Number(process.env.FIT_SPAN || 240) })
+      const c = impliedClipPose(geo.pose, r)
+      // Undo the drift: the clip's pose at t is the anchor plus this slide's
+      // motion at t, in the very units journal-path.mjs adds them in.
+      const a = {
+        t: m.t, win, score: r.v, rival: r.rival, shaky: shaky(r),
+        scale: +(c.scale / m.size).toFixed(4),
+        cx: +(c.cx - (m.dx / W) * 100).toFixed(2),
+        cy: +(c.cy - (m.dy / H) * 100).toFixed(2),
+        rot: +(c.rot - m.rot).toFixed(2),
+      }
+      got.push(a)
+      console.log('  ' + m.t.toFixed(2).padStart(6) + win.padStart(6) +
+        `${r.pct >= 0 ? '+' : ''}${r.pct.toFixed(1)} %`.padStart(9) +
+        `${r.dx >= 0 ? '+' : ''}${r.dx.toFixed(0)}/${r.dy >= 0 ? '+' : ''}${r.dy.toFixed(0)}`.padStart(11) +
+        `${r.rot >= 0 ? '+' : ''}${r.rot.toFixed(2)}`.padStart(8) +
+        r.v.toFixed(3).padStart(8) + r.rival.toFixed(3).padStart(7) + '    ->     ' +
+        a.scale.toFixed(4).padStart(7) + a.cx.toFixed(2).padStart(7) + a.cy.toFixed(2).padStart(7) +
+        a.rot.toFixed(2).padStart(7) + (a.shaky ? '   no peak' : ''))
+    }
+    if (!got.length) { console.log('  (nothing measurable)\n'); continue }
+    const firm = got.filter(g => !g.shaky)
+    const rep = firm.length >= 3 ? firm : got
+    const row = {
+      frame, page: s ? s.page : '', t0: rows[0].t, n: rep.length, firm: firm.length, of: got.length,
+      scale: +med(rep.map(g => g.scale)).toFixed(4),
+      cx: +med(rep.map(g => g.cx)).toFixed(2),
+      cy: +med(rep.map(g => g.cy)).toFixed(2),
+      rot: +med(rep.map(g => g.rot)).toFixed(2),
+      spread: {
+        scale: +(spread(rep.map(g => g.scale)) / med(rep.map(g => g.scale)) * 100).toFixed(1),
+        cx: +(spread(rep.map(g => g.cx)) / 100 * W).toFixed(0),
+        cy: +(spread(rep.map(g => g.cy)) / 100 * H).toFixed(0),
+        rot: +spread(rep.map(g => g.rot)).toFixed(2),
+      },
+      samples: got,
+    }
+    out.push(row)
+    console.log(`  MEDIAN of ${rep.length}${firm.length >= 3 ? ' firm' : ' (no firm majority — all samples used)'}` +
+      `   scale ${row.scale}  cx ${row.cx}  cy ${row.cy}  rot ${row.rot}`)
+    console.log(`  SPREAD                 size ${row.spread.scale} %  cx ${row.spread.cx} px  ` +
+      `cy ${row.spread.cy} px  rot ${row.spread.rot} deg\n`)
+  }
+  writeFileSync(`${OUT}/anchor.json`, JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows: out }, null, 1))
+  console.log(`-> ${OUT}/anchor.json`)
+  console.log('Paste into ANCHOR in scripts/journal-path.mjs, then re-run `npm run journal:path`.')
+  console.log('Do not hand-edit JOURNAL_PATH.')
   process.exit(0)
 }
 
