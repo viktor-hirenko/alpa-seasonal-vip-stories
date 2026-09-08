@@ -45,11 +45,23 @@
 .page__edge {
   position: absolute;
   left: 63.6%;
-  right: 0.57%;
   top: 0.84%;
-  bottom: 1.41%;
-  width: auto;
-  height: auto;
+  // WIDTH AND HEIGHT, NOT `right` AND `bottom` (V-64). This is an <img>, and a
+  // replaced element with `left` + `right` and `width: auto` does NOT stretch
+  // between them: the browser takes the image's OWN width and drops `right` as
+  // over-constrained. page-edge.svg is 561 x 1868 intrinsic, so the strip drew
+  // 561 CSS px wide whatever `--u` was — 71.7 % of the page at a phone size
+  // instead of the 35.8 % the mock asks for, spilling 36.9 % of the page width
+  // past `.page__body` as a brown band down the right edge and along the
+  // bottom. The owner saw it before any gate could: nothing in scripts/
+  // compares us with Figma.
+  //
+  // The percentages are the mock's own (21770:4736 -> I21770:4736;21770:2822,
+  // `inset: 0.84% 0.57% 1.41% 63.6%`), just resolved into a size:
+  //   width  = 100 - 63.6  - 0.57 = 35.83 %
+  //   height = 100 -  0.84 - 1.41 = 97.75 %
+  width: 35.83%;
+  height: 97.75%;
   pointer-events: none;
 }
 
@@ -1085,11 +1097,12 @@
 /// PageChrome falls through onto its root (Vue attribute fallthrough).
 .pf .page__edge {
   left: 32.09%;
-  right: 32.09%;
   top: 1.13%;
-  bottom: 1.13%;
-  width: auto;
-  height: auto;
+  // Sized rather than inset, for the reason spelled out on `.page__edge` (V-64).
+  //   width  = 100 - 32.09 - 32.09 = 35.82 %
+  //   height = 100 -  1.13 -  1.13 = 97.74 %
+  width: 35.82%;
+  height: 97.74%;
   transform: scaleX(-1);
 }
 
