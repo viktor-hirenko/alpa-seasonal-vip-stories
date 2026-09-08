@@ -17,6 +17,17 @@ guard against regressions and nothing more — most of them compare our data wit
 our data. The only evidence that a thing looks right is a picture you OPENED and
 DESCRIBED in words. "The numbers agree" is not a finding.
 
+**LOOK AT IT IN THE BROWSER.** Before the report, open what you built — the dev
+server AND the production build (`npm run build`, then `vite preview` on 4177;
+`public/video/story.mp4` must exist, `npm run video:prod` makes it from the
+reference clip until the final video lands) — play the story through at a
+phone viewport (430x932), step through your own part frame by frame, and
+describe in words what you saw. A report on a build nobody watched is
+invalid: "all done" without watching is exactly how "done" turns out broken
+on the site. The owner asked for this on 2026-09-08, after a session that
+reported a build it had checked only by numbers. While long runs are going,
+tell him every 10-15 minutes what is running, why, and how long is left.
+
 **FINISH.** Before the report and before the commit, rewrite
 `_context/90-next-session.md`: move what you closed, add what you found, re-point
 the queue, and write the NEXT session's prompt in full so it works in an empty
