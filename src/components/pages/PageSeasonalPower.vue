@@ -42,8 +42,22 @@
     <JChip :top="129">{{ copy.chip }}</JChip>
     <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
     <!-- The mock's value box is centred on 700, not the body's 720.6, so it is
-         placed explicitly rather than auto-centred. -->
-    <JValue :value="points" :top="1485" :size="188" :left="190" :width="1020" v-bind="L.value" />
+         placed explicitly rather than auto-centred.
+         382 is the SHORT-value ceiling, not the mock's 188: at the clip's own
+         print, "120", the clip's number is x2.03 of ours (session S,
+         `tile-fit.mjs --value`, three seconds, spread 2.4 %), and 188 is what
+         the mock's nine-character "1 200 000" shrank to. useJournalFit puts
+         that back. Anchored by its middle, the mock's own 1485 + 188 / 2,
+         because a ceiling that grew downwards would leave the clip's line by
+         91 px.
+         THE BUDGET IS 933, NOT THE MOCK'S 1020, and the box is moved to keep
+         its centre on 700: 933 is what OUR setting of the mock's own string
+         needs at the mock's own 188, so the long value lands back on 188 to the
+         pixel. The mock's 1020 frame is 8.5 % wider than that — our digits and
+         its are not set identically — and using it as the budget grew the long
+         value to 205.5, i.e. 9 % past the size the mock draws, on a page nobody
+         complained about. Measured in the DOM, both ways, session S. -->
+    <JValue :value="points" :center-y="1579" :size="382" :left="233.5" :width="933" v-bind="L.value" />
   </PageChrome>
 </template>
 

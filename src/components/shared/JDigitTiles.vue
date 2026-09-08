@@ -52,15 +52,18 @@
  * fixed (days_in_spotlight, multiplier_moment). Hence three vertical props;
  * a page passes exactly one, in the mock's coordinates for the mock's value.
  *
- * WHICH SIZE IS "THE CLIP'S". The clip's tiles are not drawn to the mock's
- * proportions — their glyph sits smaller inside a taller box, by 4-8 % — so
- * "as big as the clip's" has three answers. The one taken is THE ROW'S WIDTH,
- * because it is the one the mock itself confirms: on top_sport_signal the mock
- * already prints three digits at 286, and with proportional digits our row
- * there is the clip's row to 0.2 % (scripts/tile-fit.mjs, 2026-09-08). Where
- * the vertical room does not allow it — bonus_report would run into its
- * heading, headline_win into its currency — the height is capped by the room
- * and the comment on the page says by how much.
+ * WHICH SIZE IS "THE CLIP'S". THE ROW'S WIDTH, because it is the one the mock
+ * itself confirms: on top_sport_signal the mock already prints three digits at
+ * 286, and with proportional digits our row there is the clip's row to 0.2 %
+ * (scripts/tile-fit.mjs, 2026-09-08). It used to be one of three answers,
+ * because the clip's tiles were not drawn to the mock's proportions — a smaller
+ * glyph in a taller, wider box, with a third of the gap. Since session S they
+ * ARE the clip's proportions (see R below), so the three answers have collapsed
+ * into one: the row's width is still the anchor, and the box height that
+ * follows from it is the clip's box height as well. Where the vertical room
+ * does not allow it — bonus_report would run into its heading, headline_win
+ * into its currency — the height is capped by the room and the page's comment
+ * says by how much.
  *
  * MEASURED: the mock's rows are DIGITS ONLY — Bonus Report's `Numbers` frame
  * is 1337.967 wide with exactly seven tiles for a seven-digit value, no
@@ -111,13 +114,45 @@ const props = defineProps({
   right: { type: Number, default: 0 },
 })
 
-/** Ratios against the Days reference (h = 350). */
+/**
+ * Ratios against the Days reference (h = 350). FOUR OF THEM ARE THE CLIP'S, NOT
+ * THE MOCK'S (session S, 2026-09-08). The owner's review list opens with the
+ * tiles' drawing — "a thin border, gold gradient, dark plate" against our
+ * "thick, flat, bright yellow" — and on that item the video outranks the mock.
+ * Measured on Days at 18.05, 19.76 and 21.47 by `tile-fit.mjs --prop`, three
+ * tiles a second, as ratios INSIDE each picture, so no common frame is needed
+ * and the journal's pose residual cannot reach them:
+ *
+ *   ratio      mock      clip    clip/mock   what it sets
+ *   gap        58.978    30.04     0.509     the air between two tiles
+ *   border     13.536    12.29     0.908     the stroke
+ *   pad        15.47     29.19     1.887     the air beside the glyph
+ *   font      386.108   359        0.930     the glyph
+ *   radius     24.171    24.171      —       not measured; the corners read alike
+ *   blur        7.735     7.735      —       not in the clip's picture at all
+ *
+ * THE HEIGHTS MOVED WITH THEM, x1.0303 on all seven pages, and that is not a
+ * second decision but the same one. Every number here is a ratio against
+ * `height`, so changing them changes THE ROW'S WIDTH — and the row's width is
+ * the one thing about these tiles measured off the clip and guarded by a gate
+ * (`tiles:fit`, x1.00 +- 0.02). At the clip's proportions a three-digit row is
+ * 2.94 % narrower per unit of height, so x1.0303 leaves the row exactly as wide
+ * as session R measured it. It also lands the box on the clip's box height,
+ * which reads x1.034 of ours over the same row width — the two agree to 0.3 %,
+ * which is the check that the set is self-consistent rather than fitted.
+ *
+ * WHAT THIS COSTS. The mock's heights for the LONG demo values no longer come
+ * out by themselves: at the clip's proportions a row of seven or eight digits
+ * squeezed into the same slot is some 4 % taller than the mock draws it. The
+ * mock and the clip do not draw the same tile, and the owner chose the clip
+ * for this; the slot, and so the row's width, is still the mock's.
+ */
 const R = {
-  gap: 58.978 / 350,
-  border: 13.536 / 350,
+  gap: 30.04 / 350,
+  border: 12.29 / 350,
   radius: 24.171 / 350,
-  pad: 15.47 / 350,
-  font: 386.108 / 350,
+  pad: 29.19 / 350,
+  font: 359 / 350,
   blur: 7.735 / 350,
 }
 

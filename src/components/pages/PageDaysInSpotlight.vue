@@ -11,10 +11,12 @@
 
     <JChip :top="129">{{ copy.chip }}</JChip>
     <JHeading :text="copy.headline" :top="536" v-bind="L.headline" />
-    <!-- 448 tall at three digits: the height at which our row is as wide as
-         the clip's (V-61, tile-fit); the mock's 350 is what four digits shrink
-         to in the 1338 slot. Grows about its centre, 767.5 + 350 / 2. -->
-    <JDigitTiles :value="days" :height="448" :center-y="942.5" />
+    <!-- 461.6 tall at three digits: the height at which our row is as wide as
+         the clip's (V-61, tile-fit). It was 448 while the tile was drawn to the
+         mock's proportions; session S drew it to the clip's, which needs x1.0303
+         to keep the same row width (JDigitTiles' R). The mock's 350 is what four
+         digits shrink to in the 1338 slot. Grows about its centre. -->
+    <JDigitTiles :value="days" :height="461.6" :center-y="942.5" />
     <JHeading :text="copy.footer" :top="1245" v-bind="L.footer" />
   </PageChrome>
 </template>

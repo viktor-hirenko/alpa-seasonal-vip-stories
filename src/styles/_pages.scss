@@ -194,6 +194,7 @@
 }
 
 .j-tile {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -201,12 +202,6 @@
   height: var(--tile-h);
   padding: var(--tile-pad);
   overflow: clip;
-  // The stroke is drawn INSIDE in Figma, so it must not add to the layout
-  // width. MEASURED on Bonus Report (21770:3718): the tile is 167.68 wide and
-  // its text node is 150 wide at x = 8.84 — i.e. content + 2 * padding exactly,
-  // with no border contribution. A real `border` made every tile ~10% too wide
-  // and pushed 7-digit rows off the page.
-  box-shadow: inset 0 0 0 var(--tile-border) #{$accent};
   border-radius: var(--tile-radius);
   // 21770:3206: bg rgba(0,10,18,0.65) behind the digit. Without it the tiles
   // read as bare outlines over whatever art is behind them.
@@ -217,13 +212,52 @@
   backdrop-filter: blur(var(--tile-blur));
 }
 
+/// THE STROKE, AND IT IS A GRADIENT — measured off the clip on Days at 18.05,
+/// 19.76 and 21.47 (session S, 2026-09-08, `tile-fit.mjs --prop`): its left limb
+/// reads #e99c0e and its right #f4f87c, brightness 162 against 238, which is
+/// $accent-grad end to end and per tile. Ours read #f49a01 on all four limbs,
+/// brightness 161-163 — the "flat, bright yellow" of the owner's review list
+/// against the clip's "gold gradient".
+///
+/// A pseudo-element rather than a `border`, because the stroke must still cost
+/// the layout nothing. It is drawn INSIDE in Figma: MEASURED on Bonus Report
+/// (21770:3718), the tile is 167.68 wide and its text node 150 wide at x = 8.84
+/// — content + 2 * padding exactly, with no border contribution. A real
+/// `border` made every tile ~10% too wide and pushed 7-digit rows off the page;
+/// `box-shadow: inset` was layout-free but cannot carry a gradient.
+///
+/// The two-layer mask keeps the plate behind the digit dark: the whole box
+/// minus the content box is the ring, and its thickness is the padding. Safe
+/// below the preserve-3d chain for the same reason the backdrop-filter above it
+/// is — a leaf with no 3D children of its own.
+.j-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: var(--tile-border);
+  border-radius: inherit;
+  background-image: $accent-grad;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
 /// Gap-only cell for separators, so a grouped number keeps its rhythm without
 /// drawing a bordered box around a comma.
 .j-tile--sep {
-  box-shadow: none;
   background: none;
   backdrop-filter: none;
   padding: 0;
+}
+
+.j-tile--sep::before {
+  content: none;
 }
 
 .j-tile__digit {

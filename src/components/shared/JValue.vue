@@ -8,14 +8,34 @@
 /**
  * A big gradient number without tiles — Seasonal Power's "1 200 000"
  * (21770:3046, 1020 x 188 at y=1485). Same accent gradient as the tiles.
+ *
+ * `size` IS A CEILING WHERE A PAGE SAYS SO, exactly as JDigitTiles' `height`
+ * is (V-61). The mock draws one value per page, and where that value is the
+ * long demo one its size is what the LONG string shrank to — so a short value
+ * inherits a size meant for nine characters and comes out small. Measured on
+ * Seasonal Power (session S, `tile-fit.mjs --value`): at the clip's own print,
+ * "120", the clip's number is x2.03 of ours, three seconds in a row, spread
+ * 2.4 %. The page therefore declares the SHORT-value size and lets
+ * useJournalFit shrink the long one back into `width`, which lands it on the
+ * mock's 188 again. This is the second half of DP-15258's "adaptive font size
+ * for values of different lengths"; the tiles were the first.
+ *
+ * A page that grows may not grow DOWNWARDS from the mock's top edge — at
+ * Seasonal Power's ceiling that would push the number 91 px below where the
+ * clip keeps it — so `centerY` anchors the middle instead, the way
+ * JDigitTiles' does, and both the short and the long value then sit on one
+ * line. Text slots (game names, the player name) keep `top`.
  */
 import { computed } from 'vue'
 import { alignStyle } from './slotAlign.js'
 
 const props = defineProps({
   value: { type: [String, Number], default: '' },
-  top: { type: Number, required: true },
-  /** Design-px font size from the mock. */
+  top: { type: Number, default: 0 },
+  /** Design-px centre line, from the body's top: the value grows both ways.
+   *  Exactly one of `top` and `centerY`. */
+  centerY: { type: Number, default: 0 },
+  /** Design-px font size: the mock's, or the SHORT-value ceiling (see above). */
   size: { type: Number, default: 188 },
   maxWidth: { type: Number, default: 0 },
   /** 'center' (default), 'left' pinned at `left`, 'right' with its right edge at `right`. */
@@ -39,7 +59,12 @@ const props = defineProps({
 })
 
 const slotStyle = computed(() => ({
-  top: `calc(${props.top} * var(--u))`,
+  // A translate, not `bottom:` or a computed offset: it is a percentage of the
+  // slot's OWN height, so it is right at either face size and at any fitted
+  // font (JDigitTiles' note on --jw/--jh gives the long version).
+  ...(props.centerY
+    ? { top: `calc(${props.centerY} * var(--u))`, transform: 'translateY(-50%)' }
+    : { top: `calc(${props.top} * var(--u))` }),
   '--value-font': `calc(${props.size} * var(--u))`,
   ...(props.maxWidth ? { maxWidth: `calc(${props.maxWidth} * var(--u))` } : {}),
   ...alignStyle(props),

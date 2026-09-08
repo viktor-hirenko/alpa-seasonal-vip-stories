@@ -105,9 +105,15 @@ export const PAGE_LAYOUTS = {
     // ENGLISH width as the cap, which would have shrunk French and Italian by
     // ~17 % for nothing.
     headline: { maxWidth: 1105, lines: 2 },
-    // 1020 fixed at x=190 in all four — the mock's box is centred on 700, not
-    // on the body's 720.6, which is why the page states it explicitly.
-    value: { maxWidth: 1020, lines: 1 },
+    // The mock's box is 1020 fixed at x=190 in all four, centred on 700 rather
+    // than on the body's 720.6, which is why the page states it explicitly. The
+    // cap here is 933, not 1020: since session S the page's `size` is the SHORT
+    // value's ceiling, so this width is what the fitter shrinks the long value
+    // into, and 933 is the width our own setting of the mock's string needs at
+    // the mock's own 188. The page keeps the centre on 700 by starting the box
+    // at 233.5 instead. Four languages, one number: the string is the same in
+    // all of them but for its separators.
+    value: { maxWidth: 933, lines: 1 },
   },
 
   vip_status: {

@@ -21,12 +21,14 @@
       :line-height="1.15"
       v-bind="L.headline"
     />
-    <!-- 163 tall at three digits: Headline Win's twin (both 120.805 in the
-         mock), and this page's own clip reading — 165 by row width, in a
-         layout the clip draws differently, heading left and tiles beside it
-         (V-61). The mock's 120.8 is what five digits shrink to in the 577.82
-         slot (21811:3563). Grows about its centre, 558.598 + 120.805 / 2. -->
-    <JDigitTiles :value="multiplier" :height="163" :center-y="619" :slot="577.82" />
+    <!-- 167.9 tall at three digits: Headline Win's twin (both 120.805 in the
+         mock), and this page's own clip reading — 165 by row width, in a layout
+         the clip draws differently, heading left and tiles beside it (V-61).
+         163 at the mock's tile proportions, x1.0303 since session S drew the
+         tile the clip's way (JDigitTiles' R). The mock's 120.8 is what five
+         digits shrink to in the 577.82 slot (21811:3563). Grows about its
+         centre, 558.598 + 120.805 / 2. -->
+    <JDigitTiles :value="multiplier" :height="167.9" :center-y="619" :slot="577.82" />
     <div class="mm__divider" />
     <JValue :value="gameName" :top="787" :size="96" v-bind="L.game" />
     <JGameThumb :src="gameImage" :name="gameName" :top="946" />

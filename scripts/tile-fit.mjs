@@ -496,6 +496,473 @@ if (argv.includes('--selftest')) {
 }
 
 // ===========================================================================
+// --prop  THE TILE'S PROPORTIONS, WHICH ITS SIZE DOES NOT ANSWER
+// ===========================================================================
+//
+//   node scripts/tile-fit.mjs --prop [frame...] [--n 3]
+//
+// The first line of the owner's review list is not the row's SIZE — session R
+// settled that — but the DRAWING of one tile: "a thin gold-gradient border on
+// a dark plate" against our "thick, flat, bright yellow". A proportion is a
+// ratio, so it needs no registration between the pictures: stroke, glyph and
+// gap over the tile's own box height are read INSIDE each picture and only
+// then compared. Design px are printed beside them, the clip's carried across
+// by the pose residual through the page art exactly as tile-fit's H is, and
+// pinned to a number the DOM knows exactly (the tile's laid-out height), so
+// the two rows can also be argued about in the page's own units.
+//
+// THE WINDOW IS CUT IN THE TILE'S FRAME, not the screen's. The row leans by a
+// degree or three, and an axis-aligned crop of a leaning box reads some 4 %
+// taller than the box itself. Sampling along the row's axis removes that. The
+// yaw that makes a tile a trapezoid rather than a rectangle is left in; it is
+// why the far tile of a row reads a little narrower than the near one, and the
+// reason every number is a median over three tiles and several seconds.
+//
+// THE STROKE AND THE GLYPH ARE SEPARATE PATCHES OF GOLD, so they are told
+// apart by connected components rather than by insetting the box: the first
+// build of this inset by the stroke's own thickness and read the stroke's
+// inner edge back as the glyph on every tile — 91 % of the box in BOTH
+// pictures, which is (box - 2 * inset) / box and not a measurement at all.
+// Components also keep the neighbouring tiles out: the clip's gap is a third
+// of ours, so its neighbours reach into the window, and an outer bound over
+// all the gold there made the clip's tile read square (w/h 0.99 to our 0.83).
+//
+// THE STROKE'S THICKNESS IS READ AT HALF ITS OWN HEIGHT, not by counting the
+// pixels a threshold calls gold. Our render's edge is one pixel of ramp and
+// the clip's is two or three, so a fixed threshold reads OUR stroke short and
+// the clip's long by different amounts — worth 6 % on a 16 px stroke, which is
+// the whole of the difference being measured. A half-maximum width is the same
+// measurement on a sharp edge and a blurred one.
+
+/** A window in the TILE's own frame: `rot` degrees of screen lean undone, 1:1. */
+function patch(rgb, cx, cy, hw, hh, rot) {
+  const pw = Math.max(4, Math.round(hw * 2)), ph = Math.max(4, Math.round(hh * 2))
+  const th = (rot * Math.PI) / 180
+  const ax = Math.cos(th), ay = Math.sin(th)
+  const bx = -Math.sin(th), by = Math.cos(th)
+  const buf = Buffer.alloc(pw * ph * 3)
+  for (let y = 0; y < ph; y++)
+    for (let x = 0; x < pw; x++) {
+      const u = x - pw / 2 + 0.5, v = y - ph / 2 + 0.5
+      const sx = cx + ax * u + bx * v, sy = cy + ay * u + by * v
+      const ix = Math.floor(sx), iy = Math.floor(sy)
+      if (ix < 0 || iy < 0 || ix >= W - 1 || iy >= H - 1) continue
+      const fx = sx - ix, fy = sy - iy
+      const o = (y * pw + x) * 3, q = (iy * W + ix) * 3
+      for (let c = 0; c < 3; c++)
+        buf[o + c] = rgb[q + c] * (1 - fx) * (1 - fy) + rgb[q + 3 + c] * fx * (1 - fy) +
+                     rgb[q + W * 3 + c] * (1 - fx) * fy + rgb[q + W * 3 + 3 + c] * fx * fy
+    }
+  return { buf, w: pw, h: ph }
+}
+
+const goldP = (p, x, y) => {
+  if (x < 0 || y < 0 || x >= p.w || y >= p.h) return false
+  const i = (y * p.w + x) * 3, r = p.buf[i], g = p.buf[i + 1], b = p.buf[i + 2]
+  return r > 150 && g > 95 && b < 130 && r - b > 55
+}
+
+/** How gold a pixel is, on a scale the plate sits at zero on. */
+const goldness = (p, x, y) => {
+  if (x < 0 || y < 0 || x >= p.w || y >= p.h) return 0
+  const i = (y * p.w + x) * 3
+  return Math.max(0, p.buf[i] - p.buf[i + 2])
+}
+
+/** Four-connected gold blobs, each with its pixel count and bounding box. */
+function blobs(p) {
+  const lab = new Int32Array(p.w * p.h).fill(-1)
+  const out = []
+  const stack = []
+  for (let y0 = 0; y0 < p.h; y0++)
+    for (let x0 = 0; x0 < p.w; x0++) {
+      const i0 = y0 * p.w + x0
+      if (lab[i0] !== -1 || !goldP(p, x0, y0)) continue
+      const id = out.length
+      const c = { id, n: 0, x0, y0, x1: x0, y1: y0 }
+      lab[i0] = id
+      stack.push(i0)
+      while (stack.length) {
+        const j = stack.pop()
+        const jx = j % p.w, jy = (j - jx) / p.w
+        c.n++
+        if (jx < c.x0) c.x0 = jx
+        if (jx > c.x1) c.x1 = jx
+        if (jy < c.y0) c.y0 = jy
+        if (jy > c.y1) c.y1 = jy
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = jx + dx, ny = jy + dy
+          if (nx < 0 || ny < 0 || nx >= p.w || ny >= p.h) continue
+          const k = ny * p.w + nx
+          if (lab[k] === -1 && goldP(p, nx, ny)) { lab[k] = id; stack.push(k) }
+        }
+      }
+      out.push(c)
+    }
+  return { list: out, lab }
+}
+
+/**
+ * The stroke's width at half its own height, on the first hump the scan meets
+ * coming in from one edge of the box, as a median over the middle 40 % of that
+ * edge — clear of the corner radius, which would read the arc's chord. The
+ * outer crossing is interpolated between pixels, so the answer is not quantised
+ * to whole pixels the way a run of thresholded ones is.
+ */
+function strokeFWHM(p, box, side, guess) {
+  const [x0, y0, x1, y1] = box
+  const horiz = side === 'top' || side === 'bottom'
+  const a = horiz ? Math.round(x0 + (x1 - x0) * 0.3) : Math.round(y0 + (y1 - y0) * 0.3)
+  const b = horiz ? Math.round(x0 + (x1 - x0) * 0.7) : Math.round(y0 + (y1 - y0) * 0.7)
+  const step = side === 'top' || side === 'left' ? 1 : -1
+  const start = (side === 'top' ? y0 : side === 'bottom' ? y1 : side === 'left' ? x0 : x1) - step * 4
+  const at = (i, d) => {
+    const j = start + step * d
+    return horiz ? goldness(p, i, j) : goldness(p, j, i)
+  }
+  const reach = Math.min(Math.round(guess * 3 + 8), horiz ? p.h - 1 : p.w - 1)
+  const out = []
+  for (let i = a; i <= b; i++) {
+    let peak = 0, dPeak = -1
+    for (let d = 0; d <= reach; d++) {
+      const v = at(i, d)
+      if (v > peak) { peak = v; dPeak = d }
+      // Stop at the padding: the glyph beyond it is a second, taller hump.
+      if (dPeak >= 0 && v < peak * 0.35 && d > dPeak + 1) break
+    }
+    if (peak < 60 || dPeak < 0) continue
+    const half = peak / 2
+    let lo = dPeak, hi = dPeak
+    while (lo > 0 && at(i, lo - 1) >= half) lo--
+    while (hi < reach && at(i, hi + 1) >= half) hi++
+    // Linear crossings either side, so the width is not quantised.
+    const vLo = at(i, lo - 1), vHi = at(i, hi + 1)
+    const eLo = lo - (at(i, lo) - half) / Math.max(1, at(i, lo) - vLo)
+    const eHi = hi + (at(i, hi) - half) / Math.max(1, at(i, hi) - vHi)
+    const w = eHi - eLo
+    if (w > 0 && w < guess * 3) out.push({ w, outer: start + step * eLo })
+  }
+  if (out.length < 3) return null
+  return { w: med(out.map(o => o.w)), outer: med(out.map(o => o.outer)) }
+}
+
+const meanRGB = px => {
+  if (!px.length) return null
+  let r = 0, g = 0, b = 0
+  for (const c of px) { r += c[0]; g += c[1]; b += c[2] }
+  return [r / px.length, g / px.length, b / px.length].map(v => Math.round(v))
+}
+const hex = c => (c ? '#' + c.map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('') : '   —   ')
+const lum = c => (c ? 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] : NaN)
+
+/**
+ * ONE TILE, MEASURED INSIDE ITS OWN PICTURE. The stroke is the gold blob whose
+ * box holds the window's centre and is the widest such — the glyph's blob also
+ * holds the centre, and is smaller. Whatever gold sits inside that box and is
+ * not the stroke is the glyph; a digit broken into pieces by the video is put
+ * back together by taking the bound of them all.
+ */
+function tileMetrics(p) {
+  const { list, lab } = blobs(p)
+  const cx = p.w / 2, cy = p.h / 2
+  const holds = c => c.x0 <= cx && c.x1 >= cx && c.y0 <= cy && c.y1 >= cy
+  const ring = list.filter(c => holds(c) && c.n > 60)
+    .sort((a, b) => (b.x1 - b.x0) * (b.y1 - b.y0) - (a.x1 - a.x0) * (a.y1 - a.y0))[0]
+  if (!ring) return null
+  const box = [ring.x0, ring.y0, ring.x1, ring.y1]
+  const boxW = ring.x1 - ring.x0 + 1, boxH = ring.y1 - ring.y0 + 1
+  if (boxW < 8 || boxH < 8) return null
+  const guess = Math.max(3, ring.n / (2 * (boxW + boxH)))
+  const sides = {
+    top: strokeFWHM(p, box, 'top', guess), bottom: strokeFWHM(p, box, 'bottom', guess),
+    left: strokeFWHM(p, box, 'left', guess), right: strokeFWHM(p, box, 'right', guess),
+  }
+  const got = Object.values(sides).filter(v => v != null)
+  if (got.length < 4) return null
+  const t = med(got.map(v => v.w))
+  // The box, edge to edge, at half the stroke's own height: a blob's bound is
+  // the threshold's idea of where the gold stops, which sits a pixel inside a
+  // crisp edge and two or three inside a video's.
+  const oT = sides.top.outer, oB = sides.bottom.outer
+  const oL = sides.left.outer, oR = sides.right.outer
+  const inner = list.filter(c => c.id !== ring.id && c.n > 40 &&
+    c.x0 >= ring.x0 && c.x1 <= ring.x1 && c.y0 >= ring.y0 && c.y1 <= ring.y1)
+  if (!inner.length) return null
+  const gx0 = Math.min(...inner.map(c => c.x0)), gx1 = Math.max(...inner.map(c => c.x1))
+  const gy0 = Math.min(...inner.map(c => c.y0)), gy1 = Math.max(...inner.map(c => c.y1))
+  const glyphIds = new Set(inner.map(c => c.id))
+  const ringPx = [], glyphPx = []
+  const band = { top: [], bottom: [], left: [], right: [] }
+  for (let y = ring.y0; y <= ring.y1; y++)
+    for (let x = ring.x0; x <= ring.x1; x++) {
+      const id = lab[y * p.w + x]
+      if (id !== ring.id && !glyphIds.has(id)) continue
+      const i = (y * p.w + x) * 3
+      const c = [p.buf[i], p.buf[i + 1], p.buf[i + 2]]
+      if (id === ring.id) {
+        ringPx.push(c)
+        // Which limb this pixel is on, so a gradient shows which way it runs.
+        if (y < ring.y0 + t * 1.5) band.top.push(c)
+        else if (y > ring.y1 - t * 1.5) band.bottom.push(c)
+        else if (x < ring.x0 + t * 1.5) band.left.push(c)
+        else if (x > ring.x1 - t * 1.5) band.right.push(c)
+      } else glyphPx.push(c)
+    }
+  return {
+    boxH: oB - oT, boxW: oR - oL, border: t, sides,
+    x0: oL, x1: oR,
+    digitH: gy1 - gy0 + 1, digitW: gx1 - gx0 + 1,
+    ring: meanRGB(ringPx), glyph: meanRGB(glyphPx),
+    top: meanRGB(band.top), bottom: meanRGB(band.bottom),
+    left: meanRGB(band.left), right: meanRGB(band.right),
+  }
+}
+
+/** Ours and the clip's one tile, BOTH SCALED TO ONE HEIGHT: the sheet on which
+ *  a proportion, and only a proportion, is what the eye can see. */
+function propSheet(pairs, file) {
+  const parts = [], inputs = []
+  pairs.forEach((p, i) => {
+    const raw = `${OUT}/.prop-${i}.rgb`
+    writeFileSync(raw, p.buf)
+    inputs.push('-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${p.w}x${p.h}`, '-i', raw)
+    parts.push(`[${i}]scale=-1:480:flags=lanczos,pad=iw+8:ih+8:4:4:0x808080[p${i}]`)
+  })
+  ff(['-y', ...inputs, '-filter_complex',
+    `${parts.join(';')};${pairs.map((_, i) => `[p${i}]`).join('')}hstack=inputs=${pairs.length}`,
+    '-frames:v', '1', file])
+}
+
+if (argv.includes('--prop')) {
+  const wantP = argv.filter(a => !a.startsWith('--') && a !== String(N)).map(Number).filter(Boolean)
+  const framesP = wantP.length ? wantP : [9]
+  console.log('THE TILE AS IT IS DRAWN — ours against the clip\'s, on the same second.')
+  console.log('px    = the page\'s design px: ours off the DOM, the clip\'s scaled onto it by the')
+  console.log('        row register and the pose residual the page art measures')
+  console.log('ratio = the same reading over the tile\'s own box height, which needs no common frame\n')
+  const rows = []
+  for (const frame of framesP) {
+    const i = SLIDES.findIndex(s => s.frame === frame)
+    if (i < 0) { console.log(`frame ${frame}: not in slides.js`); continue }
+    const s = SLIDES[i], next = SLIDES[i + 1]
+    const t0 = s.at + LEAD, t1 = (next ? next.at : s.at + 4) - TAIL
+    const ts = [...new Set(Array.from({ length: N }, (_, k) =>
+      +(t0 + ((t1 - t0) * k) / Math.max(1, N - 1)).toFixed(3)))]
+    console.log(`frame ${frame} ${s.page}`)
+    console.log('      t  tile    box h ours | clip     stroke ours | clip     glyph h ours | clip' +
+      '    stroke/box      glyph/box     box w/h        stroke        glyph')
+    for (const t of ts) {
+      const png = `${OUT}/.prop-ours-${frame}-${t}.png`
+      const { rgb, row, art } = await ourFrame(t, png)
+      if (!row) { console.log(`  ${t.toFixed(2)}  (no digit row on screen)`); continue }
+      const clip = rgbOfVideo(CLIP, t)
+      const r = fitRow(rgb, clip, row)
+      const a = art ? fitArt(rgb, clip, art) : null
+      const sArt = a && !a.shaky ? a.s : 1
+      const [px, py] = rowPivot(row)
+      const gap = row.hOurs * row.pose.scale * (58.978 / 350)
+      const thO = (row.pose.rot * Math.PI) / 180, thC = ((row.pose.rot + r.rot) * Math.PI) / 180
+      const sheets = [], edgeO = [], edgeC = [], mets = []
+      let designPer = null
+      row.tiles.forEach(([bx, by, bw, bh], k) => {
+        const tcx = bx + bw / 2, tcy = by + bh / 2
+        const hwO = bw / 2 + gap * 0.45, hhO = bh / 2 + gap * 0.45
+        const pO = patch(rgb, tcx, tcy, hwO, hhO, row.pose.rot)
+        const cxC = px + (tcx - px) * r.s + r.dx, cyC = py + (tcy - py) * r.s + r.dy
+        const pC = patch(clip, cxC, cyC, hwO * r.s * 1.14, hhO * r.s * 1.14, row.pose.rot + r.rot)
+        if (k === 1) sheets.push(pO, pC)
+        const mO = tileMetrics(pO), mC = tileMetrics(pC)
+        if (!mO || !mC) { console.log(`  ${t.toFixed(2)}  "${row.text[k]}"    (no reading)`); return }
+        // Screen px to the page's design px, pinned to a length the DOM knows
+        // exactly: the tile's laid-out height. The clip's picture is ours times
+        // the pose residual, so its readings take that out first.
+        if (designPer == null) designPer = row.hOurs / mO.boxH
+        const D = designPer, Dc = designPer / sArt
+        mets.push({ k, mO, mC })
+        // The row axis, so a gap is measured along the row and not on screen.
+        const alongO = (tcx - px) * Math.cos(thO) + (tcy - py) * Math.sin(thO)
+        const alongC = (cxC - px) * Math.cos(thC) + (cyC - py) * Math.sin(thC)
+        edgeO.push([alongO + mO.x0 - pO.w / 2, alongO + mO.x1 - pO.w / 2])
+        edgeC.push([alongC + mC.x0 - pC.w / 2, alongC + mC.x1 - pC.w / 2])
+        rows.push({ page: s.page, t, ch: row.text[k],
+          boxO: mO.boxH * D, boxC: mC.boxH * Dc,
+          strokeO: mO.border * D, strokeC: mC.border * Dc,
+          glyphO: mO.digitH * D, glyphC: mC.digitH * Dc,
+          bRatO: mO.border / mO.boxH, bRatC: mC.border / mC.boxH,
+          gRatO: mO.digitH / mO.boxH, gRatC: mC.digitH / mC.boxH,
+          wRatO: mO.boxW / mO.boxH, wRatC: mC.boxW / mC.boxH,
+          ringO: mO.ring, ringC: mC.ring, glyO: mO.glyph, glyC: mC.glyph,
+          topO: mO.top, botO: mO.bottom, leftO: mO.left, rightO: mO.right,
+          topC: mC.top, botC: mC.bottom, leftC: mC.left, rightC: mC.right,
+          sArt, shaky: !a || a.shaky })
+        console.log(`  ${t.toFixed(2)}  "${row.text[k]}" ${fmt(mO.boxH * D, 9, 1)} |${fmt(mC.boxH * Dc, 7, 1)}` +
+          `${fmt(mO.border * D, 12, 2)} |${fmt(mC.border * Dc, 6, 2)}${fmt(mO.digitH * D, 13, 1)} |${fmt(mC.digitH * Dc, 7, 1)}  ` +
+          `${fmt(mO.border / mO.boxH * 100, 6, 2)} |${fmt(mC.border / mC.boxH * 100, 5, 2)} %` +
+          `${fmt(mO.digitH / mO.boxH * 100, 8, 2)} |${fmt(mC.digitH / mC.boxH * 100, 5, 2)} %` +
+          `${fmt(mO.boxW / mO.boxH, 7, 3)} |${fmt(mC.boxW / mC.boxH, 5, 3)}  ` +
+          `${hex(mO.ring)} |${hex(mC.ring)}  ${hex(mO.glyph)} |${hex(mC.glyph)}`)
+      })
+      // THE ROW'S WIDTH IS THE COMMON ANCHOR. The two pictures are not in one
+      // frame — our journal is not the clip's to the per cent (V-25), and the
+      // art window refuses to say by how much on this page. But session R
+      // measured our row onto the clip's, and `tiles:fit` guards it: the two
+      // rows are the same width. So every length is also printed over the row's
+      // width, and those numbers need no pose residual at all. The height the
+      // tiles must be set to, to keep that width while the drawing changes,
+      // falls straight out of box/row.
+      if (edgeO.length === row.tiles.length && edgeO.length > 1) {
+        const rowWO = edgeO[edgeO.length - 1][1] - edgeO[0][0]
+        const rowWC = edgeC[edgeC.length - 1][1] - edgeC[0][0]
+        rows.filter(x => x.t === t).forEach((x, i) => {
+          const { mO, mC } = mets[i] || {}
+          if (!mO || !mC) return
+          x.boxRowO = mO.boxH / rowWO
+          x.boxRowC = mC.boxH / rowWC
+          x.strokeRowO = mO.border / rowWO
+          x.strokeRowC = mC.border / rowWC
+          x.glyphRowO = mO.digitH / rowWO
+          x.glyphRowC = mC.digitH / rowWC
+        })
+        console.log(`        row width: ours ${(rowWO * designPer).toFixed(1)} px, ` +
+          `clip ${(rowWC * designPer).toFixed(1)} px on our scale ` +
+          `(the pose residual is in that one; box/row below is not)`)
+        rows.filter(x => x.t === t).forEach(x => { x.rowWO = rowWO * designPer; x.rowWC = rowWC * designPer })
+      }
+      // The gaps, along the row, in the page's design px.
+      if (designPer && edgeO.length > 1) {
+        const gO = [], gC = []
+        for (let k = 1; k < edgeO.length; k++) {
+          gO.push((edgeO[k][0] - edgeO[k - 1][1]) * designPer)
+          gC.push((edgeC[k][0] - edgeC[k - 1][1]) * designPer / sArt)
+        }
+        const hO = row.hOurs, hC = med(rows.filter(x => x.t === t).map(x => x.boxC))
+        console.log(`        gap along the row: ours ${gO.map(v => v.toFixed(1)).join(' / ')} px ` +
+          `(${(med(gO) / hO * 100).toFixed(2)} % of the box), clip ${gC.map(v => v.toFixed(1)).join(' / ')} px ` +
+          `(${(med(gC) / hC * 100).toFixed(2)} %)   pose residual x${sArt.toFixed(4)}${a && a.shaky ? ' SHAKY' : ''}`)
+        rows.filter(x => x.t === t).forEach(x => { x.gapO = med(gO); x.gapC = med(gC); x.gRelO = med(gO) / hO; x.gRelC = med(gC) / hC })
+      }
+      if (sheets.length === 2) propSheet(sheets, `${OUT}/prop-${s.page}-${t}.png`)
+      sheet(png, t, row, r, `${OUT}/row-${s.page}-${t}.png`)
+    }
+  }
+  const byPage = new Map()
+  for (const r of rows) { if (!byPage.has(r.page)) byPage.set(r.page, []); byPage.get(r.page).push(r) }
+  console.log('\nMEDIANS — what the fix is set from. `x` is the clip over ours.\n')
+  console.log('page                 stroke/box ours   clip     x     glyph/box ours   clip     x     ' +
+    'gap/box  ours   clip     x     box/row  ours   clip     x')
+  for (const [page, rs] of byPage) {
+    const m = k => med(rs.map(r => r[k]).filter(v => Number.isFinite(v)))
+    const p3 = (a, b) => `${fmt(a, 11, 2)} %${fmt(b, 7, 2)} %${fmt(b / a, 6, 3)}`
+    console.log(`${page.padEnd(20)} ${p3(m('bRatO') * 100, m('bRatC') * 100)}  ` +
+      `${p3(m('gRatO') * 100, m('gRatC') * 100)}  ${p3(m('gRelO') * 100, m('gRelC') * 100)}  ` +
+      `${p3(m('boxRowO') * 100, m('boxRowC') * 100)}`)
+  }
+  console.log('\nCOLOUR — the stroke by limb, and the glyph. Ours is flat $accent; the clip\'s is not.\n')
+  console.log('page                      stroke   top      bottom   left     right    glyph')
+  for (const [page, rs] of byPage) {
+    const c = k => meanRGB(rs.map(r => r[k]).filter(Boolean))
+    for (const [who, sfx] of [['ours', 'O'], ['clip', 'C']]) {
+      console.log(`${(who === 'ours' ? page : '').padEnd(20)} ${who}  ${hex(c('ring' + sfx))}  ${hex(c('top' + sfx))}  ` +
+        `${hex(c('bot' + sfx))}  ${hex(c('left' + sfx))}  ${hex(c('right' + sfx))}  ${hex(c('gly' + sfx))}`)
+      const L = k => lum(c(k + sfx))
+      console.log(`${''.padEnd(25)}brightness: top ${L('top').toFixed(0)}, bottom ${L('bot').toFixed(0)}, ` +
+        `left ${L('left').toFixed(0)}, right ${L('right').toFixed(0)}  (glyph ${L('gly').toFixed(0)})`)
+    }
+  }
+  writeFileSync(`${OUT}/prop.json`, JSON.stringify(rows, null, 2))
+  console.log(`\nsheets and prop.json in ${OUT}`)
+  process.exit(0)
+}
+
+// ===========================================================================
+// --value  THE PLAIN NUMBER, THE ONE THAT IS NOT TILES
+// ===========================================================================
+//
+//   node scripts/tile-fit.mjs --value [frame...]
+//
+// Seasonal Power draws its number with JValue rather than tiles, and it has the
+// same fault the tiles had before V-61: the mock's 188 is the size the LONG
+// demo value shrank to, so the clip's three-digit "120" comes out about half
+// the size the clip draws. Same measurement as the tiles', with the row swapped
+// for the value's own box: our glyph height off the picture, the clip's off
+// the same second, and the journal's own residual divided out through the page
+// art the way `--anchor` does it.
+if (argv.includes('--value')) {
+  const wantV = argv.filter(a => !a.startsWith('--') && a !== String(N)).map(Number).filter(Boolean)
+  const framesV = wantV.length ? wantV : [10]
+  const VALUE = `(() => {
+    const a = document.querySelector('.journal-page--active'); if (!a) return null
+    const el = a.querySelector('.j-value'); if (!el) return null
+    const st = document.querySelector('.stage'), jb = document.querySelector('.journal-box')
+    const u = jb.offsetWidth / parseFloat(getComputedStyle(st).getPropertyValue('--jw'))
+    const r = el.getBoundingClientRect()
+    const g = (window.__story && window.__story.gsap) || window.gsap
+    const num = p => { const v = g ? Number(g.getProperty(jb, p)) : NaN; return Number.isFinite(v) ? v : 0 }
+    return { page: a.dataset.page || '', text: el.textContent.trim(),
+      box: [r.left * 2, r.top * 2, r.width * 2, r.height * 2],
+      fontOurs: parseFloat(getComputedStyle(el).fontSize) / u,
+      pose: { rot: num('rotationZ'), scale: num('scaleX') } }
+  })()`
+  console.log('THE PLAIN NUMBER, ours against the clip\'s, on the same second.')
+  console.log('span = the gold number\'s width across the picture; font = what the DOM lays it out at\n')
+  console.log('page             t      text    span ours | clip     x     pose x    font ours   clip implies')
+  for (const frame of framesV) {
+    const i = SLIDES.findIndex(s => s.frame === frame)
+    if (i < 0) { console.log(`frame ${frame}: not in slides.js`); continue }
+    const s = SLIDES[i], next = SLIDES[i + 1]
+    const t0 = s.at + LEAD, t1 = (next ? next.at : s.at + 4) - TAIL
+    const ts = [...new Set(Array.from({ length: N }, (_, k) =>
+      +(t0 + ((t1 - t0) * k) / Math.max(1, N - 1)).toFixed(3)))]
+    const got = []
+    for (const t of ts) {
+      const png = `${OUT}/.value-ours-${frame}-${t}.png`
+      await cdp.eval(PARK(t))
+      await sleep(320)
+      const v = await cdp.eval(VALUE)
+      const art = await cdp.eval(ART)
+      if (!v) { console.log(`  (no plain value on screen at ${t})`); continue }
+      const rgb = await shoot(png)
+      const clip = rgbOfVideo(CLIP, t)
+      const a = art ? fitArt(rgb, clip, art) : null
+      const sArt = a && !a.shaky ? a.s : null
+      const [bx, by, bw, bh] = v.box
+      const cx = bx + bw / 2, cy = by + bh / 2
+      // A window WIDE and SHORT: the number is measured across, not down. The
+      // page's own art is a gold medal directly above it, and a window tall
+      // enough to hold the clip's taller glyph holds the medal too — the first
+      // reading of this said x1.28 because the medal's bottom was in the bound.
+      // Nothing on this page is gold to the left or right of the number, and
+      // the widest part of every digit is at mid-height, so a band of the box's
+      // middle answers the size question with nothing else in it.
+      const hw = bw * 1.7, hh = bh * 0.3
+      const pO = patch(rgb, cx, cy, hw, hh, v.pose.rot)
+      const sA = sArt || 1
+      const dx = a ? a.dx : 0, dy = a ? a.dy : 0
+      const pC = patch(clip, cx + dx, cy + dy, hw * sA, hh * sA, v.pose.rot + (a ? a.rot : 0))
+      const capOf = p => {
+        const { list } = blobs(p)
+        const big = list.filter(c => c.n > 120)
+        if (!big.length) return null
+        return Math.max(...big.map(c => c.x1)) - Math.min(...big.map(c => c.x0)) + 1
+      }
+      const cO = capOf(pO), cC = capOf(pC)
+      if (!cO || !cC) { console.log(`  ${t.toFixed(2)}  (no gold found)`); continue }
+      const ratio = cC / sA / cO
+      got.push(ratio)
+      console.log(`${s.page.padEnd(16)} ${t.toFixed(2)}  "${v.text}"${fmt(cO, 9, 1)} |${fmt(cC, 7, 1)}` +
+        `${fmt(ratio, 7, 3)}${sArt ? fmt(sArt, 9, 4) : '   SHAKY'}${fmt(v.fontOurs, 12, 1)}` +
+        `${fmt(v.fontOurs * ratio, 13, 1)}`)
+      if (!got.sheetDone) {
+        propSheet([pO, pC], `${OUT}/value-${s.page}-${t}.png`)
+        got.sheetDone = true
+      }
+    }
+    if (got.length) console.log(`\n  ${s.page}: median x${med(got).toFixed(3)}, spread ${(spread(got) * 100).toFixed(1)} %`)
+  }
+  process.exit(0)
+}
+
+// ===========================================================================
 // MEASURE
 // ===========================================================================
 

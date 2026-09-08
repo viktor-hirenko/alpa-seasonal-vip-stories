@@ -29,12 +29,13 @@
 
     <!-- Digits sit to the right of the heading and share the 1334.38 right
          edge with the currency and game name, keeping it at any length — the
-         clip does, with three digits. 163 tall at three digits (V-61): the
-         clip's row is 5 % wider still, but 172 would leave 4 px to the currency
-         at 585, so the room caps it here, 13 px clear, as the clip keeps it.
-         The mock's 120.8 is what six digits shrink to in the 699.86 slot
-         (21770:3302). Top edge fixed, level with the heading. -->
-    <JDigitTiles :value="amount" :height="163" :top="409.195" :right="1334.38" :slot="699.86" />
+         clip does, with three digits. 167.9 tall at three digits (V-61): 163
+         at the mock's tile proportions, x1.0303 since session S drew the tile
+         the clip's way (JDigitTiles' R). The clip's row is wider still, but the
+         currency at 585 caps the height here. The mock's 120.8 is what six
+         digits shrink to in the 699.86 slot (21770:3302). Top edge fixed, level
+         with the heading. -->
+    <JDigitTiles :value="amount" :height="167.9" :top="409.195" :right="1334.38" :slot="699.86" />
 
     <!-- Currency and game name are right-aligned to 1334.38. -->
     <JCurrency :top="585" :size="82" align="right" :right="1334.38">{{ currency }}</JCurrency>

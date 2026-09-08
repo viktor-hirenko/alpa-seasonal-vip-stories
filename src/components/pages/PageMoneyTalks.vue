@@ -20,11 +20,12 @@
     <JChip :top="129">{{ copy.chip }}</JChip>
     <!-- The mock breaks the headline explicitly over two lines. -->
     <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
-    <!-- 290 tall at three digits: the height at which our row is as wide as
-         the clip's (V-61, tile-fit); the mock's 172 is what eight digits shrink
-         to. Grows upwards from the edge above the currency label,
-         1380.031 + 172. -->
-    <JDigitTiles :value="amount" :height="290" :bottom="1552.031" />
+    <!-- 298.8 tall at three digits: the height at which our row is as wide as
+         the clip's (V-61, tile-fit) — 290 at the mock's tile proportions,
+         x1.0303 since session S drew the tile the clip's way (JDigitTiles' R).
+         The mock's 172 is what eight digits shrink to. Grows upwards from the
+         edge above the currency label, 1380.031 + 172. -->
+    <JDigitTiles :value="amount" :height="298.8" :bottom="1552.031" />
     <JCurrency :top="1593" :size="160">{{ currency }}</JCurrency>
   </PageChrome>
 </template>

@@ -57,9 +57,12 @@
     <JHeading :text="copy.headline" :top="373" :size="78" v-bind="L.headline" />
     <!-- The clip's row is as wide as ours at 320 (V-61), but growing upwards
          from the edge above the currency (560 + 200) that would run into the
-         heading — in the clip the two touch. 283 keeps 20 px of air under the
-         heading. The mock's 200 is what seven digits shrink to. -->
-    <JDigitTiles :value="amount" :height="283" :bottom="760" />
+         heading — in the clip the two touch. 283 kept 20 px of air under the
+         heading at the mock's tile proportions; session S drew the tile the
+         clip's way, x1.0303 to hold the same row width (JDigitTiles' R), so
+         291.6 — still clear of the heading, by less. The mock's 200 is what
+         seven digits shrink to. -->
+    <JDigitTiles :value="amount" :height="291.6" :bottom="760" />
     <JCurrency :top="791.5" :size="200">{{ currency }}</JCurrency>
     <JHeading :text="copy.footer" :top="1693" :size="78" v-bind="L.footer" />
   </PageChrome>
