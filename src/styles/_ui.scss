@@ -390,6 +390,17 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
   transform-origin: 50% du(165);
   text-align: center;
   pointer-events: none;
+  // GIVE THE ZOOM ITS OWN LAYER (V-54). `outroText` scales this block 11.57 -> 1
+  // and then out to 8.63, and without a layer of its own Chrome re-rasters the
+  // type — and the 27.9 px `text-shadow` under it — at every new scale. A trace
+  // over 87.5..90 s is 110.9 ms of RasterTask and essentially nothing else, and
+  // `smooth-scan --tempo` showed four to five long frames there in EVERY run,
+  // on a second pass as well as a first, so it is recurring work rather than a
+  // first paint. With the layer the scale is the compositor's and the count is
+  // zero. Safe here where hard rule 5 would forbid it elsewhere: `.story-outro`
+  // lives in `.stage__ui`, the one layer with no perspective ancestor, so there
+  // is no 3D scene under it to flatten.
+  will-change: transform;
 }
 
 ///
