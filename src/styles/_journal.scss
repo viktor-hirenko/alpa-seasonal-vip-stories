@@ -45,14 +45,39 @@
 }
 
 /// Front — the page slot plus the "shadow season" glow.
+///
+/// THE BLACK AND THE SHADOW BELONG TO THE CARD, NOT TO THE FACE (V-66).
+///
+/// They used to sit on this element, whose box is the WHOLE face — and the
+/// card the reader actually sees (`.page__body`) is inset 0.84 % top, 1.41 %
+/// bottom, 6.32 % left and 1.53 % right inside it. Two consequences, both
+/// wrong and both spotted by the owner before any gate:
+///   · the black ran all the way to the ends of the spine, so the card read as
+///     tall as the spine and the spine looked flush with it. In the clip the
+///     spine plainly stands proud of the card at both ends.
+///   · the shadow hugged the face's rectangle, not the card's.
+/// They have to move TOGETHER: shrink the black alone and the shadow detaches
+/// from the card and reads as a grey band down the right and bottom edges —
+/// tried on 09.09, and that is exactly what the owner saw.
+///
+/// The insets are the mock's own (21770:4736 -> I21770:4736;21770:2823), and
+/// the pseudo-element is painted BEFORE `.journal-pages`, so it stays behind
+/// the page content and behind every `mix-blend-mode` layer inside it — which
+/// is what keeps the sheen blending against black rather than against the room.
 .jface--front {
   transform: translateZ(calc(var(--jd) * 0.5 * var(--u)));
-  background: $page-bg;
-  box-shadow:
-    calc(#{list.nth($shadow-season-1, 1)} * var(--u)) calc(#{list.nth($shadow-season-1, 2)} * var(--u))
-      calc(#{list.nth($shadow-season-1, 3)} * var(--u)) list.nth($shadow-season-1, 4),
-    calc(#{list.nth($shadow-season-2, 1)} * var(--u)) calc(#{list.nth($shadow-season-2, 2)} * var(--u))
-      calc(#{list.nth($shadow-season-2, 3)} * var(--u)) list.nth($shadow-season-2, 4);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0.84% 1.53% 1.41% 6.32%;
+    background: $page-bg;
+    box-shadow:
+      calc(#{list.nth($shadow-season-1, 1)} * var(--u)) calc(#{list.nth($shadow-season-1, 2)} * var(--u))
+        calc(#{list.nth($shadow-season-1, 3)} * var(--u)) list.nth($shadow-season-1, 4),
+      calc(#{list.nth($shadow-season-2, 1)} * var(--u)) calc(#{list.nth($shadow-season-2, 2)} * var(--u))
+        calc(#{list.nth($shadow-season-2, 3)} * var(--u)) list.nth($shadow-season-2, 4);
+  }
 }
 
 /// Back — the closed cover with the rocket logo. Visible for the first ~1.4 s of
