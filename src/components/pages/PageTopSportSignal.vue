@@ -44,6 +44,8 @@
 
     <JChip :top="129">{{ copy.chip }}</JChip>
     <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
+    <!-- The mock already shows a three-digit value here, so 286 IS the
+         short-value height; the clip agrees to within the measurement (V-61). -->
     <JDigitTiles :value="multiplier" :height="286" :top="1258" />
   </PageChrome>
 </template>

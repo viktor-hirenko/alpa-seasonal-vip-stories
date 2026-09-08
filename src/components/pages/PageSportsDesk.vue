@@ -63,7 +63,11 @@
 
     <JChip :top="129">{{ copy.chip }}</JChip>
     <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
-    <JDigitTiles :value="amount" :height="200" :top="1371.031" />
+    <!-- 284 tall at three digits: the height at which our row is as wide as
+         the clip's (V-61, tile-fit); the mock's 200 is what seven digits shrink
+         to. Grows upwards from the edge above the currency label,
+         1371.031 + 200. -->
+    <JDigitTiles :value="amount" :height="284" :bottom="1571.031" />
     <JCurrency :top="1603.031" :size="200">{{ currency }}</JCurrency>
   </PageChrome>
 </template>

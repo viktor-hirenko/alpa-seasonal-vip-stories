@@ -122,27 +122,25 @@
   text-align: center;
 }
 
-/// Full-width slot: the child centres itself with `justify-content`.
+/// The digit row's slot: an EXPLICIT width (JDigitTiles writes it inline),
+/// centred, or right-aligned by the component, with the row centred inside it
+/// by `justify-content`.
 ///
-/// Needed for the digit row. MEASURED: Rubik's digit advance is 0.688 em, so a
-/// tile at font-size 386.108 is 265.7 + 2*15.47 padding + 2*13.536 border =
-/// 323.7 design px — which matches the mock exactly. But four of them plus
-/// three 58.978 gaps come to 1471.7, and the page body is only 1441.2 wide, so
-/// a 4-digit value overflows BY DESIGN and the mock lets it sit hard against
-/// both page edges.
-///
-/// With `width: fit-content` + `margin-inline: auto` that overflow lands
-/// entirely on the RIGHT (the box clamps to the available width and the flex
-/// row starts at its left edge), which reads as a bug. A full-width slot with
-/// `justify-content: center` overflows symmetrically, like the mock.
-///
-/// Five digits or more must actually shrink — that is the digit role's job in
-/// useJournalFit (task B), via the shared `--tile-fit`.
-.j-slot--full {
+/// The header this replaces claimed a four-digit value "overflows BY DESIGN",
+/// from 0.688 em TABULAR digits: 4 x 323.7 + 3 x 58.978 = 1471.7 against a
+/// 1441.2 body. That was wrong twice over. The mock's digits are PROPORTIONAL
+/// — at h = 350 a "2" tile is 292.9 wide, a "5" 288.9, a "7" 262.9
+/// (21770:2946) — so its four-digit row is 1314.7 wide and sits inside the
+/// body with 63 px to spare. And no row is meant to reach the body at all:
+/// every mock row stops at ~1338 (21811:3914 is the widest, 1337.97), which is
+/// the slot the component declares. A row wider than its slot is shrunk by
+/// useJournalFit through `--tile-fit`; a narrower one centres. The symmetric
+/// overflow the old rule bought is kept — `justify-content: center` still
+/// overflows both ways while the fitter is converging.
+.j-slot--tiles {
   inset-inline: 0;
-  width: auto;
   max-width: none;
-  margin-inline: 0;
+  margin-inline: auto;
 }
 
 /// Chip / "Tabs" (21770:2962).
@@ -179,16 +177,19 @@
 ///
 /// Digit tiles (21770:2953 -> 2954 and friends).
 ///
-/// HEIGHT-DRIVEN. Measuring all four tile sizes in the mock (350 / 200 / 172 /
-/// 120.8) showed gap/height is 0.16851 in every one, constant to five decimals,
-/// so the whole geometry is one similarity class. JDigitTiles derives the
-/// custom properties below from a single `height` prop; an enum could not have
-/// expressed 172 or 200.
+/// HEIGHT-DRIVEN. Measuring all five tile sizes in the mock (350 / 286 / 200 /
+/// 172 / 120.8) showed gap/height is 0.16851 in every one, constant to five
+/// decimals, so the whole geometry is one similarity class. JDigitTiles derives
+/// the custom properties below from a single `height` prop; an enum could not
+/// have expressed 172 or 200. Since V-61 that height is the SHORT-value
+/// ceiling and the mock's long-value heights follow from the slot width — see
+/// the component's header.
 ///
 .j-tiles {
   display: flex;
   align-items: center;
-  justify-content: center;
+  // Set to `flex-end` by the component for a right-aligned row (Headline Win).
+  justify-content: var(--tiles-justify, center);
   gap: var(--tile-gap);
 }
 
@@ -239,7 +240,11 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  font-variant-numeric: tabular-nums;
+  // PROPORTIONAL digits, as the mock's: its "2", "5" and "7" tiles are 292.9,
+  // 288.9 and 262.9 wide at h = 350 (21770:2946), i.e. each tile hugs its own
+  // glyph. `tabular-nums` used to force one advance on all ten, which made
+  // every tile the width of the widest and put a four-digit row 12 % past the
+  // mock's — the root of the wrong "overflows by design" note above (V-61).
 }
 
 .j-tile--sep .j-tile__digit {
@@ -355,9 +360,6 @@
   }
 }
 
-
-
-
 ///
 /// Days in the Spotlight — page-specific art placement. Figma 21770:2946.
 ///
@@ -391,9 +393,6 @@
 /// Per-page art placement. Every offset is a design px from the page body's
 /// top-left, straight out of the mock's metadata.
 ///
-
-
-
 
 ///
 /// Art nesting from the mock: an outer box centres a rotated inner image.
@@ -1114,8 +1113,7 @@
   // border-box instead, and drew a magenta rectangle with three visible edges
   // (V-09). `drop-shadow` reads the same alpha Figma does, so every number
   // below is the mock's, unchanged — only the shape they follow is fixed.
-  filter:
-    drop-shadow(0 du(15) du(22.3) rgba(255, 0, 212, 0.27))
+  filter: drop-shadow(0 du(15) du(22.3) rgba(255, 0, 212, 0.27))
     drop-shadow(du(12) du(40) du(20.9) rgba(255, 0, 212, 0.52));
   pointer-events: none;
 
@@ -1198,8 +1196,7 @@
   overflow: hidden;
   pointer-events: none;
   // 21770:4229 — same transfer error as .sp__mascot, see its note (V-11).
-  filter:
-    drop-shadow(0 du(21) du(81.2) rgba(255, 0, 212, 0.56))
+  filter: drop-shadow(0 du(21) du(81.2) rgba(255, 0, 212, 0.56))
     drop-shadow(0 du(15) du(22.3) rgba(255, 0, 212, 0.27))
     drop-shadow(du(30) du(44) du(26.4) rgba(255, 0, 212, 0.36));
 
@@ -1221,8 +1218,7 @@
     // 21770:4238. The light square the owner photographed (V-10) was this
     // stack drawn on the 797 box; the mock's own shape here is the logo's
     // alpha. Numbers unchanged, shape fixed — see .sp__mascot's note.
-    filter:
-      drop-shadow(0 du(21) du(81.5) rgba(255, 199, 246, 0.33))
+    filter: drop-shadow(0 du(21) du(81.5) rgba(255, 199, 246, 0.33))
       drop-shadow(0 du(4) du(26.6) rgba(255, 0, 212, 0.46))
       drop-shadow(du(15) du(15) du(17.9) rgba(255, 204, 246, 0.77));
   }

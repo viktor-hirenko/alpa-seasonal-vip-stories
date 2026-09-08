@@ -27,8 +27,14 @@
       v-bind="L.headline"
     />
 
-    <!-- Digits sit to the right of the heading, centred on 984.46. -->
-    <JDigitTiles :value="amount" :height="120.805" :top="409.195" :center-x="984.46" />
+    <!-- Digits sit to the right of the heading and share the 1334.38 right
+         edge with the currency and game name, keeping it at any length — the
+         clip does, with three digits. 163 tall at three digits (V-61): the
+         clip's row is 5 % wider still, but 172 would leave 4 px to the currency
+         at 585, so the room caps it here, 13 px clear, as the clip keeps it.
+         The mock's 120.8 is what six digits shrink to in the 699.86 slot
+         (21770:3302). Top edge fixed, level with the heading. -->
+    <JDigitTiles :value="amount" :height="163" :top="409.195" :right="1334.38" :slot="699.86" />
 
     <!-- Currency and game name are right-aligned to 1334.38. -->
     <JCurrency :top="585" :size="82" align="right" :right="1334.38">{{ currency }}</JCurrency>

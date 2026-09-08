@@ -16,7 +16,7 @@ import { FACE } from '@/story/journalGeometry.js'
  * WHY A BINARY SEARCH: Thor guesses multiplicatively
  * (`fit *= (width - 2*over) / width`), which only ever decreases. A guess that
  * overshoots can never come back, so a long string lands smaller than it needs
- * to be. Six halvings of [role.min, 1] land within 0.6 % of the largest size
+ * to be. Seven halvings of [role.min, 1] land within 0.5 % of the largest size
  * that fits, from either side.
  *
  * WHY ONE PASS: a journal page is a fixed box in design px scaled uniformly by
@@ -54,8 +54,12 @@ import { FACE } from '@/story/journalGeometry.js'
  *           barely ever moves; 0.7 is a floor, not a target.
  *  digit    the bordered tile row (JDigitTiles), via `--tile-fit`, which scales
  *           the WHOLE row (height, padding, gap, radius, glyph) so the tiles
- *           stay one similarity class — see 31-pages.md. 0.45 covers a
- *           14-digit row at h=200, which is far past anything real.
+ *           stay one similarity class — see 31-pages.md. Since V-61 the row
+ *           STARTS at its short-value height (up to 430 on days) and the slot
+ *           is 1338 or narrower, so a long value needs a deeper shrink than
+ *           the old 0.45: nine digits on money_talks land at 0.54, nine on
+ *           headline_win's 700-wide slot at 0.48. 0.35 covers twelve digits
+ *           there, which is past anything a link can carry.
  *  value    big gradient values and names (JValue, the cover's player name).
  *           MEASURED: a 23-character player name in the cover's 1058-wide box
  *           lands at 0.419, and a 37-character game name in Headline Win's 1230
@@ -68,12 +72,15 @@ import { FACE } from '@/story/journalGeometry.js'
 const ROLES = {
   display: { min: 0.6, prop: '--fit' },
   chip: { min: 0.7, prop: '--fit' },
-  digit: { min: 0.45, prop: '--tile-fit' },
+  digit: { min: 0.35, prop: '--tile-fit' },
   value: { min: 0.35, prop: '--fit' },
   currency: { min: 0.7, prop: '--fit' },
 }
 
-const ITERATIONS = 6
+// Seven, not six: the digit role's range grew to [0.35, 1] with V-61, and its
+// long-value heights are checked against the mock to the per cent, so the
+// search has to resolve 0.5 % — one more layout flush for the whole journal.
+const ITERATIONS = 7
 /** CSS px. offsetWidth/clientWidth/scrollWidth are integer-rounded, so a box
  *  that fits exactly can read one pixel over. */
 const TOL = 1

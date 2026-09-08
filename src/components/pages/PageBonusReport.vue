@@ -55,7 +55,11 @@
 
     <JChip :top="129">{{ copy.chip }}</JChip>
     <JHeading :text="copy.headline" :top="373" :size="78" v-bind="L.headline" />
-    <JDigitTiles :value="amount" :height="200" :top="560" />
+    <!-- The clip's row is as wide as ours at 320 (V-61), but growing upwards
+         from the edge above the currency (560 + 200) that would run into the
+         heading — in the clip the two touch. 283 keeps 20 px of air under the
+         heading. The mock's 200 is what seven digits shrink to. -->
+    <JDigitTiles :value="amount" :height="283" :bottom="760" />
     <JCurrency :top="791.5" :size="200">{{ currency }}</JCurrency>
     <JHeading :text="copy.footer" :top="1693" :size="78" v-bind="L.footer" />
   </PageChrome>
