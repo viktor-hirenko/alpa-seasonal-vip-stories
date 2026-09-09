@@ -175,12 +175,42 @@
  *
  * These flights keep a CONSTANT angle — the median of their own rows, so a
  * deliberate tilt survives — rather than zero, which would stand every cross
- * and every clock face upright.
+ * and every clock face upright. Where that median has itself been checked
+ * against the clip and found to be noise, ROUND_HOLD below overrides it.
  */
 export const ROUND_ASSETS = new Set([
   'basketball', 'calendar', 'coin-b', 'coin-face', 'cross', 'gift', 'heart',
   'planet-cow', 'points-b', 'report', 'spark', 'tennis',
 ])
+
+/**
+ * THE ANGLE A ROUND FLIGHT IS ACTUALLY HELD AT, where the median of its own
+ * rows has been measured against the clip and lost.
+ *
+ * The median is a sensible default and a bad one for `calendar`. Its column
+ * reads 21, 21, 24, 27 and then 39 seventeen times over — and those seventeen
+ * are not seventeen measurements. `fly-measure.mjs` replaces any key more than
+ * ANGLE_OUTLIER (30 deg) from its flight's own median WITH that median, a rule
+ * written for cartons and pens that have an axis to be wrong about. On a disc
+ * the fit returns noise, the noise sets the median, and the rule then pulls the
+ * rest of the column onto it. The number holds itself up.
+ *
+ * Checked against the clip by session L (2026-09-07) and recorded in V-08:
+ * correlating our sprite against the clip answers -2 deg on the only two frames
+ * where it is confident at all (22.1 and 22.5, correlation 0.40 and 0.53) and
+ * 0.07-0.16 — no answer — on the other eight. Laid over the clip at 20.42, our
+ * disc at 0 deg puts the pointer arm and every bead where the clip puts them,
+ * and at 39 deg the arm sits at three-to-four o'clock where the clip reads two.
+ * Zero, not -2: the correlation's own confidence does not reach a degree, and
+ * a clock face the clip draws upright is drawn upright.
+ *
+ * This is deliberately NOT a third threshold. It is a per-asset measurement,
+ * and an asset stays out of it until someone has laid it over the clip and
+ * looked. The `rot` column in the table is left exactly as measured — the
+ * table is a measurement and is not hand-edited, and flattening a column there
+ * would move the keys `dp()` picks off it and reshape flights that are right.
+ */
+export const ROUND_HOLD = new Map([['calendar', 0]])
 
 export const FLY_Z = -600
 export const FLY_Z_FRONT = 600

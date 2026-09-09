@@ -1,5 +1,5 @@
 import { gsap } from 'gsap'
-import { ROUND_ASSETS } from '@/story/flyObjects.js'
+import { ROUND_ASSETS, ROUND_HOLD } from '@/story/flyObjects.js'
 import { splineReader } from './hermite.js'
 
 /**
@@ -63,10 +63,11 @@ export function flyingObject(els, rec) {
   // A round silhouette has no measurable angle, so its `rot` column is fit noise
   // and animating it reads as a spin the clip never does. Those flights hold the
   // MEDIAN of their own rows — constant, but not zero, so a deliberate tilt
-  // survives. See ROUND_ASSETS in flyObjects.js.
+  // survives — unless that median has itself been laid over the clip and lost,
+  // which is what ROUND_HOLD carries. See both in flyObjects.js.
   const spin = !ROUND_ASSETS.has(rec.asset)
   const rots = k.map(r => r[4]).sort((a, b) => a - b)
-  const fixedRot = rots[rots.length >> 1]
+  const fixedRot = ROUND_HOLD.has(rec.asset) ? ROUND_HOLD.get(rec.asset) : rots[rots.length >> 1]
 
   const head = { t: t0 }
   const s = gsap.timeline({ paused: true })
