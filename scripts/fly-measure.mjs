@@ -266,6 +266,23 @@ function moments(px, w = W) {
   }
 }
 const med = a => a.slice().sort((x, y) => x - y)[a.length >> 1]
+/**
+ * A WEIGHTED MEAN, used on the size column after its median (see stageTable).
+ * Kernel weights are 1-2-3-2-1 and the ends are handled by dropping the taps
+ * that fall off, so the first and last rows keep their own value's weight
+ * rather than being pulled towards a neighbour that does not exist.
+ */
+const blur = (a, i, k = [1, 2, 3, 2, 1]) => {
+  const r = (k.length - 1) / 2
+  let sw = 0, sv = 0
+  for (let j = -r; j <= r; j++) {
+    const q = a[i + j]
+    if (q === undefined) continue
+    sw += k[j + r]
+    sv += k[j + r] * q
+  }
+  return sv / sw
+}
 const cache = (name, make) => {
   const f = `${CACHE}/${name}.json`
   if (existsSync(f)) return JSON.parse(readFileSync(f, 'utf8'))
@@ -1424,10 +1441,33 @@ function stageTable(fit, covers) {
     }
     // Angle and size are properties of the object, not of one frame: a single
     // outlier must not become a keyframe.
-    const sm = good.map((k, i) => ({
-      ...k,
-      size: Math.round(med(good.slice(Math.max(0, i - 2), i + 3).map(q => q.size))),
-    }))
+    //
+    // A MEDIAN ALONE LEAVES A STAIRCASE, AND THE STAIRCASE IS WHAT THE EYE SEES
+    // (V-69, found by the owner on the milk cartons). The size fit is a
+    // correlation over scale on a 3 % grid, and on a hovering carton it is
+    // barely confident — milkpack-3 scores 0.23-0.35 against a bar of 0.22 —
+    // so the raw column swings a fifth of the object: 385, 433, 519, 398, 425,
+    // 392, 530. A 5-frame median kills those spikes and returns a piecewise
+    // CONSTANT series: milkpack-1 comes out 413 four rows running and then 459
+    // in one 0.2 s step. Read through the spline that is a hold followed by a
+    // lunge — 0.0 design px per frame for half a second, then 14 — and on an
+    // object that is otherwise hanging still it reads exactly as the complaint:
+    // the cartons twitch and wobble. The clip does no such thing; its own size
+    // curve over the same seconds is 254, 262, 266, monotone.
+    //
+    // So smooth the median. The median decides WHICH value is honest and the
+    // blur decides how it gets there, which is the split the two filters are
+    // good at. Measured on the rendered table, worst width change per frame
+    // while a flight hovers and is less than half covered: 18.3 design px
+    // before, 5.7 after, and not one of the 27 flights got worse (milkpack-1
+    // 14.1 -> 3.8, report-2 18.3 -> 3.8, calendar-1 9.0 -> 3.0). Kernels of
+    // 1-2-1 and 1-3-4-3-1 were measured too and land at 7.2 and 6.0.
+    //
+    // POSITION AND ANGLE ARE NOT BLURRED, for the reasons in the two notes
+    // below: the path is already smooth through the spline, and the angle
+    // column is folded and outlier-replaced instead.
+    const smed = good.map((k, i) => med(good.slice(Math.max(0, i - 2), i + 3).map(q => q.size)))
+    const sm = good.map((k, i) => ({ ...k, size: Math.round(blur(smed, i)) }))
     // The fitter rotates the SPRITE onto the frame; CSS rotates the element the
     // other way round, so the angle changes sign on the way into the table.
     const fd = fold(
