@@ -25,6 +25,7 @@
     "journal:selftest": "node scripts/journal-measure.mjs --selftest",
     "journal:path": "node scripts/journal-path.mjs",
     "fly:measure": "node scripts/fly-measure.mjs",
+    "preloader:fit": "node scripts/preloader-fit.mjs",
     "smooth:scan": "node scripts/smooth-scan.mjs",
     "smooth:report": "node scripts/smooth-report.mjs",
     "fly:sprites": "node scripts/fly-sprites.mjs",
