@@ -195,7 +195,45 @@ const ANCHOR = {
   14: { rot: -8.43, scale: 0.6985, cx: 50.17, cy: 53.65 },  // clip: position and size
   15: { rot: 10.28, scale: 0.6498, cx: 51.37, cy: 48.01 },  // clip: position and size
   16: { rot: -21.89, scale: 0.6016, cx: 54.96, cy: 51.61 }, // clip: position and size
-  17: { rot: 15.07, scale: 0.6561, cx: 59.68, cy: 49.98 },  // clip: position and size
+  // `cy` RE-READ 2026-09-09 (session V): the page sat too low, and two
+  // independent flights on this very slide say so in mirror image — the
+  // basketball rides ABOVE the page's top edge and our page covered LESS of it
+  // than the clip does (10 % vs 33 %, 3 % vs 12 %), while the tennis ball
+  // passes UNDER the bottom edge and our page covered MORE (97 % vs 56 %,
+  // `CROSSING-POP` at the handover). One offset explains both signs; a size
+  // error could not. Of the two windows only `--face` survives the 1.0 deg
+  // angle rule (its rot reads 15.01-15.57 against the shipped 15.07, while the
+  // art window answers 12.06-13.56 — a second local maximum), and its
+  // angle-passing readings put cy at 48.85, 48.88, 49.30, 49.36, 49.37.
+  //
+  // WHICH OF THOSE FIVE, and why not their median. Not one reading on this
+  // slide beat its own neighbourhood — thirteen readings across two windows,
+  // every one of them `no peak` — so the registration brackets the answer here
+  // and does not pick inside the bracket. The flights do have a confident
+  // answer, and they were asked: every candidate was rendered and both flights
+  // measured against the CLIP's own covered fractions.
+  //
+  //     cy      tennis handover   tennis 56.94   basketball 54.17   55.34
+  //     49.98         50 % POP        97 %            10 %            3 %
+  //     49.30         27 % POP        92 %            15 %            3 %
+  //     48.99         19 %            89 %            17 %            5 %
+  //     48.85         17 %            87 %            18 %            6 %
+  //     48.68         14 %            85 %            19 %            7 %
+  //     the clip       6 %            56 %            33 %           12 %
+  //
+  // All four columns walk toward the clip together and none overshoots it, so
+  // the bracket's low end is the best answer inside it: 48.85, the lowest
+  // reading that passes the angle rule. 48.68 is lower still and fits better,
+  // but it is the median of the window the angle rule rejects, so it is not
+  // ours to take. A RESIDUAL REMAINS — even at 48.68 the clip covers less of
+  // the tennis ball and more of the basketball than we do — and this
+  // instrument cannot resolve it on this slide. That residual is a candidate
+  // for a session with a better one, not a reason to keep pushing cy past what
+  // was measured.
+  //
+  // `scale` and `cx` are NOT touched: -3.4 % and +8 px are each inside the
+  // spread of those same readings, so neither is a measurement of anything.
+  17: { rot: 15.07, scale: 0.6561, cx: 59.68, cy: 48.85 },   // clip: position and size
   18: { rot: -11.58, scale: 0.6602, cx: 54.36, cy: 59.02 }, // clip: position and size
   19: { rot: 8.36, scale: 0.6885, cx: 46.08, cy: 54.33 },   // clip: position and size
   // `cx` RE-READ 2026-09-09 (session U): 52.84 was the odd one out. Four
