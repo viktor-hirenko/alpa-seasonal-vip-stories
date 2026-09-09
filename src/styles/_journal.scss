@@ -157,14 +157,54 @@
   overflow: clip;
 }
 
+///
+/// A PAGE IS LAID OUT AT ITS OWN BASE SIZE, NOT AT THE FACE'S (V-58, V-67).
+///
+/// This used to be `inset: 0`, i.e. the current value of `--jw`/`--jh`. That is
+/// the same rectangle whenever the page is actually on screen — the face always
+/// carries the showing page's own size — so nothing here changes what is drawn,
+/// and the before/after screenshots agree to 1/255 of a channel. What it changes
+/// is what happens to the OTHER sixteen pages when `--jw` moves: with `inset: 0`
+/// every one of them was re-laid-out and the compositor threw away everything it
+/// had rasterised for them. Now `--jw` moves the paper and the clip; the pages
+/// underneath do not budge.
+///
+/// WHAT THIS WAS FOR, AND WHAT CAME OF IT. Session T found that walking the
+/// timeline through every page before the story starts removes the image decode
+/// behind the stalls at 61.4 / 67.4 / 78.4, but could not use it: the pass
+/// leaves the face page-sized, and putting the cover's size back undid the
+/// warm-up, because of the `inset: 0` above. This rule removes that obstacle,
+/// and session T-2 then measured the warm-up properly. It does exactly what it
+/// claims — a trace of 67.0-68.2 shows `GpuImageDecodeCache::DecodeImage` at
+/// 98.3 ms without it and NOT ONCE with it — and it does not help: three
+/// alternating pairs of frame-pacing runs gave eight long frames each way, at
+/// the same three seconds. The decode runs on a worker thread beside the GPU
+/// tile upload that is what actually drops the frame (V-67), so paying it early
+/// buys nothing. The warm-up is therefore not in the product; this rule stays,
+/// because it is also what fixes the face after a backwards seek (see
+/// `applySegment`) and because relaying out sixteen invisible pages on every
+/// face change was never right.
+///
+/// Sizes are the two base components of journalGeometry.js's FACE. `.cover` is
+/// NOT built on `.page` — it has its own smaller skeleton — so the two are
+/// selected apart by the `data-face` the segment already carries.
+///
 .journal-page {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: 0;
+  width: duPage(1564);
+  height: duPage(1911);
   // Inactive pages use `visibility`, never `display: none`: a display:none page
   // is unmeasurable, and the font fitter needs every page measurable in one
   // boot-time sweep (ADR-0004, ADR-0008).
   visibility: hidden;
   pointer-events: none;
+}
+
+.journal-page[data-face='cover'] {
+  width: duPage(1465);
+  height: duPage(1868);
 }
 
 .journal-page--active {

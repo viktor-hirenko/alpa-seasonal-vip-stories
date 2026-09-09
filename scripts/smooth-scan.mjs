@@ -122,6 +122,11 @@ const INSTALL = `(() => {
     const rows = []
     for (const t of times) {
       s.tl.seek(t, false)
+      // The page cut AND the face size are read off the clock, not scheduled on
+      // the timeline (ADR-0008, and V-58 for the face), so a raw seek leaves
+      // both showing whatever the previous sample left. Every parking routine
+      // in scripts/ calls this for the same reason.
+      s.applySegment?.(t)
       const sr = s3d.getBoundingClientRect()
       const cs = getComputedStyle(stage)
       const jwv = parseFloat(cs.getPropertyValue('--jw'))

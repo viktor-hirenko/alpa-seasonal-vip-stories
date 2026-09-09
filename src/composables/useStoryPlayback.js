@@ -37,6 +37,7 @@ export function useStoryPlayback(ctx) {
     showPlayButton,
     isBuffering,
     onSegmentChange,
+    setFace,
   } = ctx
 
   let frameHandle = null
@@ -86,11 +87,23 @@ export function useStoryPlayback(ctx) {
    * `segmentAt` is a pure function of currentTime, so the cut lands correctly
    * after ANY seek, including backwards and from the debug hook — which a
    * timeline `.set()` could not do without reverse bookkeeping (ADR-0008).
+   *
+   * THE FACE RIDES ALONG, for exactly the same reason. It used to be a
+   * `tl.call()` on the master timeline, and a `tl.call()` fires only when the
+   * playhead moves FORWARD over it: any move back across the 11.21 handover —
+   * the desktop "back" arrow from frame 8, a debug seek, "watch again" — left
+   * the page-sized face (1564x1911) standing under the cover, which is 6 %
+   * bigger than the cover's own 1465x1868. Same bug ADR-0008 describes for the
+   * content cut, same cure: read it off the clock.
    */
   const applySegment = t => {
     const idx = segmentAt(t)
     if (idx !== activeSegment.value) {
       activeSegment.value = idx
+      // Before the first cut no page is on screen yet, but the face still has
+      // to be the one the cover flies in on — hence the clamp rather than a
+      // guard: seeking to 0 must put 1465x1868 back, not leave the last page's.
+      setFace?.(STORY_SEGMENTS[Math.max(idx, 0)].face)
       onSegmentChange?.(idx)
     }
   }

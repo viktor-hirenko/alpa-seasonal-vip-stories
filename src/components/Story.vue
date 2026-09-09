@@ -197,7 +197,7 @@ onMounted(async () => {
   await nextTick()
   targets = resolveTargets(stageRef.value)
 
-  const { tl, hoverTl } = buildStoryTimeline(targets, {
+  const { tl, hoverTl, setFace } = buildStoryTimeline(targets, {
     onUpdate: () => {
       if (!reachedEnd && tl.duration() > 0 && tl.progress() > 0.995) {
         reachedEnd = true
@@ -221,6 +221,7 @@ onMounted(async () => {
     activeSegment,
     showPlayButton,
     isBuffering,
+    setFace,
   })
 
   // Show the first page immediately so nothing flashes empty before the video's

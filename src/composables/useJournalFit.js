@@ -32,16 +32,23 @@ import { FACE } from '@/story/journalGeometry.js'
  * `visibility: hidden`, never `display: none` (ADR-0008), so they still take
  * part in layout and every metric above is live.
  *
- * ONE TRAP THAT COST AN HOUR: all 17 pages live inside ONE box, and that box is
- * laid out at `--jw`/`--jh`, which follow the CURRENT slide's face — 1465 x 1868
- * for the cover, 1564 x 1911 for a data page (journalGeometry.js). At boot the
- * cover is showing, so every data page measures 6.3 % narrower than the box it
- * will actually be shown in, and rows that fit fine get shrunk for nothing
- * (sports_desk's seven-digit row came out at 0.98 before this was noticed).
- * So the sweep groups pages by their `data-face` and sets `--jw`/`--jh` to that
- * face while it measures the group, restoring afterwards. The swap and the
- * restore happen inside one synchronous task, so no intermediate state can be
- * painted.
+ * ONE TRAP THAT COST AN HOUR, and is now disarmed at the source. All 17 pages
+ * live inside ONE box, and that box is laid out at `--jw`/`--jh`, which follow
+ * the CURRENT slide's face — 1465 x 1868 for the cover, 1564 x 1911 for a data
+ * page (journalGeometry.js). At boot the cover is showing, so every data page
+ * used to measure 6.3 % narrower than the box it would actually be shown in,
+ * and rows that fit fine got shrunk for nothing (sports_desk's seven-digit row
+ * came out at 0.98 before this was noticed). `withFace` below answers it: the
+ * sweep groups pages by their `data-face` and lays the box out at that face
+ * while it measures the group, restoring afterwards, all inside one synchronous
+ * task so no intermediate state can be painted.
+ *
+ * SINCE V-58 A PAGE NO LONGER TAKES ITS SIZE FROM THE FACE at all — it has its
+ * own fixed box in design px (`.journal-page` in `_journal.scss`), so the
+ * measurement would come out right without `withFace` too. It is kept because
+ * it states the intent — "measure this page at its own base size" — and costs
+ * two style writes per group; do not read its presence as evidence that the
+ * pages still follow `--jw`.
  */
 
 /**

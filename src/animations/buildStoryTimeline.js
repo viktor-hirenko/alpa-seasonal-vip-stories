@@ -54,6 +54,11 @@ export function buildStoryTimeline(targets, ctx) {
   // Face geometry changes at the cover -> data-page handover. It is a layout
   // change, not a transform, and it lands on the same frame as a hard content
   // cut, so it is invisible.
+  //
+  // WHO CALLS THIS: useStoryPlayback's `applySegment`, off the clock, together
+  // with the content cut it belongs to. It is returned rather than scheduled
+  // here because a `tl.call()` only fires forwards, and the face has to be
+  // right after a backwards seek too — see the note on `applySegment`.
   const setFace = face => {
     const { w, h } = FACE[face]
     targets.stage.style.setProperty('--jw', String(w))
@@ -131,12 +136,11 @@ export function buildStoryTimeline(targets, ctx) {
   // neighbouring frames were moving under 2.5. Every later turn already begins
   // at zero, so they pass 0 and nothing changes for them.
   SLIDES.filter(s => s.frame >= 8 && s.frame <= 23).forEach((slide, i) => {
-    const at = snap(slide.at)
     // The face swap (cover 1465x1868 -> page 1564x1911) is a 6 % size change,
     // so it goes where the content cut goes: the edge-on instant, where the
-    // front face is a hairline and nothing about it can be seen.
-    tl.call(() => setFace(slide.face), null, snap(at + TIMING.flip.out))
-    nest(tl, pageTurn(targets, { from: i === 0 ? HANDOVER_YAW : 0 }), at)
+    // front face is a hairline and nothing about it can be seen. It is applied
+    // from the clock alongside that cut, not scheduled here — see `setFace`.
+    nest(tl, pageTurn(targets, { from: i === 0 ? HANDOVER_YAW : 0 }), snap(slide.at))
   })
 
   // Nested at 0 because the flight timeline is already in absolute video time.
@@ -169,5 +173,5 @@ export function buildStoryTimeline(targets, ctx) {
   // synthetic drift on top would double the motion and put it out of step with
   // the reference. `hover` stays a library preset and the lab still has a button
   // for it; the story does not build one. Every consumer of `hoverTl` guards it.
-  return { tl, hoverTl: null, fly }
+  return { tl, hoverTl: null, fly, setFace }
 }
