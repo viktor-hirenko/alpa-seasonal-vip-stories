@@ -198,7 +198,19 @@ const ANCHOR = {
   17: { rot: 15.07, scale: 0.6561, cx: 59.68, cy: 49.98 },  // clip: position and size
   18: { rot: -11.58, scale: 0.6602, cx: 54.36, cy: 59.02 }, // clip: position and size
   19: { rot: 8.36, scale: 0.6885, cx: 46.08, cy: 54.33 },   // clip: position and size
-  20: { rot: -24.28, scale: 0.7083, cx: 52.84, cy: 47.0 },  // clip: position and size
+  // `cx` RE-READ 2026-09-09 (session U): 52.84 was the odd one out. Four
+  // window runs — session Q's two on 07.09 and session U's two today, each ten
+  // seconds of the slide carried back to 68.037 and filtered by the 1.0 deg
+  // angle rule — put it at 54.21, 54.21, 53.80, 54.21. Of the sixteen readings
+  // those medians come from, fifteen sit above 53.7 and exactly one lands on
+  // 52.81, so the shipped number was the bottom edge of the distribution
+  // rather than its middle. 54.00 is the mean of TODAY'S two windows, which
+  // are 4 px apart; session Q's runs are not averaged in because they read a
+  // template this repo no longer renders (V-64's brown band, V-66's spine,
+  // T-2's page box). `scale` and `cy` are NOT touched: both windows answer
+  // 0.7060 and 46.9-47.0 against the shipped 0.7083 and 47.0, which is inside
+  // their own spread and so is not a measurement of anything.
+  20: { rot: -24.28, scale: 0.7083, cx: 54.0, cy: 47.0 },   // clip: position and size
   21: { rot: 11.03, scale: 0.6677, cx: 51.41, cy: 52.21 },  // clip: position and size
   22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 },    // storyboard — the two windows disagreed
   23: { rot: 13.21, scale: 0.681, cx: 52.0, cy: 50.2 },     // storyboard — the outro, out of scope
