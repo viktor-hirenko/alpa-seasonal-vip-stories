@@ -64,13 +64,22 @@
 /// the pseudo-element is painted BEFORE `.journal-pages`, so it stays behind
 /// the page content and behind every `mix-blend-mode` layer inside it — which
 /// is what keeps the sheen blending against black rather than against the room.
+///
+/// LEFT IS 0, NOT THE CARD'S 6.32 %. In the mock the glow wraps the WHOLE
+/// journal, spine included (it hangs on `Component 17`), and a box shadow only
+/// ever draws OUTSIDE its box — so a box that starts at the card's left edge
+/// leaves the spine side unlit, which is exactly what the owner saw. Reaching to
+/// the face's left edge puts the glow back around the spine. The extra black it
+/// paints there costs nothing: `.page__spine` is 109 design px wide against the
+/// card's 6.32 % inset (98.8 px), so the drawn spine covers all of it.
+/// Top and bottom stay inset — that is what lets the spine stand proud.
 .jface--front {
   transform: translateZ(calc(var(--jd) * 0.5 * var(--u)));
 
   &::before {
     content: '';
     position: absolute;
-    inset: 0.84% 1.53% 1.41% 6.32%;
+    inset: 0.84% 1.53% 1.41% 0;
     background: $page-bg;
     box-shadow:
       calc(#{list.nth($shadow-season-1, 1)} * var(--u)) calc(#{list.nth($shadow-season-1, 2)} * var(--u))
