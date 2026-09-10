@@ -445,11 +445,31 @@ recede.PARAM_DEFAULTS = { dur: TIMING.recede.dur }
  * seeked arbitrarily (ADR-0008).
  */
 export function journalDissolve(t, params) {
-  const p = P({ dur: TIMING.exit.dur, ease: EASE.dissolve }, params)
+  const p = P(
+    {
+      dur: TIMING.exit.dur,
+      ease: EASE.dissolve,
+      scale: TIMING.exit.scale,
+      // The scale the path leaves the journal at. Passed in rather than
+      // imported so this file keeps knowing nothing about slides.js.
+      from: null,
+      fadeAt: TIMING.exit.fadeAt - TIMING.exit.at,
+      fadeDur: TIMING.exit.fadeDur,
+    },
+    params,
+  )
   const s = tl()
   if (!t.pos) return s
   s.set(t.pos, { autoAlpha: 1 })
-  s.to(t.pos, { autoAlpha: 0, duration: p.dur, ease: p.ease }, 0)
+  // THE SHRINK IS THE EXIT; the fade is a tail on the end of it. See
+  // TIMING.exit for the measurement, and note that `scale` goes on `.journal-box`
+  // — the same element the pose owns — which is safe here only because
+  // JOURNAL_PATH has ended by this second and nothing else writes it after.
+  if (p.from != null) {
+    s.set(t.box, { scale: p.from }, 0)
+    s.to(t.box, { scale: p.from * p.scale, duration: p.dur, ease: 'power1.in' }, 0)
+  }
+  s.to(t.pos, { autoAlpha: 0, duration: p.fadeDur, ease: p.ease }, p.fadeAt)
   return s
 }
 journalDissolve.PARAM_SCHEMA = { dur: { min: 0.1, max: 2, step: 0.05 } }

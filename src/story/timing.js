@@ -165,7 +165,34 @@ export const TIMING = {
    * room's wall panels and its magenta glow are plainly visible THROUGH the
    * page, and the yellow type on it has gone dim but is still legible.
    */
-  exit: { at: 88.35, dur: 0.55 },
+  /**
+   * THE JOURNAL SHRINKS AWAY WITH THE TITLE — it does not simply fade on the
+   * spot. Re-measured 2026-09-10 after the owner said so, and he is right.
+   *
+   * WHY THE EARLIER READING SAID "FADE". The numbers above were taken from the
+   * strength of a difference mask (`preview` minus `clean bg`) inside the page.
+   * That mask weakens when the journal goes transparent — and equally when the
+   * journal simply gets SMALLER, because fewer pixels differ. The two are
+   * indistinguishable to it, and shrinking is what is actually happening.
+   *
+   * THE LANDMARK THAT SEPARATES THEM is the page's own yellow copy, which no
+   * white title and no glow can be confused with. Its width in the clip:
+   *
+   *   87.60  744      88.25  440 (0.59)     88.55  122 (0.16)
+   *   87.90  744      88.40  254 (0.34)     88.70  gone
+   *   88.10  714
+   *
+   * and its CENTRE holds at 524..574 / 898..946 throughout — the journal is not
+   * travelling, it is scaling about its own middle. In the log domain the steps
+   * are -0.53, -0.55, -0.75, i.e. very close to constant, which is why the ease
+   * is `power1.in` rather than a linear ramp.
+   *
+   * `scale` is the fraction of the path's last scale that is left at the end of
+   * `dur`. The fade is kept, but as a short tail at the very end: at 88.55 the
+   * yellow copy is still legible at 122 px wide, so the journal is small by
+   * then, not transparent.
+   */
+  exit: { at: 88.1, dur: 0.6, scale: 0.15, fadeAt: 88.55, fadeDur: 0.25 },
 
   /** Hyperspace burst: 1080 -> 2338 px = scale 2.165. */
   speed: { at: 92.83, dur: 1.1, scale: 2.165 },

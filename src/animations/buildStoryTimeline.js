@@ -161,7 +161,13 @@ export function buildStoryTimeline(targets, ctx) {
   // just more path, its roll crosses the fold on the spline like every other page
   // turn, and there is nothing here to nest. `recede` stays a library preset with
   // a button in the lab, the way `hover` did when the path replaced it.
-  nest(tl, journalDissolve(targets), snap(TIMING.exit.at))
+  // `from` is the scale the path leaves behind, so the shrink starts from
+  // exactly where the pose stopped rather than from a number repeated here.
+  nest(
+    tl,
+    journalDissolve(targets, { from: JOURNAL_PATH[JOURNAL_PATH.length - 1][2] }),
+    snap(TIMING.exit.at),
+  )
   nest(tl, hyperspaceBurst(targets), snap(TIMING.speed.at))
   // Nested at 88.10, the second the title's own first pixels appear — what the
   // old code called the flash was this arrival (TIMING.outro). Its exit leads

@@ -221,7 +221,22 @@ export const FLY_Z_FRONT = 600
 // prettier-ignore
 const RAW = [
   // pen-1 — frame 8, 10.80..18.17 s
-  { id: 'pen-1', asset: 'pen', frame: 8, zFlip: 12.04, keys: [
+  // THE PEN NEVER GOES BEHIND THE JOURNAL — an OWNER DECISION (2026-09-10:
+  // "на втором слайде ручка должна левитировать над журналом"), not a
+  // measurement, and the one row in this table that is not one.
+  //
+  // The clip crosses it at 12.04, which is what `zFlip` held and what
+  // fly-measure prints. The MOCK draws it the other way: on Editor's Note
+  // (21770:2821) the pen is painted OVER the page, nib and all, hovering above
+  // the spread. Playing the clip's version reads as the pen standing on the top
+  // edge of the page and then being swallowed by it, which is what the owner
+  // objected to. 18.17 is the flight's own last key, so the step never fires.
+  //
+  // CONSEQUENCE, ON PURPOSE: `fly:check` compares the covered fraction against
+  // the clip and will now disagree on pen-1. That is the trade the decision
+  // buys; do not "fix" it by putting 12.04 back. Re-running `fly:measure`
+  // WILL overwrite this — restore it by hand afterwards.
+  { id: 'pen-1', asset: 'pen', frame: 8, zFlip: 18.17, keys: [
     [10.80,   57.4,  -11.3,  399,  -91.5],
     [11.00,   59.8,   -3.7,  399,  -85.5],
     [11.24,   62.7,    5.3,  402,  -85.5],

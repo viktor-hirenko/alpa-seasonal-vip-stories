@@ -681,26 +681,30 @@
   pointer-events: none;
 }
 
-/// Pink glow blob behind the astronaut (21770:2753): a SOLID rectangle
-/// clipped into a soft shape by the mock's own blob mask — this one NEEDS
-/// the mask (unlike the astronaut photo below it, which already has a clean
-/// alpha edge from its source and is left unmasked).
+/// THE PINK BLOB BEHIND THE ASTRONAUT (21770:2753) IS NOT DRAWN, and the
+/// element stays only so the markup keeps matching the mock's layer list.
+///
+/// `cover-mask.webp` is the astronaut's own SILHOUETTE with a hard edge — 96 %
+/// of its alpha is either 0 or 255 — and it is cut slightly wider than the
+/// photo it sits behind. A solid #ff7eda clipped by it therefore does not read
+/// as a glow at all: it reads as a bright pink OUTLINE around the helmet and a
+/// band running from the left shoulder down to the bottom of the page. The
+/// owner saw it on the build (2026-09-10) and was right.
+///
+/// MEASURED, not judged by eye alone: inside the halo zone — the pixels that
+/// change when this layer is switched off — the mean per-channel error against
+/// the Figma export (21770:2744) is 86.4 with the layer on and 11.2 with it
+/// off. Blur does not save it: `filter` is applied BEFORE the mask, so the
+/// mask's hard edge survives untouched, and moving the blur to a wrapper
+/// (outside the mask) only spreads the band — 9.9 %, 11.1 %, 13.1 % and 16.0 %
+/// of the page off the mock at 30/60/100/160 design px against 9.1 % as-is and
+/// 8.0 % with the layer gone.
+///
+/// The page's pink light is already in the `cover__slots` texture, which is why
+/// removing this costs nothing: the profile of the pink across the page matched
+/// the mock BEFORE the change everywhere except this band.
 .cover__glow-blob {
-  position: absolute;
-  left: du(124.008);
-  top: du(247);
-  width: du(1458);
-  height: du(1670);
-  background: #ff7eda;
-  mask-image: url('@/assets/pages/cover-mask.webp');
-  mask-size: du(1715.689) du(1715.691);
-  mask-position: du(-4.569) du(-52.301);
-  mask-repeat: no-repeat;
-  -webkit-mask-image: url('@/assets/pages/cover-mask.webp');
-  -webkit-mask-size: du(1715.689) du(1715.691);
-  -webkit-mask-position: du(-4.569) du(-52.301);
-  -webkit-mask-repeat: no-repeat;
-  pointer-events: none;
+  display: none;
 }
 
 /// Astronaut photo (21770:2754). Mirrored (the mock's rotate(180deg) +
@@ -973,21 +977,28 @@
   white-space: nowrap;
 }
 
+/// NOT DRAWN, for the same reason as `.cover__glow-blob` — see the long note
+/// there. On the mini card the silhouette-clipped rectangle was even more
+/// obvious than on the cover: a hard pink CRESCENT standing behind the helmet,
+/// which is what the owner described on 2026-09-10.
 .en__mini-glow-blob {
-  position: absolute;
-  left: du(46.98);
-  top: du(93.58);
-  width: du(552.342);
-  height: du(632.655);
-  background: #ff7eda;
-  mask-image: url('@/assets/pages/cover-mask.webp');
-  mask-size: du(714.047) du(714.047);
-  mask-position: du(-0.208) du(-18.859);
-  mask-repeat: no-repeat;
-  -webkit-mask-image: url('@/assets/pages/cover-mask.webp');
-  -webkit-mask-size: du(714.047) du(714.047);
-  -webkit-mask-position: du(-0.208) du(-18.859);
-  -webkit-mask-repeat: no-repeat;
+  display: none;
+}
+
+/// The background texture the mini card was missing (21770:2747, the same
+/// "slots_id-1" the full cover carries as `.cover__slots`).
+///
+/// It was deliberately skipped when this card was built — "at this size it is
+/// imperceptible" — and that was wrong in a way only visible next to the mock:
+/// the pink light on the cover IS this texture, so without it the card renders
+/// near-black while the mock's is lit from behind the astronaut. Removing the
+/// blob above without adding this would have made the card darker still.
+///
+/// The numbers are the cover's own, scaled by the ratio of the two bodies
+/// (546.63 / 1441.033 = 0.3793), so the card stays a scale of the cover rather
+/// than a second, separately-authored layout.
+.en__mini-slots {
+  pointer-events: none;
 }
 
 .en__mini-astronaut {
@@ -1104,6 +1115,15 @@
   width: 35.82%;
   height: 97.74%;
   transform: scaleX(-1);
+}
+
+/// NO SPINE ON THE LAST PAGE. Every data page carries the magenta binding
+/// tube down its left edge; the mock's Final (21770:4465) does not — that page
+/// is framed on all four sides by the mirrored edge asset above and has no
+/// binding at all. Ours drew the tube anyway, which is what the owner saw on
+/// 2026-09-10 ("последняя страница в макете без переплета").
+.pf .page__spine {
+  display: none;
 }
 
 .pf__warp {

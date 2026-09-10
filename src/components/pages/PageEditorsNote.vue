@@ -46,6 +46,14 @@
       <div class="en__mini-card">
         <div class="en__mini-edge" />
         <div class="en__mini-body">
+          <!-- The cover's own background texture at the card's scale (0.3793).
+               See `.en__mini-slots` for why it is here and was not before. -->
+          <div
+            class="page__art art-box en__mini-slots"
+            :style="artBox(-196.91, -148.81, 1563.55, 696.02)"
+          >
+            <img :src="slots" alt="" :style="artImg(1563.55, 696.02, -5.3)" />
+          </div>
           <div class="en__mini-fade1" />
           <p class="en__mini-vip-club">{{ cover.vip_club }}</p>
           <div class="en__mini-glow-blob" />
@@ -90,6 +98,7 @@ import galaxy from '@/assets/pages/galaxy-3.webp'
 import planets from '@/assets/pages/planets-4.webp'
 import dot from '@/assets/pages/editors-note-dot.svg'
 import ellipse from '@/assets/pages/cover-ellipse.svg'
+import slots from '@/assets/pages/cover-slots.webp'
 
 const story = useStory()
 const L = story.layout('editors_note')

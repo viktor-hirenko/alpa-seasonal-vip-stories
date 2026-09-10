@@ -6,14 +6,17 @@
     <StoryProgressBar :time="time" :segments="segments" />
 
     <div class="story-header__row">
+      <!-- TWO GLYPHS, as the mock has them (21770:2739 / 21770:2741): the
+           speaker with three arcs is SOUND ON, the speaker with a cross is
+           SOUND OFF. Do not go back to one asset plus a drawn-on slash — see
+           `.story-header__btn--sound`. -->
       <button
         class="story-header__btn story-header__btn--sound"
         type="button"
         :aria-label="soundOn ? 'Turn sound off' : 'Turn sound on'"
-        :class="{ 'is-off': !soundOn }"
         @click="$emit('toggle-sound')"
       >
-        <img :src="soundIcon" alt="" />
+        <img :src="soundOn ? soundOnIcon : soundOffIcon" alt="" />
       </button>
 
       <div class="story-header__spacer" />
@@ -48,7 +51,8 @@
 
 <script setup>
 import StoryProgressBar from './StoryProgressBar.vue'
-import soundIcon from '@/assets/ui/sound.svg'
+import soundOnIcon from '@/assets/ui/sound-on.svg'
+import soundOffIcon from '@/assets/ui/sound-off.svg'
 import closeIcon from '@/assets/ui/close.svg'
 
 defineProps({

@@ -9,11 +9,26 @@
 /// 1080x1920 canvas — so it scales with `--u` like everything else.
 ////
 
+/// THE HEADER IS CLAMPED TO THE SCREEN, not to the design canvas.
+///
+/// The canvas is 1080x1920 and the scene covers the viewport, so on a phone the
+/// canvas is WIDER than the screen and its right side is cropped — expected for
+/// the scene (see `--fit`), and fatal for chrome. At 430x932 the canvas is 524
+/// CSS px wide, so `width: du(976)` came out 474 px starting at x=25: the row's
+/// right end sat at 499 and the CLOSE BUTTON at 455..484 was entirely off
+/// screen. It could not be seen and could not be tapped — measured on the build
+/// of 2026-09-10, and present before that day's changes too.
+///
+/// `min()` with a viewport length is deliberate and allowed: _units.scss bans
+/// vw/vh INSIDE the design canvas and explicitly permits it for the chrome that
+/// lives outside it. The clamp only ever bites where the canvas overflows the
+/// screen — at 834 and 1440 the design width is the smaller of the two and
+/// nothing moves (measured: header 509 px and 412 px, unchanged).
 .story-header {
   position: absolute;
   left: du(52);
   top: calc(du(36) + env(safe-area-inset-top, 0px));
-  width: du(976);
+  width: min(#{du(976)}, calc(100vw - #{du(52)} * 2));
   display: flex;
   flex-direction: column;
   gap: du(20);
@@ -44,10 +59,14 @@
   will-change: width;
 }
 
+/// The row carries the mock's own 946 (30 narrower than the header), but it
+/// must not be able to reach past the header — otherwise clamping the header
+/// achieves nothing and the close button still lands off screen, which is
+/// exactly what happened on the first attempt at the phone fix.
 .story-header__row {
   display: flex;
   align-items: center;
-  width: du(946);
+  width: min(#{du(946)}, 100%);
   gap: du(16);
 }
 
@@ -77,29 +96,20 @@
   }
 }
 
+/// TWO EXPORTED GLYPHS, NOT ONE PLUS A DRAWN SLASH.
+///
+/// The mock's `Sound` component (21770:2738) has two variants and they are
+/// different drawings: "Sound on" (21770:2739) is a speaker with three arcs,
+/// "Sound OFF" (21770:2741) is a speaker with a cross beside it. `sound.svg`,
+/// the single asset this replaces, was an export of the OFF variant — so the
+/// header showed a crossed-out speaker while the sound was ON, and the `.is-off`
+/// rule then dimmed that same crossed-out glyph and drew ANOTHER diagonal bar
+/// across it. The owner reported it on 2026-09-10; both halves were wrong.
+///
+/// 82x70 is the mock's own box for both variants (the old asset was 71.4x60).
 .story-header__btn--sound {
-  width: du(71.4);
-  height: du(60);
-
-  // The exported icon is the "sound on" glyph; the off state is the same glyph
-  // dimmed with a slash, so it reads at a glance without a second asset.
-  &.is-off {
-    opacity: 0.55;
-    position: relative;
-
-    &::after {
-      content: '';
-      position: absolute;
-      left: 6%;
-      top: 50%;
-      width: 88%;
-      height: du(5);
-      border-radius: du(5);
-      background: #fff;
-      transform: rotate(-32deg);
-      transform-origin: center;
-    }
-  }
+  width: du(82);
+  height: du(70);
 }
 
 .story-header__btn--close {
