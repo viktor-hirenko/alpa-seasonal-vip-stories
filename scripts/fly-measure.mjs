@@ -266,12 +266,55 @@ function moments(px, w = W) {
   }
 }
 const med = a => a.slice().sort((x, y) => x - y)[a.length >> 1]
+/** Sample every Nth tracker point when fitting size and angle. 1 = every frame. */
+const FIT_STRIDE = Number(process.env.FIT_STRIDE || 8)
 /**
  * A WEIGHTED MEAN, used on the size column after its median (see stageTable).
  * Kernel weights are 1-2-3-2-1 and the ends are handled by dropping the taps
  * that fall off, so the first and last rows keep their own value's weight
  * rather than being pulled towards a neighbour that does not exist.
  */
+/** Indices of the samples within +/- `sec` of sample `i`, by their own time. */
+const inWindow = (ks, i, sec) => {
+  const out = []
+  for (let j = i; j >= 0 && ks[i].t - ks[j].t <= sec; j--) out.push(j)
+  for (let j = i + 1; j < ks.length && ks[j].t - ks[i].t <= sec; j++) out.push(j)
+  return out
+}
+/**
+ * Half-width of the median window and of the blur, in SECONDS of clip - not in
+ * samples, because the fit is sampled every frame now and a sample-counted
+ * window would shrink eightfold with it.
+ *
+ * 0.7 s is measured, not chosen. Swept at 0.27 / 0.40 / 0.55 / 0.70 / 0.90 and
+ * judged on two numbers at once - the worst frame-to-frame CHANGE in the growth
+ * of the on-screen box (what the eye calls twitching) and the number of frames
+ * whose size is more than 10 % off the clip's own:
+ *
+ *     window   worst jerk   median jerk   size >10 % off
+ *     0.27 s      4.12         0.95           36
+ *     0.40 s      2.53         0.66           35
+ *     0.55 s      1.71         0.49           39
+ *     0.70 s      0.86         0.49           41
+ *     0.90 s      0.84         0.47           43
+ *
+ * Past 0.7 the smoothing stops buying gladness and starts costing accuracy. For
+ * scale: the sparse table this replaces reads 5.12 worst and 56 frames off - it
+ * looked smooth only because it had a third of the keys, and its rare jerks were
+ * the staircase of V-69.
+ */
+const MED_SEC = Number(process.env.MED_SEC || 0.7)
+const BLUR_SEC = Number(process.env.BLUR_SEC || 0.7)
+/** Weighted mean over a time window, weights falling off with distance. */
+const blurT = (ks, vals, i, sec) => {
+  let sw = 0, sv = 0
+  for (const j of inWindow(ks, i, sec)) {
+    const w = 1 - Math.abs(ks[j].t - ks[i].t) / (sec + 1e-9)
+    sw += w
+    sv += w * vals[j]
+  }
+  return sw ? sv / sw : vals[i]
+}
 const blur = (a, i, k = [1, 2, 3, 2, 1]) => {
   const r = (k.length - 1) / 2
   let sw = 0, sv = 0
@@ -937,7 +980,13 @@ function stageFit(flights) {
     for (let t = Math.max(0, f.t0 - 9); t <= Math.min(94, f.t1 + 9); t += 0.5) fs.push(oneFrame(t))
     const pl = medianPlate(fs)
     const ks = []
-    for (let i = 0; i < f.pts.length; i += 8) {
+    // HOW DENSELY THE FIT IS SAMPLED. The tracker gives one point per frame of
+    // the clip; correlating the sprite on every eighth of them left the size and
+    // angle columns with 3.7 measurements a second, and a quarter of a second
+    // between neighbours is long enough for the object to do anything at all.
+    // Everything in between was interpolation, which is what the owner saw as
+    // "it follows the video in steps".
+    for (let i = 0; i < f.pts.length; i += FIT_STRIDE) {
       const q = f.pts[i]
       // 2.7x the object, so a rotated silhouette never leaves the crop. The
       // crop may hang off the frame — pad rather than skip, which is what
@@ -1015,7 +1064,15 @@ function stageFit(flights) {
  * MEASURED off those frames — not off the settled leg.
  */
 function withEntry(sp, a, ks, pl) {
-  const conf = ks.filter(k => k.sc >= 0.22)
+  // THE WALK NEEDS A WHOLE OBJECT TO START FROM. Its first step predicts the
+  // next centre from the anchor, so an anchor the frame is already cutting gives
+  // it a centre and a size that are both wrong, and the very first correlation
+  // fails: sampled every frame, basketball-1 and chip-1 stopped at "score -1.00"
+  // on their own anchor and shipped an entry two rows long, i.e. the ball
+  // appearing at the edge instead of flying in from beyond it. Anchor on the
+  // first confident frame the edge does NOT cut, and walk back from there.
+  const uncut = ks.filter(k => k.sc >= 0.22 && !k.clip)
+  const conf = uncut.length >= 2 ? uncut : ks.filter(k => k.sc >= 0.22)
   if (conf.length < 2) return ks
   const step = 1 / 30
   const crop = s => Math.round(s * 2.6)
@@ -1466,8 +1523,35 @@ function stageTable(fit, covers) {
     // POSITION AND ANGLE ARE NOT BLURRED, for the reasons in the two notes
     // below: the path is already smooth through the spline, and the angle
     // column is folded and outlier-replaced instead.
-    const smed = good.map((k, i) => med(good.slice(Math.max(0, i - 2), i + 3).map(q => q.size)))
-    const sm = good.map((k, i) => ({ ...k, size: Math.round(blur(smed, i)) }))
+    // A SIZE MEASURED ON A SILHOUETTE THE FRAME CUTS IS NOT A MEASUREMENT — the
+    // same rule the angle has carried since session N, which the old comment
+    // explicitly declined to apply here ("a blob clipped by the frame still has
+    // a centre"). A centre, yes; a SIZE, no. Sampled every frame, milkpack-1's
+    // entry reads 167, 176, 259, 304, 337 across a third of a second while the
+    // carton crosses the edge - the fit is measuring the visible sliver, not the
+    // carton. Drop those rows' sizes and carry the nearest whole ones across.
+    const whole = good.map(k => !k.clip && (k.vis === undefined || k.vis > 0.95))
+    const rawSize = good.map(k => k.size)
+    const wholeSize = good.map((k, i) => {
+      if (whole[i]) return rawSize[i]
+      let a = i, b = i
+      while (a >= 0 && !whole[a]) a--
+      while (b < good.length && !whole[b]) b++
+      if (a < 0 && b >= good.length) return rawSize[i]
+      if (a < 0) return rawSize[b]
+      if (b >= good.length) return rawSize[a]
+      const u = (good[i].t - good[a].t) / (good[b].t - good[a].t)
+      return rawSize[a] + (rawSize[b] - rawSize[a]) * u
+    })
+    // WINDOWS ARE IN SECONDS, NOT IN SAMPLES. The fit is sampled every frame now
+    // (FIT_STRIDE), and a fixed 5-sample window that used to span 1.2 s of clip
+    // spans 0.16 s at that density - the same code, eight times weaker, which is
+    // how a denser and more honest measurement came out looking worse.
+    const smed = good.map((k, i) => med(inWindow(good, i, MED_SEC).map(j => wholeSize[j])))
+    const sm = good.map((k, i) => ({
+      ...k,
+      size: Math.round(blurT(good, smed, i, BLUR_SEC)),
+    }))
     // The fitter rotates the SPRITE onto the frame; CSS rotates the element the
     // other way round, so the angle changes sign on the way into the table.
     const fd = fold(
@@ -1525,10 +1609,48 @@ function stageTable(fit, covers) {
     // path already turns by less than 60 deg on every frame of every flight and
     // changes speed by at most 5 % of the stage per second. Smoothing the rows
     // as well would move the table away from the measurement for nothing.
-    const sm2 = sm.map((k, i) => ({
-      ...k,
-      rot: +med(sm.slice(Math.max(0, i - 2), i + 3).map(q => q.rot)).toFixed(1),
-    }))
+    // THE ANGLE GETS THE SAME TWO TREATMENTS AS THE SIZE, and for the same
+    // reason — but it is an AXIS, not a number, so neither a median nor a mean
+    // may be taken on it directly. The artwork reads the same every 180 deg
+    // (symOf), so -89 and +89 are two names for one pose and averaging them
+    // gives 0, which is the pose at right angles to both. Work on the DOUBLED
+    // angle as a unit vector, average that, and halve it back: the standard way
+    // to average an orientation, and the only one that does not invent a turn.
+    //
+    // Sampled every frame this matters far more than it did at stride 8: the
+    // fit answers about a nearly square silhouette and its column rattles
+    // -42, -61.5, -42 inside three frames, which plays as the object flicking
+    // back and forth. Clipped frames are dropped first, exactly as for size.
+    const rotWhole = sm.map(k => !k.clip && (k.vis === undefined || k.vis > 0.95))
+    const axis = sm.map((k, i) => {
+      if (rotWhole[i]) return k.rot
+      let a = i, b = i
+      while (a >= 0 && !rotWhole[a]) a--
+      while (b < sm.length && !rotWhole[b]) b++
+      if (a < 0 && b >= sm.length) return k.rot
+      return a < 0 ? sm[b].rot : b >= sm.length ? sm[a].rot : sm[a].rot
+    })
+    const meanAxis = (idx, weights) => {
+      let sx = 0, sy = 0, sw = 0
+      idx.forEach((j, n) => {
+        const w = weights ? weights[n] : 1
+        const th = (2 * axis[j] * Math.PI) / 180
+        sx += w * Math.cos(th)
+        sy += w * Math.sin(th)
+        sw += w
+      })
+      if (!sw || (sx === 0 && sy === 0)) return axis[idx[0]]
+      return (Math.atan2(sy / sw, sx / sw) * 180) / Math.PI / 2
+    }
+    const sm2 = sm.map((k, i) => {
+      const idx = inWindow(sm, i, MED_SEC)
+      const w = idx.map(j => 1 - Math.abs(sm[j].t - sm[i].t) / (MED_SEC + 1e-9))
+      // keep the result on the same branch the folded column already uses
+      let r = meanAxis(idx, w)
+      while (r - k.rot > 90) r -= 180
+      while (k.rot - r > 90) r += 180
+      return { ...k, rot: +r.toFixed(1) }
+    })
 
     const keep = new Set([
       ...dp(sm2, k => k.x, 0.35),
@@ -1571,7 +1693,22 @@ function stageTable(fit, covers) {
     // further than the slide's own cut. It is a poor entry, and it is what
     // shipped; what it is NOT is an invention carried over a second, which is
     // where extrapolating a measurement that does not exist ends up.
-    const ks2 = ks[0].entry ? ks : [synthEntry(ks, CUT[f.frame]), ...ks]
+    // A MEASURED ENTRY THAT IS TWO ROWS LONG IS NOT AN ENTRY. The backward walk
+    // stops as soon as one frame fails to score, and on basketball-1 and chip-1
+    // that is the anchor itself: what shipped was the ball switching on already
+    // a fifth drawn, jumping to half in three frames, and sliding right before
+    // it slid left. Below 0.15 s the walk has not carried the object clear of
+    // anything, so drop it and use the synthesised row, which at least runs the
+    // first measured leg back beyond the edge.
+    const measured = ks.filter(k => k.entry)
+    const span = measured.length ? measured[measured.length - 1].t - measured[0].t : 0
+    const usable = ks[0].entry && span >= 0.15
+    if (ks[0].entry && !usable)
+      console.error(
+        `!! ${f.id}: measured entry spans only ${(span * 1000) | 0} ms — falling back to the synthesised row`,
+      )
+    const body = usable ? ks : ks.filter(k => !k.entry)
+    const ks2 = usable ? ks : [synthEntry(body, CUT[f.frame]), ...body]
     const cr = crossing(covers[f.id] ?? [])
     if (!cr) console.error(`!! ${f.id}: no occlusion curve, zFlip left at the flight's end`)
     out.push({

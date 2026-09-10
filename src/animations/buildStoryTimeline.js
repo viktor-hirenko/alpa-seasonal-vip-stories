@@ -1,5 +1,5 @@
 import { gsap } from 'gsap'
-import { SLIDES, JOURNAL_PATH } from '@/story/slides.js'
+import { SLIDES, JOURNAL_PATH, SLIDE_LEAN } from '@/story/slides.js'
 import { FACE } from '@/story/journalGeometry.js'
 import { TIMING, snap } from '@/story/timing.js'
 import {
@@ -135,12 +135,18 @@ export function buildStoryTimeline(targets, ctx) {
   // turn — 18 design px of silhouette width and 7 px of position, where the
   // neighbouring frames were moving under 2.5. Every later turn already begins
   // at zero, so they pass 0 and nothing changes for them.
-  SLIDES.filter(s => s.frame >= 8 && s.frame <= 23).forEach((slide, i) => {
+  SLIDES.filter(s => s.frame >= 8 && s.frame <= 23).forEach((slide, i, arr) => {
     // The face swap (cover 1465x1868 -> page 1564x1911) is a 6 % size change,
     // so it goes where the content cut goes: the edge-on instant, where the
     // front face is a hairline and nothing about it can be seen. It is applied
     // from the clock alongside that cut, not scheduled here — see `setFace`.
-    nest(tl, pageTurn(targets, { from: i === 0 ? HANDOVER_YAW : 0 }), snap(slide.at))
+    // A TURN NOW STARTS WHERE THE PREVIOUS ONE LANDED. Leaving `from` at zero
+    // while `to` is a lean would throw the lean away in one frame at the head of
+    // the next turn - the same twitch the HANDOVER_YAW note below describes,
+    // only on every slide that leans.
+    const prev = arr[i - 1]
+    const from = i === 0 ? HANDOVER_YAW : (SLIDE_LEAN[prev.frame] ?? 0)
+    nest(tl, pageTurn(targets, { from, to: SLIDE_LEAN[slide.frame] ?? 0 }), snap(slide.at))
   })
 
   // Nested at 0 because the flight timeline is already in absolute video time.

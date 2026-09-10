@@ -411,7 +411,52 @@ for (const s of SLIDES) {
    */
   const next = SLIDES.find(x => x.at > s.at + 1e-6)
   const folds = next && next.page !== s.page
-  if (folds && full.length) full.push({ ...full[full.length - 1], t: +(next.at - 0.02).toFixed(2) })
+  /**
+   * THE TAIL ROW CARRIES THE MOTION ON, IT DOES NOT FREEZE IT (2026-09-10).
+   *
+   * This row used to be a COPY of the slide's last measured pose, which made the
+   * journal stand perfectly still for the last 0.3-0.7 s of almost every slide —
+   * and once hermite.js started holding flat segments exactly (V-55), that stand
+   * became a dead stop the owner could see: "перед переключением слайда журнал
+   * замирает, этого не было".
+   *
+   * The copy was never a measurement. The sampler stepped 0.5 s and stopped
+   * short of the turn, so the gap simply had no data and "it holds" was the
+   * assumption filling it. Measured on 2026-09-10 with journal-measure --t
+   * straight into one of those gaps, the clip does no such thing:
+   *
+   *   t      66.57   66.75   66.90   67.00      (fold at 67.07)
+   *   rot    25.56   25.91   26.26   26.41      still turning
+   *   scale  0.661   0.664   0.667   0.668      still growing
+   *   cx      54.1    54.2    54.4    54.5      still travelling
+   *
+   * — a straight continuation of the leg before it, to a fraction of a degree.
+   * So the row continues the last measured STEP instead of repeating the pose,
+   * and the motion table underneath it was re-shot at 0.25 s (233 samples) so
+   * the leg being continued is short and the extrapolation spans a quarter of a
+   * second rather than half of one.
+   *
+   * What the old note below is right about stands: the journal must not start
+   * its THIRTY-degree turn early, and it does not — this carries the slide's own
+   * drift of a degree or two, not the fold.
+   */
+  if (folds && full.length) {
+    const last = full[full.length - 1]
+    const prev = full.length > 1 ? full[full.length - 2] : null
+    const t = +(next.at - 0.02).toFixed(2)
+    if (prev && last.t > prev.t) {
+      const k = (t - last.t) / (last.t - prev.t)
+      full.push({
+        t,
+        rot: +(last.rot + (last.rot - prev.rot) * k).toFixed(2),
+        scale: +(last.scale + (last.scale - prev.scale) * k).toFixed(4),
+        cx: +(last.cx + (last.cx - prev.cx) * k).toFixed(2),
+        cy: +(last.cy + (last.cy - prev.cy) * k).toFixed(2),
+      })
+    } else {
+      full.push({ ...last, t })
+    }
+  }
   allFull.push(...full)
   // How far the journal travels over the slide, and how far it wanders from
   // where it started — the second number is the one that says "this slide

@@ -309,14 +309,21 @@ journalPath.PARAM_SCHEMA = {}
  * The measurement behind `peak`, `out` and `back` is in TIMING.flip.
  */
 export function pageTurn(t, params) {
-  const p = P({ ...TIMING.flip, from: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack }, params)
+  const p = P({ ...TIMING.flip, from: 0, to: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack }, params)
   const s = tl()
   s.set(t.box, { rotationY: p.from }, 0)
   s.to(t.box, { rotationY: p.peak, duration: p.out, ease: p.easeOut }, 0)
-  s.to(t.box, { rotationY: 0, duration: p.back, ease: p.easeBack }, p.out)
+  // `to` IS WHERE THE TURN LANDS, and it is not always square-on. The clip
+  // stops several of its slides short of zero and leaves the page leaning -
+  // which under the stage's perspective is the trapezium the owner kept
+  // pointing at on review.html. Landing at zero everywhere was the reason our
+  // page always faced the camera dead on. See SLIDE_LEAN in slides.js for the
+  // measured angles and for why the ones under the bar are left at zero.
+  s.to(t.box, { rotationY: p.to, duration: p.back, ease: p.easeBack }, p.out)
   return s
 }
 pageTurn.PARAM_SCHEMA = {
+  to: { min: -30, max: 30, step: 1 },
   peak: { min: 0, max: 180, step: 1 },
   out: { min: 0.02, max: 0.6, step: 0.01 },
   back: { min: 0.05, max: 1.5, step: 0.01 },
