@@ -4,12 +4,14 @@
       <div class="page__art art-box" :style="artBox(-637, -136, 1501.563, 1258.608)">
         <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
+          <JGlow :left="-435.2" :top="1070.59" :width="2272.4" :height="1136.2" />
     </template>
 
     <template #art>
-      <JGlow :left="-435.2" :top="1070.59" :width="2272.4" :height="1136.2" />
-      <div class="sp__mascot">
+      <div class="sp__mascot" :style="{ '--cow': `url(${cow})` }">
         <img :src="cow" alt="" />
+        <!-- 21770:4151's inner shadow — see the `inner-glow` mixin. -->
+        <div class="sp__inner" />
       </div>
       <!-- 21770:4152, and it sits AFTER the cow in the mock's own order: the
            mascot box runs 547 px past the bottom of the body, so without this

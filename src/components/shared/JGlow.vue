@@ -31,14 +31,46 @@ const props = defineProps({
    * by analogy with a neighbouring page.
    */
   blend: { type: String, default: 'hard' },
+  /**
+   * The ELLIPSE MASK's own box, design px, relative to this element's top-left.
+   *
+   * ⚠️ THE MASK IS NOT THE PICTURE, AND COLLAPSING THE TWO IS WHY THE GLOW CAME
+   * OUT PALE (V-91). The mock nests them separately — the bitmap fills the
+   * element, the mask is a smaller rectangle at its own offset inside it
+   * (`mask-size: 1439.453px 862.734px; mask-position: 201.617px -21.566px` on
+   * Seasonal Power). This component used to stretch the mask over the whole
+   * element with `100% 100%` and call it "visually equivalent". It is not: the
+   * ellipse's bright core lands somewhere else and over a wider area, so the
+   * peak drops and the falloff flattens. Measured on the page export, the
+   * magenta peak was 70 against the mock's 113 on Space Milk and 12 against 35
+   * on Sponsor, and the top third of Seasonal Power was black where the mock is
+   * pink. The owner saw it on his phone and said so three times.
+   *
+   * Leave these at 0 only where the mock really does size the mask to the
+   * element; every page that does not is wrong until it carries its own numbers.
+   */
+  maskX: { type: Number, default: 0 },
+  maskY: { type: Number, default: 0 },
+  maskWidth: { type: Number, default: 0 },
+  maskHeight: { type: Number, default: 0 },
 })
 
 const d = n => `calc(${+n.toFixed(3)} * var(--u))`
 
-const boxStyle = computed(() => ({
-  left: d(props.left),
-  top: d(props.top),
-  width: d(props.width),
-  height: d(props.height),
-}))
+const boxStyle = computed(() => {
+  const box = {
+    left: d(props.left),
+    top: d(props.top),
+    width: d(props.width),
+    height: d(props.height),
+  }
+  if (!props.maskWidth || !props.maskHeight) return box
+  const size = `${d(props.maskWidth)} ${d(props.maskHeight)}`
+  const position = `${d(props.maskX)} ${d(props.maskY)}`
+  return {
+    ...box,
+    maskSize: size, maskPosition: position,
+    WebkitMaskSize: size, WebkitMaskPosition: position,
+  }
+})
 </script>

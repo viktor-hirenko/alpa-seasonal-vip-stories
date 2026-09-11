@@ -4,6 +4,14 @@
     <img class="page__edge" :src="edge" alt="" />
 
     <div class="page__body">
+      <!-- The body's OWN background image, below everything (V-91). Several
+           pages fill the body frame with a picture on top of the #000a12 — on
+           Seasonal Power it is the magenta-to-dark ramp that lights the whole
+           left half, and without it the top of the page is black where the mock
+           is pink. The owner saw exactly that and said so. A page without one
+           simply omits `bg`. -->
+      <img v-if="bg" class="page__bg" :src="bg" alt="" />
+
       <!-- Backdrop art: sits BELOW the colour wash, so the wash tints it. -->
       <slot name="backdrop" />
 
@@ -51,6 +59,8 @@ defineProps({
   spineFadeTo: { type: String, default: '#000a12' },
   /** Colour wash laid over the background with mix-blend-mode: color. */
   tint: { type: String, default: '' },
+  /** The body frame's own background image, if the page has one — see above. */
+  bg: { type: String, default: '' },
 })
 
 import spine from '@/assets/pages/spine.svg'

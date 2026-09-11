@@ -7,6 +7,10 @@
       :height="glowHeight"
       :plus="glowPlus"
       :blend="glowBlend"
+      :mask-x="glowMaskX"
+      :mask-y="glowMaskY"
+      :mask-width="glowMaskWidth"
+      :mask-height="glowMaskHeight"
     />
     <slot />
   </div>
@@ -43,6 +47,11 @@ const props = defineProps({
   glowTop: { type: Number, default: -112 },
   glowWidth: { type: Number, default: 1908.199 },
   glowHeight: { type: Number, default: 1143.676 },
+  /** The ellipse mask's own box inside the glow box — see JGlow, V-91. */
+  glowMaskX: { type: Number, default: 0 },
+  glowMaskY: { type: Number, default: 0 },
+  glowMaskWidth: { type: Number, default: 0 },
+  glowMaskHeight: { type: Number, default: 0 },
   /** Most pages stack two glow copies; VIP Status has only the hard-light one. */
   glowPlus: { type: Boolean, default: true },
   /** Blend of the first glow copy — see JGlow. Seasonal Power uses 'dodge'. */

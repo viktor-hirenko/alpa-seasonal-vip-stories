@@ -2,7 +2,7 @@
   <!-- Seasonal Power. Figma set 21770:3030, EN variant 21770:3031.
        Slide frame 10, cut at 22.07 s. Dynamic value: the `points` param.
        The value is a plain gradient number here, not digit tiles. -->
-  <PageChrome>
+  <PageChrome :bg="bg">
     <template #art>
       <PageBackdrop :planets="false" />
       <!-- The glow is this hero's OWN mask group (21770:3037), not the shared
@@ -16,10 +16,14 @@
         :top="566"
         glow-blend="dodge"
         :glow-plus="false"
-        :glow-x="64.235"
-        :glow-top="40.324"
-        :glow-width="1439.454"
-        :glow-height="862.735"
+        :glow-x="0"
+        :glow-top="61.89"
+        :glow-width="1714.303"
+        :glow-height="857.151"
+        :glow-mask-x="201.617"
+        :glow-mask-y="-21.566"
+        :glow-mask-width="1439.453"
+        :glow-mask-height="862.734"
       >
         <!-- get_design_context on 21770:3036: a 1135.351 box centring the 919
              artwork at 15.88deg. The 143.234 that used to stand here was
@@ -69,6 +73,7 @@ import JValue from '@/components/shared/JValue.vue'
 import JHero from '@/components/shared/JHero.vue'
 import JHeroIcon from '@/components/shared/JHeroIcon.vue'
 import PageBackdrop from '@/components/shared/PageBackdrop.vue'
+import bg from '@/assets/pages/bg-seasonal-power.webp'
 import { useStory } from '@/composables/useStoryData.js'
 import icon from '@/assets/pages/hero-seasonal-power.webp'
 

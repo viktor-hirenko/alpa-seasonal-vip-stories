@@ -2,6 +2,65 @@
 @use 'units' as *;
 @use 'tokens' as *;
 
+
+///
+/// FIGMA'S INNER SHADOW, DONE THE WAY FIGMA DOES IT (V-91).
+///
+/// An inner shadow in Figma follows the LAYER'S ALPHA — on a cut-out mascot it
+/// lights the inside of her silhouette. CSS has two near-misses and this page
+/// had both: `box-shadow: inset` follows the BOX and paints a rectangle (that
+/// is V-09, and it came back the moment it was tried again), while turning the
+/// inset into one more outer `drop-shadow` throws the light outward, where the
+/// mock has none — that is the halo around SPACE MILK the owner called out.
+///
+/// The shape that is actually wanted is `alpha MINUS alpha shifted by the
+/// offset`, which is a crescent hugging the lit edge from inside, blurred.
+/// Two mask layers and `mask-composite: subtract` say exactly that. Figma's
+/// blur radius is a diameter, CSS's `blur()` is a standard deviation, hence
+/// the halving.
+///
+/// `$src` is a CSS variable holding `url(...)`; the component passes it,
+/// because the asset URL only exists after the bundler has hashed it.
+///
+@mixin inner-glow($src, $dx, $dy, $blur, $colour) {
+  position: absolute;
+  // ⚠️ THE BLUR LIVES HERE AND THE MASK ON `::after`, AND THAT SPLIT IS THE
+  // WHOLE TRICK. CSS applies `filter` BEFORE `mask`, so blurring the masked
+  // element itself is a no-op along the very edge that is supposed to soften —
+  // proved by rendering at blur 8.95 and at blur 60 and getting byte-identical
+  // pixels. Masking the child and blurring the parent puts them in the right
+  // order. Figma's blur radius is a diameter, CSS's is a standard deviation.
+  filter: blur(du($blur * 0.5));
+  // ...and then clipped BACK to the alpha, because `filter` runs before `mask`
+  // on one element. Without this the blur spills past the silhouette and the
+  // box's own edge shows up as a lit rectangle — which is how the first attempt
+  // looked, and it was plain to see beside the mock.
+  mask-image: #{$src};
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+  -webkit-mask-image: #{$src};
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  pointer-events: none;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: $colour;
+    mask-image: #{$src}, #{$src};
+    mask-repeat: no-repeat, no-repeat;
+    mask-size: 100% 100%, 100% 100%;
+    mask-position: 0 0, du($dx) du($dy);
+    mask-composite: subtract;
+    -webkit-mask-image: #{$src}, #{$src};
+    -webkit-mask-repeat: no-repeat, no-repeat;
+    -webkit-mask-size: 100% 100%, 100% 100%;
+    -webkit-mask-position: 0 0, du($dx) du($dy);
+    -webkit-mask-composite: source-out;
+  }
+}
+
 ////
 /// Journal page shell and primitives.
 ///
@@ -81,6 +140,18 @@
 
 /// Page body (21770:2948). `overflow: clip` is per the mock and is safe: it
 /// sits below the last preserve-3d element so it cannot flatten the scene.
+/// The body frame's own background picture (V-91). `object-fit: cover`, as the
+/// mock has it: the source is a low-res ramp at the body's aspect, so cover and
+/// stretch agree, but cover is what the mock says and what survives a reshoot.
+.page__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
 .page__body {
   position: absolute;
   left: 6.32%;
@@ -1175,14 +1246,35 @@
   width: du(890);
   height: du(1748);
   overflow: hidden;
-  // 21770:4151. Figma hangs both glows on the ART layer, whose shape is the
-  // cow's own alpha, so it shades the silhouette. `box-shadow` shades the
-  // border-box instead, and drew a magenta rectangle with three visible edges
-  // (V-09). `drop-shadow` reads the same alpha Figma does, so every number
-  // below is the mock's, unchanged — only the shape they follow is fixed.
-  filter: drop-shadow(0 du(15) du(22.3) rgba(255, 0, 212, 0.27))
-    drop-shadow(du(12) du(40) du(20.9) rgba(255, 0, 212, 0.52));
+  // 21770:4151. ⚠️ THE MOCK HANGS TWO DIFFERENT KINDS OF GLOW HERE AND THEY ARE
+  // NOT INTERCHANGEABLE (V-91). The OUTER one (0 15px 22.3px rgba(255,0,212,.27))
+  // is a drop shadow: `box-shadow` would shade the border box and drew a magenta
+  // rectangle with three visible edges (V-09), so it stays a `drop-shadow`,
+  // which reads the same alpha Figma does. The SECOND one is an INSET
+  // (inset 12px 40px 20.9px rgba(255,0,212,.52)) — it lights the inside of the
+  // box's top edge, and that is the bright magenta rim hugging the helmet that
+  // the owner kept pointing at. Rendering it as a second outer drop-shadow threw
+  // it away: the rim measured 11 against the mock's 28. It lives on `::after`,
+  // because the filter below must not see it or the V-09 rectangle comes back.
   pointer-events: none;
+
+  // The inner glow, drawn the way Figma draws it: the cow's own alpha MINUS the
+  // same alpha pushed (12, 40), which leaves a crescent hugging her top-left
+  // edge from inside, then blurred. `box-shadow: inset` was tried first and is
+  // wrong — it follows the BOX, and painted the magenta rectangle of V-09 all
+  // over again (looked at, not guessed: the rim measured 91 against the mock's
+  // 25 and the rectangle's three edges were plain to see).
+  // The outer shadow stays on the clipping container — see `.sm__cow`'s note.
+  filter: drop-shadow(0 du(15) du(22.3) rgba(255, 0, 212, 0.27));
+
+  .sp__inner {
+    @include inner-glow(var(--cow), 12, 40, 20.9, rgba(255, 0, 212, 0.52));
+
+    left: 0;
+    top: -28.38%;
+    width: 141.91%;
+    height: 128.38%;
+  }
 
   img {
     position: absolute;
@@ -1262,10 +1354,25 @@
   height: du(1777);
   overflow: hidden;
   pointer-events: none;
-  // 21770:4229 — same transfer error as .sp__mascot, see its note (V-11).
+  // 21770:4229. Two OUTER shadows plus an INNER one; see the inner-glow mixin
+  // for why the third cannot be a drop-shadow (V-91, and V-11 for why the two
+  // outer ones cannot be box-shadows).
+  // ⚠️ THE TWO OUTER SHADOWS STAY ON THIS ELEMENT, NOT ON THE IMAGE. `overflow`
+  // clips the descendants and THEN the element is filtered, so a filter here
+  // sees the clipped content and its shadow is whole; a filter on the image
+  // inside gets its shadow sliced off at the box edge and leaves a hairline
+  // across the page at y = 670 (V-91, seen and measured after it happened).
   filter: drop-shadow(0 du(21) du(81.2) rgba(255, 0, 212, 0.56))
-    drop-shadow(0 du(15) du(22.3) rgba(255, 0, 212, 0.27))
-    drop-shadow(du(30) du(44) du(26.4) rgba(255, 0, 212, 0.36));
+    drop-shadow(0 du(15) du(22.3) rgba(255, 0, 212, 0.27));
+
+  .sm__inner {
+    @include inner-glow(var(--cow), 30, 44, 26.4, rgba(255, 0, 212, 0.36));
+
+    left: 0;
+    top: -34.84%;
+    width: 100%;
+    height: 134.84%;
+  }
 
   img {
     position: absolute;
@@ -1284,10 +1391,16 @@
   img {
     // 21770:4238. The light square the owner photographed (V-10) was this
     // stack drawn on the 797 box; the mock's own shape here is the logo's
-    // alpha. Numbers unchanged, shape fixed — see .sp__mascot's note.
+    // alpha. TWO outer shadows only — the mock's third is an INSET and is
+    // drawn by `.sm__logo-inner` below. Rendered outward at 0.77 alpha it was
+    // the white halo around SPACE MILK the owner called out (V-91).
     filter: drop-shadow(0 du(21) du(81.5) rgba(255, 199, 246, 0.33))
-      drop-shadow(0 du(4) du(26.6) rgba(255, 0, 212, 0.46))
-      drop-shadow(du(15) du(15) du(17.9) rgba(255, 204, 246, 0.77));
+      drop-shadow(0 du(4) du(26.6) rgba(255, 0, 212, 0.46));
+  }
+
+  // Same box and same rotation as the image, so the crescent turns with it.
+  .sm__logo-inner {
+    @include inner-glow(var(--logo), 15, 15, 17.9, rgba(255, 204, 246, 0.77));
   }
 }
 

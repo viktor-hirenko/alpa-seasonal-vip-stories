@@ -7,12 +7,12 @@
       <div class="page__art art-box" :style="artBox(-542.59, 1026, 1501.563, 1258.608)">
         <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
+          <JGlow :left="-635.2" :top="530.16" :width="2665.6" :height="1332.8" />
     </template>
 
     <template #art>
       <!-- Layer order is the mock's own (21945:3030 "image"): the two lighting
            washes, the radial bloom, then the helmet with its ring on top. -->
-      <JGlow :left="-635.2" :top="530.16" :width="2665.6" :height="1332.8" />
       <img class="gift__bloom" :src="bloom" alt="" />
       <div class="page__art art-box" :style="artBox(31.79, 469.13, 1321.579, 1321.579)">
         <img :src="helmet" alt="" :style="artImg(1051.288, 1051.288, -17.74)" />

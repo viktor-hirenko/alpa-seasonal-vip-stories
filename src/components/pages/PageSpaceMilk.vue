@@ -4,17 +4,39 @@
       <div class="page__art art-box" :style="artBox(-637, -136, 1501.563, 1258.608)">
         <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
+      <!-- 21770:4223/4226. The ellipse mask has its OWN box inside the bitmap's
+           (V-91): 2798 x 1676.977 at (391.891, -41.922), not the whole
+           3332 x 1666. Stretching it over the bitmap spread the core and is
+           why the glow around the cow read pale. -->
+      <JGlow
+        :left="-900.9"
+        :top="348.92"
+        :width="3332.03"
+        :height="1666.02"
+        :mask-x="391.891"
+        :mask-y="-41.922"
+        :mask-width="2798"
+        :mask-height="1676.977"
+      />
     </template>
 
     <template #art>
-      <JGlow :left="-900.9" :top="348.92" :width="3332.03" :height="1666.02" />
+      <!-- ⚠️ THE ORDER OF THESE THREE IS THE MOCK'S, AND IT IS NOT DECORATIVE
+           (V-91). All three are `hard-light`, so each one lights whatever is
+           already under it. Figma stacks them 3277 -> cow -> 3276 -> 3275,
+           i.e. the two smaller blooms sit ON TOP of the mascot and light her
+           and the carton. Drawing all three before her buried them, which is
+           the white gradient the owner could see in Figma and not in ours. -->
       <img class="sm__ellipse sm__ellipse--a" :src="bloomTight" alt="" />
+
+      <div class="sm__cow" :style="{ '--cow': `url(${cow})` }">
+        <img :src="cow" alt="" />
+        <!-- 21770:4229's inner shadow — see the `inner-glow` mixin. -->
+        <div class="sm__inner" />
+      </div>
+
       <img class="sm__ellipse sm__ellipse--b" :src="bloomWide" alt="" />
       <img class="sm__ellipse sm__ellipse--c" :src="bloomWide" alt="" />
-
-      <div class="sm__cow">
-        <img :src="cow" alt="" />
-      </div>
       <!-- 21770:4231. After the cow and BEFORE the logo, which is the mock's
            own order: the fade dissolves the mascot into the page bottom, and
            the logo stays above it. Without it the body's edge cut her off. -->
@@ -28,8 +50,12 @@
            103 px. Undo both: side = 796.969 / (cos 8.52 + sin 8.52) = 700.867,
            and the AABB's top follows from the recovered centre. Checked against
            the page export pixel for pixel — the two routes agree to 4.5 px. -->
-      <div class="page__art art-box sm__logo" :style="artBox(646, -23.051, 796.969, 796.969)">
+      <div
+        class="page__art art-box sm__logo"
+        :style="{ ...artBox(646, -23.051, 796.969, 796.969), '--logo': `url(${logo})` }"
+      >
         <img :src="logo" alt="" :style="artImg(700.867, 700.867, -8.52)" />
+        <div class="sm__logo-inner" :style="artImg(700.867, 700.867, -8.52)" />
       </div>
     </template>
 
