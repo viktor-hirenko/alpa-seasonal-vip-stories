@@ -7,12 +7,16 @@
       <div class="page__art art-box" :style="artBox(-542.59, 1026, 1501.563, 1258.608)">
         <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
-          <JGlow :left="-635.2" :top="530.16" :width="2665.6" :height="1332.8" />
     </template>
 
     <template #art>
       <!-- Layer order is the mock's own (21945:3030 "image"): the two lighting
-           washes, the radial bloom, then the helmet with its ring on top. -->
+           washes, the radial bloom, then the helmet with its ring on top.
+           ⚠️ AND THE WHOLE HERO SITS ABOVE THE COLOUR WASH HERE — the mock puts
+           the wash (21945:3027) BEFORE the hero, unlike Space Milk where it
+           comes after the glow. Moving this glow below the wash by analogy cost
+           27 points of brightness down the left edge (V-91). Check the page. -->
+      <JGlow :left="-635.2" :top="530.16" :width="2665.6" :height="1332.8" />
       <img class="gift__bloom" :src="bloom" alt="" />
       <div class="page__art art-box" :style="artBox(31.79, 469.13, 1321.579, 1321.579)">
         <img :src="helmet" alt="" :style="artImg(1051.288, 1051.288, -17.74)" />

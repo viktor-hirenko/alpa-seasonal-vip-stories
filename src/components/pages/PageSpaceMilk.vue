@@ -1,5 +1,11 @@
 <template>
-  <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
+  <!-- 21770:4232: the spine fade here is 377 wide and stays clear for its first
+       42.308 %, unlike the deck's default 395 with no offset. -->
+  <PageChrome
+    :tint="'rgba(255, 0, 181, 0.62)'"
+    :spine-fade-width="377"
+    :spine-fade-stop="42.308"
+  >
     <template #backdrop>
       <div class="page__art art-box" :style="artBox(-637, -136, 1501.563, 1258.608)">
         <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />

@@ -133,8 +133,22 @@
   left: du(-19);
   top: 0;
   bottom: 0;
-  width: du(395);
-  background: linear-gradient(90deg, var(--spine-fade-to, #{$page-bg}) 0%, rgba(0, 10, 18, 0) 100%);
+  // ⚠️ WIDTH AND STOP ARE PER PAGE, AND GETTING THEM WRONG DARKENS THE WHOLE
+  // LEFT EDGE (V-91). The mock writes this as a vertical gradient on a
+  // 1868 x <width> box turned 90deg, and it can carry an offset: Space Milk's
+  // (21770:4232) is `from-[57.692%] from-[rgba(0,10,18,0)] to-[#000a12]` on a
+  // 377 box, i.e. it stays FULLY TRANSPARENT for the first 42.3 % measured from
+  // the spine outward... which reads, once unrotated, as "transparent from
+  // 42.3 % of 377 = x 140 onward". Ours ramped linearly across the whole 395
+  // instead, so at x=200 it laid 45 % of the page colour over a spot the mock
+  // leaves clear, and halved the big bloom there: 130/78/95 in the mock against
+  // 69/42/54 in ours. The owner saw it as "less white light left of the milk".
+  width: var(--spine-fade-width, #{du(395)});
+  background: linear-gradient(
+    90deg,
+    var(--spine-fade-to, #{$page-bg}) 0%,
+    rgba(0, 10, 18, 0) var(--spine-fade-stop, 100%)
+  );
   pointer-events: none;
 }
 

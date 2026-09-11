@@ -4,10 +4,15 @@
       <div class="page__art art-box" :style="artBox(-576.33, 241.19, 2600.392, 2269.882)">
         <img :src="bg" alt="" :style="artImg(2181.992, 1454.661, 26.26)" />
       </div>
-          <JGlow :left="-435.2" :top="790.59" :width="2272.4" :height="1136.2" />
     </template>
 
     <template #art>
+      <!-- ⚠️ THE GLOW BELONGS ABOVE THE COLOUR WASH ON THIS PAGE: the mock
+           puts the wash (21770:3306 / 21770:3441) BEFORE the two mask groups.
+           Only pages whose mock stacks them the other way round — Space Milk,
+           Sponsor — put it in #backdrop (V-91). Check per page, never by
+           analogy with a neighbour. -->
+      <JGlow :left="-435.2" :top="790.59" :width="2272.4" :height="1136.2" />
       <div class="page__art art-box" :style="artBox(869, -167, 794.044, 711.581)">
         <img :src="rocket" alt="" :style="artImg(515.674, 655.564, 110.37, 'scaleY(-1)')" />
       </div>

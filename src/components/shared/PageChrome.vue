@@ -24,7 +24,14 @@
       <!-- Left-edge fade (21770:3190). NOT an image: a 1868x395 vertical
            gradient rotated 90deg, i.e. #000a12 at the spine fading out to the
            right, 395 wide at left:-19. -->
-      <div class="page__spine-fade" :style="{ '--spine-fade-to': spineFadeTo }" />
+      <div
+        class="page__spine-fade"
+        :style="{
+          '--spine-fade-to': spineFadeTo,
+          ...(spineFadeWidth ? { '--spine-fade-width': `calc(${spineFadeWidth} * var(--u))` } : {}),
+          ...(spineFadeStop ? { '--spine-fade-stop': `${spineFadeStop}%` } : {}),
+        }"
+      />
 
       <!-- Specular sheen (21770:3191), mix-blend-mode: screen, inset slightly
            beyond its box. -->
@@ -57,6 +64,9 @@ defineProps({
    * colour; Bonus Report stops at rgba(0,10,18,0.8).
    */
   spineFadeTo: { type: String, default: '#000a12' },
+  /** Width and transparent stop of that fade — per page, see the SCSS note. */
+  spineFadeWidth: { type: Number, default: 0 },
+  spineFadeStop: { type: Number, default: 0 },
   /** Colour wash laid over the background with mix-blend-mode: color. */
   tint: { type: String, default: '' },
   /** The body frame's own background image, if the page has one — see above. */
