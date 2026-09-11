@@ -37,7 +37,7 @@
     },
     "seasonal_power": {
       "chip": "Puissance saisonnière",
-      "headline": ["Points saisonniers", "gagnés"]
+      "headline": ["Points", "saisonniers gagnés"]
     },
     "vip_status": {
       "chip": "Statut VIP",
@@ -73,7 +73,7 @@
       "headline": ["Votre multiplicateur", "sport max :"]
     },
     "sponsor": {
-      "headline": ["Et maintenant… un mot", "de notre sponsor."],
+      "headline": ["Et maintenant…", "un mot de notre sponsor."],
       "subhead": ["Nous avons un cadeau", "spécial pour vous"]
     },
     "space_milk": {
@@ -82,7 +82,7 @@
     },
     "joke": {
       "headline": ["Blague comprise,", "on espère."],
-      "subhead": ["Mais le vrai cadeau,", "c’est vous."]
+      "subhead": ["Mais", "le vrai cadeau,", "c’est vous."]
     },
     "gift": {
       "headline": ["Vous avez fait", "de ce parcours", "VIP un vol", "en première", "classe."]

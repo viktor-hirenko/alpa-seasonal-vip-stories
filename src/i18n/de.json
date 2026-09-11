@@ -19,7 +19,7 @@
       "vip_club": "VIP Club",
       "journal": "Journal",
       "issue": ["Andromeda", "-Ausgabe"],
-      "intro": ["Deine Saison-", "Story ist bereit"],
+      "intro": ["Deine Saison", "-Story ist bereit"],
       "featuring": "Mit:"
     },
     "editors_note": {
@@ -33,7 +33,7 @@
     "days_in_spotlight": {
       "chip": "Tage im Rampenlicht",
       "headline": ["Du bist seit"],
-      "footer": ["Tagen im", "rocketplay-universum"]
+      "footer": ["Tagen im rocketplay-", "universum"]
     },
     "seasonal_power": {
       "chip": "Saison-Power",
@@ -78,11 +78,11 @@
     },
     "space_milk": {
       "packs_of": "Packungen",
-      "footer": ["Eine für jeden Tag", "bei RocketPlay."]
+      "footer": ["Eine für jeden", "Tag bei RocketPlay."]
     },
     "joke": {
       "headline": ["Witz verstanden?"],
-      "subhead": ["Du bist", "das wahre Geschenk."]
+      "subhead": ["Du bist das", "wahre Geschenk."]
     },
     "gift": {
       "headline": ["Du hast die", "VIP-Reise zum", "First-Class-Flug", "gemacht."]

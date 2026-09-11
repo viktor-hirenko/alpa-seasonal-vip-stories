@@ -37,7 +37,7 @@
     },
     "seasonal_power": {
       "chip": "Potere stagionale",
-      "headline": ["Punti stagionali", "raccolti"]
+      "headline": ["Punti", "stagionali raccolti"]
     },
     "vip_status": {
       "chip": "Status VIP",
@@ -88,8 +88,8 @@
       "headline": ["Avete reso", "questo viaggio", "VIP un volo", "di prima", "classe."]
     },
     "final": {
-      "headline": ["Mantieni", "la rotta."],
-      "subhead": ["Altre tappe", "stellari ti", "aspettano."]
+      "headline": ["Mantieni la rotta."],
+      "subhead": ["Altre tappe", "stellari", "ti aspettano."]
     }
   }
 }
