@@ -9,26 +9,38 @@
           <img :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
         </div>
 
-        <!-- Icon group `21770:3857` at (36.66, -41.39), 750.067 x 824.257.
-             Children below are group-relative offsets folded into frame coords. -->
+        <!-- Icon group `21770:3857`. ⚠️ ITS OWN BOX IS A DECOY, AND THIS PAGE
+             FELL FOR IT (V-85). The mock prints the group as
+             `absolute contents h-[824.257px] left-[36.66px] w-[750.067px]`, but
+             `display: contents` throws the box away: the children below are
+             positioned by the HERO's 919 square, not by the group, and their
+             `inset` per cents are per cents OF THE HERO. Reading them against
+             750.067 x 824.257 and then adding the group's offset put the ball
+             38 px high and 100 px small and the cup 37 px right — the "cup is
+             bigger" the owner saw on his phone. `coins 1` below sits outside
+             the group and was right all along; it is the control that proves
+             the frame. Every child here is now hero-relative. -->
 
         <!-- Ball `Sport_icon_512x512`: inset -2.94% 17.23% 41.61% 21.44%
-             of the group -> 160.82, -24.23, 460.0 x 505.5; rotate 6.12deg -->
+             of the 919 frame -> 197.03, -27.02, 563.623 sq; image 512 sq
+             (hypot(90.3217cqw, 9.67832cqh) = 512.0); rotate 6.12deg -->
         <JHeroIcon
           :src="ball"
-          :left="197.48"
-          :top="-65.62"
-          :width="460"
-          :height="505.5"
+          :left="197.034"
+          :top="-27.019"
+          :width="563.623"
+          :height="563.623"
+          :img-width="512"
+          :img-height="512"
           :rotate="6.12"
         />
 
-        <!-- Trophy `21770:3858`: group-relative (197, 219.23), 563.636 sq,
+        <!-- Trophy `21770:3858`: (197, 219.23) in the 919 frame, 563.636 sq,
              inner image 512 sq rotated 6.12deg -->
         <JHeroIcon
           :src="trophy"
-          :left="233.66"
-          :top="177.84"
+          :left="197"
+          :top="219.23"
           :width="563.636"
           :height="563.636"
           :img-width="512"
@@ -36,14 +48,18 @@
           :rotate="6.12"
         />
 
-        <!-- `coins 5`: inset 54.52% 78.62% 26.74% 6.09% of the group
-             -> 45.68, 449.4, 114.7 x 154.4; rotate -17deg, mirrored -->
+        <!-- `coins 5`: inset 54.52% 78.62% 26.74% 6.09% of the 919 frame
+             -> 55.97, 501.04, 140.515 x 172.221; image
+             hypot(-68.9782cqw, 17.1996cqh) x hypot(31.0218cqw, 82.8004cqh)
+             = 101.35 x 149.11; rotate -17deg, mirrored -->
         <JHeroIcon
           :src="coins5"
-          :left="82.34"
-          :top="408.01"
-          :width="114.7"
-          :height="154.4"
+          :left="55.967"
+          :top="501.039"
+          :width="140.515"
+          :height="172.221"
+          :img-width="101.35"
+          :img-height="149.11"
           :rotate="-17"
           mirror
         />
@@ -56,6 +72,8 @@
           :top="400.01"
           :width="291.5"
           :height="258.5"
+          :img-width="261.41"
+          :img-height="222.19"
           :rotate="-8.53"
         />
       </JHero>

@@ -41,13 +41,23 @@ watch(() => props.src, () => (failed.value = false))
 
 const d = n => `calc(${+n.toFixed(3)} * var(--u))`
 
+/**
+ * The mock's 28.503 stroke sits OUTSIDE the 635 x 843 node box (V-85), so the
+ * card the player sees is 692 x 900 and the artwork still fills 635 x 843. Our
+ * `border` plus the global `box-sizing: border-box` eats the stroke inwards
+ * instead, which made the card a whole stroke narrower and shorter than the
+ * mock's on all three pages that use it. Grow the border box by the stroke and
+ * pull the origin back by it; every call site keeps the mock's own numbers.
+ */
+const STROKE = 28.503
+
 const boxStyle = computed(() => ({
-  width: d(props.width),
-  height: d(props.height),
-  top: d(props.top),
+  width: d(props.width + STROKE * 2),
+  height: d(props.height + STROKE * 2),
+  top: d(props.top - STROKE),
   ...(props.left
-    ? { left: d(props.left) }
-    : { left: '50%', marginLeft: d(-props.width / 2) }),
+    ? { left: d(props.left - STROKE) }
+    : { left: '50%', marginLeft: d(-props.width / 2 - STROKE) }),
 }))
 
 const imgStyle = computed(() => ({

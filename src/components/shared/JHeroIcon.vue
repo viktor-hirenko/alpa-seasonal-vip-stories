@@ -24,7 +24,20 @@ const props = defineProps({
   top: { type: Number, required: true },
   width: { type: Number, required: true },
   height: { type: Number, required: true },
-  /** Intrinsic image box, design px. Defaults to the wrapper. */
+  /**
+   * Intrinsic image box, design px. Defaults to the wrapper — AND THAT DEFAULT
+   * IS A TRAP FOR ANY ROTATED ICON (V-85). The wrapper is the node's bounding
+   * box, which for a turned node is BIGGER than the picture inside it, so
+   * leaving this out inflates the art: 770 instead of 671.99 on the Bonus
+   * Report gift, 13.7 % too large and plainly visible. The mock states the
+   * inner size itself — `get_design_context` writes it as
+   * `hypot(<a>cqw, <b>cqh)` against the wrapper — and it satisfies
+   *   wrapper_w = w*|cos a| + h*|sin a| ,  wrapper_h = w*|sin a| + h*|cos a| .
+   * Prefer the mock's own hypot numbers: the inset percentages the wrapper is
+   * derived from carry only four digits, so inverting that identity by hand
+   * drifts about a per cent on small art. Only a square at 90 deg may safely
+   * leave this at the default.
+   */
   imgWidth: { type: Number, default: 0 },
   imgHeight: { type: Number, default: 0 },
   rotate: { type: Number, default: 0 },

@@ -19,8 +19,17 @@
            own order: the fade dissolves the mascot into the page bottom, and
            the logo stays above it. Without it the body's edge cut her off. -->
       <div class="page__fade" />
-      <div class="page__art art-box sm__logo" :style="artBox(646, 80.785, 796.969, 796.969)">
-        <img :src="logo" alt="" :style="artImg(796.969, 796.969, -8.52)" />
+      <!-- 21770:4238. THE INNER SIZE IS NOT THE BOX SIZE, AND THAT IS WHY "MILK"
+           used to land on the cow's helmet (V-85). `get_metadata` reports a
+           rotated node in two different currencies at once: `width`/`height`
+           are the AABB, `x`/`y` are the LOCAL ORIGIN carried through the
+           rotation. Reading 796.969 as the image's own size inflated it by
+           13.7 % and, with the origin read as the AABB's corner, dropped it
+           103 px. Undo both: side = 796.969 / (cos 8.52 + sin 8.52) = 700.867,
+           and the AABB's top follows from the recovered centre. Checked against
+           the page export pixel for pixel — the two routes agree to 4.5 px. -->
+      <div class="page__art art-box sm__logo" :style="artBox(646, -23.051, 796.969, 796.969)">
+        <img :src="logo" alt="" :style="artImg(700.867, 700.867, -8.52)" />
       </div>
     </template>
 

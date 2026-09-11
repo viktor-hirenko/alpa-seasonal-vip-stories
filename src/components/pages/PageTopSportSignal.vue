@@ -27,6 +27,8 @@
           :top="445"
           :width="121.4"
           :height="162"
+          :img-width="101.32"
+          :img-height="149.17"
           :rotate="8.13"
           mirror
         />
@@ -37,6 +39,8 @@
           :top="414.01"
           :width="291.5"
           :height="258.6"
+          :img-width="261.43"
+          :img-height="222.29"
           :rotate="-8.53"
         />
       </JHero>

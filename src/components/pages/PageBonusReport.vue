@@ -30,7 +30,16 @@
 
         <!-- Percentage insets of the 919 x 815 hero frame, resolved to design px. -->
         <!-- `Live_HERO 6` gift: inset 5.52% 6.92% 0 9.29% -> 85.4, 45.0, 770 sq -->
-        <JHeroIcon :src="gift" :left="85.4" :top="45" :width="770" :height="770" :rotate="9.12" />
+        <JHeroIcon
+          :src="gift"
+          :left="85.4"
+          :top="45"
+          :width="770"
+          :height="770"
+          :img-width="671.99"
+          :img-height="671.99"
+          :rotate="9.12"
+        />
         <!-- `coins 4`: inset 50.5% 75.98% 27.79% 7.51% -> 69.0, 411.6, 151.7 x 176.9 -->
         <JHeroIcon
           :src="coins4"
@@ -38,6 +47,8 @@
           :top="411.6"
           :width="151.7"
           :height="176.9"
+          :img-width="101.31"
+          :img-height="149.09"
           :rotate="-23.11"
           mirror
         />
@@ -48,6 +59,8 @@
           :top="500.2"
           :width="291.5"
           :height="258.5"
+          :img-width="261.41"
+          :img-height="222.19"
           :rotate="-8.53"
         />
       </JHero>
