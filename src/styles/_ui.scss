@@ -382,8 +382,10 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
 /// owner's 2026-09-04 decision that the video is the reference for how things
 /// move and where they end up: 847 - 52 = 795.
 ///
-/// CENTRED WITHOUT `transform`, through `atCx`, because GSAP owns this
-/// element's transform outright (ADR-0002) — the outro preset scales it.
+/// CENTRED WITHOUT `transform`, because GSAP owns this element's transform
+/// outright (ADR-0002) — the outro preset scales it. That is `atCx`'s own
+/// mechanism, written out below rather than included because the width is no
+/// longer a constant; see `--outro-w`.
 ///
 /// The origin of that scale is the CANVAS centre, not the block's own. Solving
 /// the measured zoom for its fixed point gives 954..959 over four frames, while
@@ -396,7 +398,47 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
 /// this box covers the middle of the screen, where the tap zones are.
 ///
 .story-outro {
-  @include atCx(795, 970);
+  position: absolute;
+  top: du(795);
+  left: 50%;
+
+  // THE MOCK'S 970 IS A BOX ON THE CANVAS, AND THE CANVAS IS NOT ALL ON SCREEN
+  // (V-81). `--u` fits 1080x1920 with `cover` (_stage.scss), so a phone taller
+  // than 9:16 is cropped at the sides: 430x932 shows 885.8 of the 1080 design
+  // px, 360x800 shows 864. Cropping the ART is what the design expects and
+  // says so; cropping the TITLE is not, and it did. The authored lines wrap
+  // against the 970 box, so a wrapped fragment may be up to 970 wide and lose
+  // its first and last letters off both edges of the screen.
+  //
+  // MEASURED at 430x932, natural width of each authored line in design px
+  // against the 885.8 that are visible: English "in the next issue." 944.2,
+  // French "Vers les étoiles !" 951.9, Italian "Verso le stelle!" 893.1,
+  // German's wrapped "Bis zur nächsten" likewise over. ENGLISH IS IN THAT LIST,
+  // which is what says this was never a language defect — it is the same class
+  // as V-80, chrome laid out in canvas units on a canvas wider than the phone.
+  //
+  // What the mock actually fixes is the MARGIN: the node is 970 wide at x=55 on
+  // a 1080 canvas, i.e. 55 each side. So the budget is 970 while the whole
+  // canvas is on screen, and "what is on screen, less that margin" once it is
+  // not. At 9:16 the two are the same number, so the reference shape — the
+  // desktop card, and a 9:16 phone — renders exactly as before. `100%` is the
+  // width of `.stage__ui`, which is `inset: 0` on the stage, i.e. the screen;
+  // this is not the `vw` that _units.scss forbids inside the canvas, it is the
+  // very quantity `--u` is derived from.
+  //
+  // WRAP, DO NOT SHRINK. The type size is the CLIP's as well as the mock's (the
+  // 932 px ink width and 104 px line pitch quoted above), and the outro's whole
+  // placement is registered against the clip. Wrapping is already this block's
+  // own mechanism — the non-English copy carries two sentences and wraps inside
+  // the box on its own (StoryOutro.vue) — so honouring the margin costs a line
+  // break on a cropped phone and nothing else. Shrinking the type would hold
+  // the line count and lose the size everything else here is measured against.
+  --outro-w: min(#{du(970)}, calc(100% - #{du(110)}));
+  width: var(--outro-w);
+  margin-left: calc(var(--outro-w) / -2);
+
+  // Still the canvas centre: the box is narrower but stays centred on the
+  // canvas, so its own 50% is the same x it always was.
   transform-origin: 50% du(165);
   text-align: center;
   pointer-events: none;
