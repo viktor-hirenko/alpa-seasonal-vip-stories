@@ -191,11 +191,20 @@
   // They used to be one hard-coded pair taken from the cash icon, which left
   // the milk packs and the gift — blur .13 of the box at alpha .56 — as dim as
   // a coin, and gave the planet cow a halo the mock does not draw at all.
-  --fo-glow: calc(var(--fo-base, 400) * var(--fo-ik) * var(--u));
+  // ⚠️ DESIGN PIXELS, NOT A FRACTION OF THE SPRITE. The storyboard is laid out
+  // on the same 1080 x 1920 the stage is, so the mock's 22.3 px of blur is
+  // 22.3 design px here. Scaling it by the sprite's own box, which is what this
+  // rule did first, gave a 250 px star 9 px of blur — a rim, not a halo, and
+  // with the backdrop video hidden the objects looked bare (V-98).
+  //
+  // `drop-shadow`, not `box-shadow`: the sprite is transparent art inside an
+  // <img>, and box-shadow would trace its BOX — the square-halo defect of
+  // V-09..V-11. Figma's own shadow follows the image's alpha, which is exactly
+  // what drop-shadow does, so this is the faithful translation and not a
+  // workaround.
   filter: url(#fly-room-light)
     drop-shadow(
-      0 calc(var(--fo-glow) * var(--fo-glow-y, 0.0386))
-        calc(var(--fo-glow) * var(--fo-glow-blur, 0.0573))
+      0 calc(var(--fo-glow-y, 15) * var(--u)) calc(var(--fo-glow-blur, 22.3) * var(--u))
         rgba(255, 0, 212, var(--fo-glow-a, 0.27))
     );
 }

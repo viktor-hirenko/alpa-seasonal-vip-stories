@@ -213,69 +213,73 @@ export const ROUND_ASSETS = new Set([
 export const ROUND_HOLD = new Map([['calendar', 0]])
 
 /**
- * THE MAGENTA HALO, PER OBJECT, STRAIGHT OFF THE STORYBOARD (V-98).
+ * THE MAGENTA HALO, PER OBJECT, IN DESIGN PIXELS (V-98).
  *
- * Every icon in 21770:4582 carries its own shadow, and they are NOT all the
- * same — which is what this file used to assume. One value, taken from the cash
- * icon (21770:4779), was applied to all seventeen sprites, so the two objects
- * the designer lit three times harder came out as dim as a coin. The owner
- * pasted the milk pack's own rule at us and asked why we did not have it.
+ * Every icon in 21770:4582 carries its own shadow and they are NOT all the
+ * same, which is what this file used to assume: one value, taken from the cash
+ * icon 21770:4779, was applied to all seventeen sprites.
  *
- * Read straight from each node, as `offset-y / blur / alpha` on the node's own
- * box, and written here as FRACTIONS of that box for the reason the rule in
- * _fly.scss gives: our sprites fly at 109 to 587 design px and shrink as they
- * land, so a fixed pixel halo would sit on a coin the way it sits on a planet.
+ * ⚠️ THE NUMBERS ARE ABSOLUTE, NOT FRACTIONS OF THE SPRITE, AND THE FIRST
+ * ATTEMPT GOT THAT WRONG. The storyboard's frame is 1080 x 1920 — the same
+ * design space our stage is laid out in — so the mock's 22.3 px of blur is
+ * 22.3 design px here too. Writing it as a fraction of the sprite's own box
+ * shrank it: a star at `base` 250 got 9 px where the mock draws 22.3, which on
+ * screen is a hairline rim instead of a halo, and the owner hid the backdrop
+ * video to show that the objects had no glow at all. The old argument for
+ * fractions — "a fixed halo puts a planet's glow on a coin" — is simply not
+ * what the designer did: the same 22.3 px sits on a 291 px tennis ball and on a
+ * 653 px planet.
  *
- *   node                        box     shadow                      here
- *   Pen              4737       490     0  8px 22.3px  .27          .0163 .0455
- *   Days calendar    4747       481     0  0    22.3px .27          0     .0464
- *   Points (10)      4758       589     0  3px 22.3px  .27          .0051 .0379
- *   Points (11)      4767       531     0 15px 22.3px  .27          .0282 .0420
- *   cash             4779       389     0 15px 22.3px  .27          .0386 .0573
- *   Planet           4790       653     0  3px 22.2px  .27          .0046 .0340
- *   X icon           4802       423     0 15px 22.3px  .27          .0355 .0527
- *   Heart            4812       360     0 15px 22.3px  .27          .0417 .0619
- *   Report           4822       561     0 15px 22.3px  .27          .0267 .0398
- *   Basketball       4833       447     0  6px 22.3px  .27          .0134 .0499
- *   Tennis           4834       291     0 15px 22.3px  .27          .0515 .0766
- *   Soccer           4844       368     0 15px 22.3px  .27          .0408 .0606
- *   Milkpack   4922/4924  614/600      0 21px 81.2px  .56          .0342 .1322
- *   Gift        21945:2949      497     0 21px 81.2px  .56          .0423 .1634
+ *   node                        box     shadow (offset-y / blur / alpha)
+ *   Pen              4737       490     0   8px  22.3px  .27
+ *   Days calendar    4747       481     0   0     22.3px .27
+ *   Points (10)      4758       589     0   3px  22.3px  .27
+ *   Points (11)      4767       531     0  15px  22.3px  .27
+ *   cash             4779       389     0  15px  22.3px  .27
+ *   Planet           4790       653     0   3px  22.2px  .27
+ *   X icon           4802       423     0  15px  22.3px  .27
+ *   Heart            4812       360     0  15px  22.3px  .27
+ *   Report           4822       561     0  15px  22.3px  .27
+ *   Basketball       4833       447     0   6px  22.3px  .27
+ *   Tennis           4834       291     0  15px  22.3px  .27
+ *   Soccer           4844       368     0  15px  22.3px  .27
+ *   Milkpack   4922/4924  614/600      0  21px  81.2px  .56
+ *   Gift        21945:2949      497     0  21px  81.2px  .56
  *   Planet cow       4934       523     no outer shadow at all
  *
- * ⚠️ THE MILK PACKS AND THE GIFT ARE THE POINT: blur .13-.16 of the box at
- * alpha .56, against .04-.08 at .27 everywhere else. Three times the spread and
- * twice the strength — that is the difference the owner could see.
+ * ⚠️ THE MILK PACKS AND THE GIFT ARE A CLASS OF THEIR OWN: 81.2 px at alpha
+ * .56 against 22.3 px at .27 everywhere else — nearly four times the spread and
+ * twice the strength.
  *
- * ⚠️ AND THE PLANET COW HAS NONE. It is not an omission in the mock: the node
- * carries only the inner shadow. Giving it the default would be inventing.
+ * ⚠️ AND THE PLANET COW HAS NONE. The node carries only the inner shadow, so
+ * giving it the default would be inventing.
  *
- * The INNER shadow every one of them also carries —
+ * The INNER shadow every icon also carries —
  * `inset 15px 15px 17.2px rgba(255,0,212,0.13)`, and `15px 4px 17.1px` on the
- * tennis ball — is NOT here. `drop-shadow` has no inset, and an inner glow that
- * follows the sprite's alpha needs the masked construction the pages use
- * (`inner-glow` in _pages.scss). It is measured and written down so the next
- * session can add it without going back to Figma.
+ * tennis ball — is not here: `drop-shadow` has no inset and an inner glow that
+ * follows a sprite's alpha needs the masked construction in _pages.scss
+ * (`inner-glow`). Measured and written down so it can be added without going
+ * back to Figma.
  *
- * @type {Record<string, [offsetY: number, blur: number, alpha: number]>}
+ * @type {Record<string, [offsetY: number, blur: number, alpha: number]>} design px
  */
 export const FLY_GLOW = {
-  pen: [0.0163, 0.0455, 0.27],
-  calendar: [0, 0.0464, 0.27],
-  spark: [0.0051, 0.0379, 0.27],
-  'points-b': [0.0282, 0.042, 0.27],
-  'coin-d': [0.0386, 0.0573, 0.27],
-  'coin-edge': [0.0386, 0.0573, 0.27],
-  'coin-b': [0.0386, 0.0573, 0.27],
-  planet: [0.0046, 0.034, 0.27],
-  cross: [0.0355, 0.0527, 0.27],
-  heart: [0.0417, 0.0619, 0.27],
-  report: [0.0267, 0.0398, 0.27],
-  basketball: [0.0134, 0.0499, 0.27],
-  tennis: [0.0515, 0.0766, 0.27],
-  soccer: [0.0408, 0.0606, 0.27],
-  milkpack: [0.0342, 0.1322, 0.56],
-  gift: [0.0423, 0.1634, 0.56],
+  pen: [8, 22.3, 0.27],
+  calendar: [0, 22.3, 0.27],
+  spark: [3, 22.3, 0.27],
+  'points-b': [15, 22.3, 0.27],
+  'coin-d': [15, 22.3, 0.27],
+  'coin-edge': [15, 22.3, 0.27],
+  'coin-b': [15, 22.3, 0.27],
+  planet: [3, 22.2, 0.27],
+  cross: [15, 22.3, 0.27],
+  heart: [15, 22.3, 0.27],
+  report: [15, 22.3, 0.27],
+  basketball: [6, 22.3, 0.27],
+  tennis: [15, 22.3, 0.27],
+  soccer: [15, 22.3, 0.27],
+  milkpack: [21, 81.2, 0.56],
+  gift: [21, 81.2, 0.56],
   'planet-cow': [0, 0, 0],
 }
 
