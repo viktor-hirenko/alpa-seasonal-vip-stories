@@ -1,6 +1,6 @@
 import { gsap } from 'gsap'
 import { snap } from '@/story/timing.js'
-import { FLY_Z, FLY_Z_FRONT } from '@/story/flyObjects.js'
+import { FLY_Z, FLY_Z_FRONT, FLY_LAYER } from '@/story/flyObjects.js'
 import { SLIDES } from '@/story/slides.js'
 import { flyingObject } from './flyingObject.js'
 
@@ -83,8 +83,11 @@ export function buildFlyLayer(layerEl, records) {
       // the open beside the turned page, shrinking, which is what the owner
       // called ugly.
       end: Math.min(rec.t1, slideEnd(rec.frame)),
-      // Never in front of a page that has already been turned — see `slideEnd`.
-      frontUntil: Math.min(rec.zFlip, slideEnd(rec.frame)),
+      // ONE depth for the whole flight, from the storyboard (FLY_LAYER), and
+      // it ends at the page turn. There is no mid-slide crossing any more: that
+      // crossing was a visible pop, because the object was already overlapping
+      // the journal when it changed sides (V-96).
+      frontUntil: FLY_LAYER[rec.id] === 'behind' ? -Infinity : slideEnd(rec.frame),
     })
     tl.add(flyingObject({ pos, box }, rec).paused(false), at)
   }

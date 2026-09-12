@@ -215,6 +215,59 @@ export const ROUND_HOLD = new Map([['calendar', 0]])
 export const FLY_Z = -600
 export const FLY_Z_FRONT = 600
 
+/**
+ * WHICH SIDE OF THE JOURNAL EACH OBJECT IS ON — FROM THE STORYBOARD, ONE VALUE
+ * FOR THE WHOLE FLIGHT (V-96).
+ *
+ * ⚠️ THIS REPLACES THE `zFlip` STEP AS A DEPTH SOURCE, AND `fly:measure` MUST
+ * NOT OVERWRITE IT. `zFlip` stays in the table because the gate still reports
+ * against it and because it is an honest reading of the clip; it is simply no
+ * longer what decides depth.
+ *
+ * WHY. The clip lets an object drift down and the page swallow it mid-slide, so
+ * the model was "in front, then behind at the measured crossing". On screen
+ * that crossing is a POP: walk `planet-1` frame by frame and at 34.60 the
+ * object is painted over the page, at 34.80 the page is painted over it, while
+ * the page does not turn until 39.07 — the object is already overlapping the
+ * journal when it changes sides, so a chunk of it vanishes between two frames.
+ * The owner called it out twice: "it shows the object above the journal, then
+ * it suddenly ends up under the journal, and the page has not even turned".
+ *
+ * THE STORYBOARD (21770:4582) ANSWERS IT DIRECTLY. Its layer called
+ * `Component 17` is the journal, so whatever is printed after it is drawn above
+ * it and whatever is printed before it is drawn below. That is one decision per
+ * object for the whole slide, which is exactly what removes the pop.
+ *
+ * Three slides carry one of each, and those were matched by position: the
+ * storyboard's icon centres against our own path at the middle of the slide.
+ * Slide 10's above-icon sits at 42 % / 18 % and its below-icon at 72 % / 83 %,
+ * which puts `spark-1..3` above and `spark-4..5` below; slide 14 puts `cross-2`
+ * above and `cross-1` below; slide 20 puts `milkpack-2` above and `milkpack-1`
+ * below. The nearest-match distances are 4-38 % of the frame, never ambiguous.
+ *
+ * Everything still goes behind the journal the moment its page is turned — see
+ * flyLayer.js. Being `front` here means "in front for as long as its own slide
+ * is up", not "in front for ever".
+ */
+export const FLY_LAYER = {
+  'pen-1': 'front',                                              // slide 8
+  'calendar-1': 'front',                                         // slide 9
+  'spark-1': 'front', 'spark-2': 'front', 'spark-3': 'front',    // slide 10
+  'spark-4': 'behind', 'spark-5': 'behind',
+  'chip-1': 'behind', 'chip-2': 'behind',                        // slide 11
+  'coin-1': 'front', 'coin-2': 'front', 'coin-3': 'front',       // slide 12
+  'planet-1': 'behind',                                          // slide 13
+  'cross-1': 'behind', 'cross-2': 'front',                       // slide 14
+  'heart-1': 'front',                                            // slide 15
+  'report-1': 'behind', 'report-2': 'behind',                    // slide 16
+  'basketball-1': 'front', 'tennis-1': 'front',                  // slide 17
+  'soccer-1': 'front', 'cross-3': 'front',                       // slide 18
+  'planet-cow-1': 'front',                                       // slide 19
+  'milkpack-1': 'behind', 'milkpack-2': 'front',                 // slide 20
+  'milkpack-3': 'front',                                         // slide 21
+  'gift-1': 'front',                                             // slide 22
+}
+
 /** @type {Omit<FlyRecord,'base'|'t0'|'t1'>[]} */
 // The rows are a measurement, not hand-authored numbers: regenerate with
 // `node scripts/fly-measure.mjs` rather than nudging one and hoping.

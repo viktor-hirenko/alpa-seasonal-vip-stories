@@ -281,6 +281,17 @@ const ROUND_ASSETS = new Set(
  * and the rows are what `npm run fly:measure` writes. `t0`/`t1` are the first
  * and last row's second, the way flyObjects.js derives them.
  */
+/**
+ * Which side of the journal each object is on, straight out of flyObjects.js.
+ * The storyboard decides it and it holds for the whole slide (V-96), which is
+ * why two of the checks below have to know about it.
+ */
+const FLY_LAYER = Object.fromEntries(
+  [...(/export const FLY_LAYER = \{([\s\S]*?)\n\}/.exec(flySrc)?.[1] ?? '').matchAll(
+    /'([^']+)':\s*'(front|behind)'/g,
+  )].map(m => [m[1], m[2]]),
+)
+
 const FLIGHTS = [
   ...flySrc.matchAll(
     /\{ id: '([^']+)', asset: '([^']+)', frame: (\d+), zFlip: ([\d.]+), keys: \[([\s\S]*?)\]\s*\}/g,
@@ -724,6 +735,7 @@ if (fitMode) {
       const degMatters =
         !ROUND_ASSETS.has(f.asset) && relong > 1.2 && obj.elong > 1.2
       const bad = []
+      let note = ''
       // Geometry is judged only where there is something on screen to judge.
       // `shapeless`: the tracker is holding a remnant (see above). `swallowed`:
       // the reference's own page has taken 85 % of the object, so its centre and
@@ -764,9 +776,18 @@ if (fitMode) {
       // the poses themselves match the design to 0.9 design px on all fifteen
       // slides, so a disagreement in that middle band is the reference's
       // resolution, not the scene's.
+      // ⚠️ A `front` OBJECT LEAVES IN FRONT, AND THAT IS THE DESIGN NOW (V-96).
+      // The storyboard decides which side of the journal each object is on and
+      // it holds for the whole slide; the crossing happens at the page turn, not
+      // mid-flight. So for those objects the clip's "all but gone by the end"
+      // is not a claim about us — the clip swallows them early, we do not, and
+      // that is the owner's decision, not a defect. `OVER-HIDDEN` still applies
+      // to everything: being buried when the mock floats you is always wrong.
+      const isFront = FLY_LAYER[f.id] === 'front'
       if (!midFlip) {
         if (rhid < 0.05 && hid > 0.75) bad.push('OVER-HIDDEN')
-        if (rhid >= 0.85 && hid < 0.6) bad.push('EXIT-NOT-BEHIND')
+        if (rhid >= 0.85 && hid < 0.6 && !isFront) bad.push('EXIT-NOT-BEHIND')
+        if (rhid >= 0.85 && hid < 0.6 && isFront) note = 'floats to the turn (storyboard)'
       }
       if (bad.length) fails++
       if (!clipped && !shapeless && !swallowed) {
@@ -787,6 +808,7 @@ if (fitMode) {
           (clipped ? '  (at the frame edge)' : '') +
           (shapeless ? '  (the reference has lost the shape)' : '') +
           (swallowed && !shapeless ? '  (the page has it in the reference too)' : '') +
+          (note ? '  (' + note + ')' : '') +
           (bad.length ? '  ' + bad.join(' ') : ''),
       )
     }
