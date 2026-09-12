@@ -1,6 +1,7 @@
 import { gsap } from 'gsap'
 import { snap } from '@/story/timing.js'
 import { FLY_Z, FLY_Z_FRONT } from '@/story/flyObjects.js'
+import { SLIDES } from '@/story/slides.js'
 import { flyingObject } from './flyingObject.js'
 
 /**
@@ -36,6 +37,28 @@ import { flyingObject } from './flyingObject.js'
  * @param {HTMLElement} layerEl the `.fly-layer` element
  * @param {import('@/story/flyObjects.js').FlyRecord[]} records
  */
+/**
+ * When the slide an object belongs to leaves the screen.
+ *
+ * THE PAGE TURN IS A HARD CEILING ON BEING IN FRONT (owner, 2026-09-12: "when
+ * the journal turns, the objects should go under it at once — the journal has
+ * to cover them; it is ugly when the page has already turned and an object from
+ * the previous slide is still shrinking on top of it"). An object may fly over
+ * its OWN page for as long as the measurement says, but the moment the next
+ * page arrives it belongs behind the journal, whatever `zFlip` was measured at.
+ *
+ * Only `pen-1` actually crosses that line — its `zFlip` is 18.17 and its slide
+ * ends at 17.10, so it floated over the next page for 1.07 s and then blinked
+ * out, which is the pen the owner named. The other 26 already flip earlier, and
+ * for them this ceiling changes nothing. Measured against the reference clip,
+ * the pen at t = 17.67 was 0 % covered for us and 96 % covered there, so this
+ * also moves us TOWARDS the clip rather than away from it.
+ */
+const slideEnd = frame => {
+  const later = SLIDES.filter(s => s.frame > frame).map(s => s.at)
+  return later.length ? Math.min(...later) : Infinity
+}
+
 export function buildFlyLayer(layerEl, records) {
   const tl = gsap.timeline({ paused: true })
   const entries = []
@@ -51,7 +74,18 @@ export function buildFlyLayer(layerEl, records) {
     // the page has already swallowed the object, so a frame of slack there
     // costs nothing and a frame short is a visible pop.
     const at = snap(rec.t0)
-    entries.push({ rec, el: pos, at, end: rec.t1, live: null, front: null })
+    entries.push({
+      rec, el: pos, at, live: null, front: null,
+      // ...and it stops being drawn there too. Every flight in the table
+      // outlives its own slide by 0.8-2.5 s, and for 24 of the 27 those seconds
+      // are spent 100 % behind the page, so cutting them changes nothing on
+      // screen. For the other three it is the fix: the object was still out in
+      // the open beside the turned page, shrinking, which is what the owner
+      // called ugly.
+      end: Math.min(rec.t1, slideEnd(rec.frame)),
+      // Never in front of a page that has already been turned — see `slideEnd`.
+      frontUntil: Math.min(rec.zFlip, slideEnd(rec.frame)),
+    })
     tl.add(flyingObject({ pos, box }, rec).paused(false), at)
   }
 
@@ -77,7 +111,7 @@ export function buildFlyLayer(layerEl, records) {
       // lands while the page still covers nothing. It used not to: the crossing
       // sat seconds late, deep inside the page, and the object went from wholly
       // drawn to half eaten between two frames.
-      const front = t < e.rec.zFlip
+      const front = t < e.frontUntil
       if (front !== e.front) {
         e.front = front
         e.el.style.setProperty('--fo-z', String(front ? FLY_Z_FRONT : FLY_Z))

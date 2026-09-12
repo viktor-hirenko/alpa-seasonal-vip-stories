@@ -577,6 +577,24 @@ if (fitMode) {
     return f
   }
 
+  /**
+   * When the slide an object belongs to leaves the screen.
+   *
+   * SAMPLES PAST IT ARE NOT JUDGED, AND THAT IS DELIBERATE (V-95). The product
+   * stops drawing a flight the moment its page is turned — the owner asked for
+   * it in those words: "when the journal turns the objects should go under it at
+   * once". There is nothing to measure on those frames, so scoring them would
+   * fail 56 of 162 samples for a reason that is a decision rather than a defect.
+   * It costs nothing in coverage: the reference itself has the page hiding every
+   * one of the 27 flights 100 % on its own last sample, so those seconds were
+   * invisible there too. Each skip is printed with the reference's own hidden
+   * fraction beside it, so this stays a stated exemption and not a silent one.
+   */
+  const slideEnd = frame => {
+    const later = SLIDES.filter(s => s.frame > frame).map(s => s.at)
+    return later.length ? Math.min(...later) : Infinity
+  }
+
   // `size` IS x1.30 AND NOT x1.16, and the reason is the two rulers rather than
   // the objects. Our side is the sprite's own ALPHA, measured off a pair of
   // screenshots on black and on white; the clip's side is a colour distance
@@ -614,8 +632,18 @@ if (fitMode) {
     // writeReference uses to choose its five says which those are — a blob under
     // 55 % of the flight's largest.
     const rmax = Math.max(...f.samples.map(s => s[3]))
+    const rec = FLIGHTS.find(r => r.id === f.id)
+    const drawnUntil = rec ? Math.min(rec.t1, slideEnd(rec.frame)) : Infinity
     for (const smp of f.samples) {
       const [t, rx, ry, rsq, rdeg, relong, rhid] = smp   // see fly-reference.json's `units`
+      if (t > drawnUntil) {
+        console.log(
+          `${f.id.padEnd(14)} ${t.toFixed(2).padStart(6)}   not judged: the page has turned at `
+          + `${drawnUntil.toFixed(2)} and we stop drawing there (the reference hides it `
+          + `${Math.round(rhid * 100)} % here anyway)`,
+        )
+        continue
+      }
       await cdp.send('Page.navigate', {
         url: `${ORIGIN}/lab.html?panel=0&bg=grid&journal=1&objects=1&frame=${frameAt(t)}&t=${t}`,
       })
