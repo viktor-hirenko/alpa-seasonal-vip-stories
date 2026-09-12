@@ -109,7 +109,36 @@ export const TIMING = {
    * consecutive pages (20.0 / 24.5 / 28.5 / 32.5 / 37.0 / 42.0 s). A real 180
    * would land it on the right for every other page. See that doc's correction.
    */
-  flip: { peak: 90, out: 0.14, back: 0.79 },
+  // ⚠️ `back` IS MEASURED AGAINST THE CLIP, NOT TUNED BY EYE (V-99, 12.09).
+  //
+  // The owner kept saying the turn "was not quite it" and could not say why.
+  // The model was right all along — hinge on the left spine, out to edge-on,
+  // back the same way, never a real 180 — and the edge-on instant was already
+  // exact. What was wrong was the TAIL: the journal took far too long to settle.
+  //
+  // HOW THE CLIP WAS MEASURED, since nothing in the project could do it before.
+  // `preview` minus `clean` leaves the journal AND the flying objects, so the
+  // bounding box of that difference is useless — the stars push it to the frame
+  // edge. Take the LARGEST CONNECTED COMPONENT instead and, of those, the
+  // TALLEST: the journal is ~1800 px tall and a star ~250. Its width divided by
+  // its width lying flat is |cos(angle)|. Frame by frame at 1/30 s over the cut
+  // at 22.07 that gives the clip's own curve: it starts turning at ~22.02, is
+  // edge-on at 22.20, and is flat again by 22.53.
+  //
+  // Fitted on when each curve has fallen to a fraction of its peak, counted
+  // from the edge-on instant:
+  //
+  //                  75 %      50 %      25 %      10 %
+  //     clip        0.070 s   0.129 s   0.223 s   0.295 s
+  //     back 0.79   0.084     0.172     0.297     0.418    <- 33-42 % too slow
+  //     back 0.60   0.067     0.136     0.233     0.332    <- within one frame
+  //
+  // `out` stays at 0.14: the clip's out-leg is ~0.18 and begins ~0.05 s before
+  // the cut, but the turn is anchored AT the cut and that anchor also fixes the
+  // page swap (slides.js uses `at + flip.out`). Moving it is a bigger change
+  // for one frame of difference, and the edge-on instant already lands on the
+  // clip's, so it was left alone deliberately.
+  flip: { peak: 90, out: 0.14, back: 0.6 },
 
   /** Idle drift. Per-property periods are deliberately co-prime-ish so the
    *  loop never reads as periodic. */
