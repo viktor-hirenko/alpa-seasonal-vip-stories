@@ -241,7 +241,8 @@ export const FLY_Z_FRONT = 600
  * Three slides carry one of each, and those were matched by position: the
  * storyboard's icon centres against our own path at the middle of the slide.
  * Slide 10's above-icon sits at 42 % / 18 % and its below-icon at 72 % / 83 %,
- * which puts `spark-1..3` above and `spark-4..5` below; slide 14 puts `cross-2`
+ * which put `spark-1..3` above and `spark-4..5` below — the latter pair was
+ * then lifted to `front` on the owner's call, see the table; slide 14 puts `cross-2`
  * above and `cross-1` below; slide 20 puts `milkpack-2` above and `milkpack-1`
  * below. The nearest-match distances are 4-38 % of the frame, never ambiguous.
  *
@@ -252,8 +253,13 @@ export const FLY_Z_FRONT = 600
 export const FLY_LAYER = {
   'pen-1': 'front',                                              // slide 8
   'calendar-1': 'front',                                         // slide 9
+  // ⚠️ THE TWO LOWER STARS OVERRIDE THE STORYBOARD, ON THE OWNER'S CALL
+  // (12.09: "make the stars at the bottom of this slide behave like the ones at
+  // the top — floating over the journal and hidden the same way"). The
+  // storyboard draws slide 10's lower `Points icon` below the journal; he wants
+  // all five stars on one side. Do not "correct" this back to the mock.
   'spark-1': 'front', 'spark-2': 'front', 'spark-3': 'front',    // slide 10
-  'spark-4': 'behind', 'spark-5': 'behind',
+  'spark-4': 'front', 'spark-5': 'front',
   'chip-1': 'behind', 'chip-2': 'behind',                        // slide 11
   'coin-1': 'front', 'coin-2': 'front', 'coin-3': 'front',       // slide 12
   'planet-1': 'behind',                                          // slide 13
