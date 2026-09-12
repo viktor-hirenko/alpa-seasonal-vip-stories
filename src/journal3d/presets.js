@@ -312,14 +312,7 @@ export function pageTurn(t, params) {
   const p = P({ ...TIMING.flip, from: 0, to: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack }, params)
   const s = tl()
   s.set(t.box, { rotationY: p.from }, 0)
-  s.to(t.box, { rotationY: p.peak, duration: p.out, ease: p.easeOut }, 0)
-  // `to` IS WHERE THE TURN LANDS, and it is not always square-on. The clip
-  // stops several of its slides short of zero and leaves the page leaning -
-  // which under the stage's perspective is the trapezium the owner kept
-  // pointing at on review.html. Landing at zero everywhere was the reason our
-  // page always faced the camera dead on. See SLIDE_LEAN in slides.js for the
-  // measured angles and for why the ones under the bar are left at zero.
-  s.to(t.box, { rotationY: p.to, duration: p.back, ease: p.easeBack }, p.out)
+  yawTurn(s, t, p)
   return s
 }
 pageTurn.PARAM_SCHEMA = {
@@ -329,6 +322,89 @@ pageTurn.PARAM_SCHEMA = {
   back: { min: 0.05, max: 1.5, step: 0.01 },
 }
 pageTurn.PARAM_DEFAULTS = { ...TIMING.flip }
+
+/**
+ * THE YAW ITSELF. Out to edge-on, THROUGH it, and on round — the page arrives
+ * leaning the OTHER way (V-100, 12.09).
+ *
+ * WHAT THIS REPLACES AND WHY. Until now the back-leg tweened from `+peak` down
+ * to `to`, i.e. the journal turned out to its edge and came back the way it
+ * went, so the incoming page swung in from the same side the outgoing one left
+ * by. The owner said three times that the clip does not look like that, and he
+ * is right. The old reading rested on two arguments, and both are duds:
+ *
+ *   - "the glowing spine stays on the left, so there is no flip" - it stays on
+ *     the left in the clip AFTER the turn as well, because both faces of the
+ *     designer's journal are dressed the same way. It cannot separate the two.
+ *   - "the silhouette width goes w0 -> 0 -> w0 either way" - true, and that is
+ *     exactly why width alone was never going to settle it.
+ *
+ * WHAT DOES SEPARATE THEM is the PERSPECTIVE KEYSTONE: the edge nearer the
+ * camera projects taller. An out-and-back keeps the same edge near the whole
+ * way; a turn that carries on past edge-on swaps it. Measured on the clip as
+ * the journal's vertical extent at its left end over the same at its right end
+ * (`preview` minus `clean` in RGB, largest component - luma tears the page
+ * apart where its own black matches the room's), sampled on each leg at the
+ * same silhouette width so the lean magnitudes match:
+ *
+ *     cut    out  back        cut    out  back        cut    out  back
+ *    11.07  1.42  0.78      34.07  1.14  0.71      61.10  2.33  0.70
+ *    17.10  1.14  0.69      39.07  1.34  0.89      67.07  1.10  0.35
+ *    22.07  1.44  0.68      44.03  1.43  0.91      73.07  1.25  0.75
+ *    26.07  1.13  0.70      49.10  1.47  0.56      78.07  1.05  0.70
+ *    30.10  1.34  0.70      53.27  0.77  0.60      83.03  1.14  0.59
+ *                           57.07  0.92  0.72
+ *
+ * The back-leg column is unanimous: sixteen cuts, sixteen readings under 1, and
+ * every cut drops from its own out-leg to its own back-leg. (The out-leg column
+ * has three soft entries — 53.27, 57.07 and 78.07. The out-leg is only four
+ * frames long, so on those three the 0.80-width sample had to be taken well off
+ * that width; and at rest the journal is wider than the canvas, which clips its
+ * left edge and drags the ratio down. Neither touches the back-leg, which is
+ * sampled mid-turn with the whole page inside the frame.)
+ *
+ * Every page turn in the story is the same turn, and it is not an out-and-back.
+ *
+ * WHY THIS IS STILL ONE FACE AND NOT A SECOND PAGE STACK. A real +180 would
+ * need a back face, a two-slot page ring, and a re-think of useJournalFit
+ * (ADR-0004 measures all pages in one pass). It is not needed: the clip's two
+ * faces are dressed identically - magenta spine down the left, gold page-block
+ * down the right, copy reading normally - and for identical faces the render at
+ * `180 + a` is pixel-for-pixel the render at `a`. So carrying on to 180 and
+ * showing the back is the same picture as passing through `-peak` and showing
+ * the front, which is what this does. The jump lands ON the edge-on instant,
+ * where the face is a hairline; it is the same frame the content cut already
+ * hides behind (STORY_SEGMENTS.cut = start + flip.out).
+ *
+ * The clip agrees frame for frame that the jump is right rather than merely
+ * convenient: at ±90 what faces the camera is a SIDE of the box, and the two
+ * sides are not alike. Just before edge-on the clip's sliver is the magenta
+ * spine (its magenta band 1815 px tall against 168 px of gold); just after, it
+ * is the gold fore-edge (1523 against 1028). It swaps in one frame, exactly as
+ * passing from +90 to -90 does.
+ *
+ * `fromTo` with `immediateRender: false`, not `set` + `to`: the master timeline
+ * is seeked arbitrarily (ADR-0008), and a plain `to` would record whatever
+ * rotationY it found on its first render as its start value.
+ *
+ * `to` IS WHERE THE TURN LANDS, and it is not always square-on. The clip stops
+ * several of its slides short of zero and leaves the page leaning - which under
+ * the stage's perspective is the trapezium the owner kept pointing at on
+ * review.html. Landing at zero everywhere was the reason our page always faced
+ * the camera dead on. See SLIDE_LEAN in slides.js for the measured angles and
+ * for why the ones under the bar are left at zero. It does NOT change with this
+ * fix: the turn ends where it always ended, it just gets there the long way, so
+ * `pose:check` measures the same settled poses.
+ */
+function yawTurn(s, t, p) {
+  s.to(t.box, { rotationY: p.peak, duration: p.out, ease: p.easeOut }, 0)
+  s.fromTo(
+    t.box,
+    { rotationY: -p.peak },
+    { rotationY: p.to, duration: p.back, ease: p.easeBack, immediateRender: false },
+    p.out,
+  )
+}
 
 /**
  * IDLE DRIFT — NO LONGER PART OF THE STORY. Kept as a library preset and used
@@ -388,10 +464,12 @@ export function rePose(t, from, to, params) {
   }
   s.to(t.pos, { ...posVars(to), duration: p.dur, ease: p.ease }, 0)
   s.to(t.box, { ...boxVars(to), duration: p.dur, ease: p.ease }, 0)
+  // The lab parks the turn through here (`?lead=`), so it has to be the SAME
+  // yaw the story plays or the lab lies about the product — which is how the
+  // old out-and-back survived as long as it did. One helper, both callers.
   if (p.flip) {
     s.set(t.box, { rotationY: 0 }, 0)
-    s.to(t.box, { rotationY: p.peak, duration: p.out, ease: p.easeOut }, 0)
-    s.to(t.box, { rotationY: 0, duration: p.back, ease: p.easeBack }, p.out)
+    yawTurn(s, t, { ...p, to: 0 })
   }
   return s
 }

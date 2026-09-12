@@ -75,8 +75,11 @@ export const TIMING = {
   rePose: 0.5,
 
   /**
-   * THE PAGE TURN. The journal yaws out to edge-on and comes BACK; it does not
-   * complete a 180. Measured against the reference with a difference mask
+   * THE PAGE TURN. The journal yaws out to edge-on and CARRIES ON THROUGH IT —
+   * the page arrives leaning the other way. These three numbers are about its
+   * CLOCK and are unaffected by that; the trajectory itself lives in
+   * `yawTurn` in journal3d/presets.js, and the keystone measurement that
+   * settled the direction is in its comment. Measured with a difference mask
    * (preview.mp4 minus clean bg.mp4 isolates the journal exactly, because the
    * two clips differ nowhere else), one frame at a time across five cuts. The
    * journal's on-screen silhouette width, cut at 17.10 s:
@@ -104,10 +107,14 @@ export const TIMING = {
    * hairline, so the swap cannot be seen. ADR-0008 still owns the cut — it just
    * happens at `start + out` rather than at `start`.
    *
-   * Why not the 180 that _context/34-page-flip.md specified: the glowing
-   * magenta spine sits on the LEFT of the page on every settled frame of six
-   * consecutive pages (20.0 / 24.5 / 28.5 / 32.5 / 37.0 / 42.0 s). A real 180
-   * would land it on the right for every other page. See that doc's correction.
+   * ⚠️ THE PARAGRAPH THAT STOOD HERE WAS WRONG, and it cost three sessions.
+   * It argued there was no 180 because "the glowing magenta spine sits on the
+   * LEFT of the page on every settled frame of six consecutive pages". So it
+   * does — and it sits on the left AFTER every turn too, because both faces of
+   * the designer's journal are dressed alike. The spine cannot separate the two
+   * models, and neither can the width table above: `w0 -> 0 -> w0` is what both
+   * produce. The owner said so on 2026-09-03 and was overruled by this comment.
+   * What actually separates them is the perspective keystone — see `yawTurn`.
    */
   // ⚠️ `back` IS MEASURED AGAINST THE CLIP, NOT TUNED BY EYE (V-99, 12.09).
   //
