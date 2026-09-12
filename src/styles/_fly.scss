@@ -186,10 +186,17 @@
   //
   // The defs live in FlyLayer.vue rather than here, because a `url()` filter
   // that resolves to nothing DROPS THE ELEMENT rather than falling back.
+  // The three numbers come from the object's OWN node in the storyboard, handed
+  // down by FlyObject as --fo-glow-y / --fo-glow-blur / --fo-glow-a (V-98).
+  // They used to be one hard-coded pair taken from the cash icon, which left
+  // the milk packs and the gift — blur .13 of the box at alpha .56 — as dim as
+  // a coin, and gave the planet cow a halo the mock does not draw at all.
   --fo-glow: calc(var(--fo-base, 400) * var(--fo-ik) * var(--u));
   filter: url(#fly-room-light)
     drop-shadow(
-      0 calc(var(--fo-glow) * 0.0386) calc(var(--fo-glow) * 0.0573) rgba(255, 0, 212, 0.27)
+      0 calc(var(--fo-glow) * var(--fo-glow-y, 0.0386))
+        calc(var(--fo-glow) * var(--fo-glow-blur, 0.0573))
+        rgba(255, 0, 212, var(--fo-glow-a, 0.27))
     );
 }
 

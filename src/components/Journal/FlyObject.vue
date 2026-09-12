@@ -24,15 +24,22 @@
  */
 import { computed } from 'vue'
 import { OBJECT_URL } from '@/story/flyAssets.js'
-import { FLY_Z_FRONT } from '@/story/flyObjects.js'
+import { FLY_Z_FRONT, FLY_GLOW } from '@/story/flyObjects.js'
 
 const props = defineProps({
   rec: { type: Object, required: true },
 })
 
 const src = OBJECT_URL[props.rec.asset]
+// The halo is per object, not per deck — see FLY_GLOW. An asset with no entry
+// would silently fall back to the cash icon's, which is the bug FLY_GLOW fixes,
+// so the lookup is explicit and a miss is visible as no halo at all.
+const glow = FLY_GLOW[props.rec.asset] ?? [0, 0, 0]
 const style = computed(() => ({
   '--fo-z': String(FLY_Z_FRONT),
   '--fo-base': String(props.rec.base),
+  '--fo-glow-y': String(glow[0]),
+  '--fo-glow-blur': String(glow[1]),
+  '--fo-glow-a': String(glow[2]),
 }))
 </script>
