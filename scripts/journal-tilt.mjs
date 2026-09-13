@@ -30,7 +30,16 @@
  */
 import { spawn, execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { W, H, pyramid, maskPyramid, register, quadMask, pageMask, reachMask } from './lib/gradfit.mjs'
+import {
+  W,
+  H,
+  pyramid,
+  maskPyramid,
+  register,
+  quadMask,
+  pageMask,
+  reachMask,
+} from './lib/gradfit.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const CLIP = `${ROOT}_refs/DP-15152 - preview.mp4`
@@ -39,32 +48,67 @@ const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const PORT = Number(process.env.TILT_PORT || 9401)
 const ORIGIN = process.env.PROBE_ORIGIN || 'http://localhost:5173'
 const argv = process.argv.slice(2)
-const flag = n => { const i = argv.indexOf(n); return i < 0 ? null : argv[i + 1] }
+const flag = n => {
+  const i = argv.indexOf(n)
+  return i < 0 ? null : argv[i + 1]
+}
 const FINE = argv.includes('--fine')
 const KEEP = Number(process.env.TILT_KEEP || 0.14)
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const ff = a => execFileSync('ffmpeg', ['-v', 'error', ...a], { maxBuffer: 1 << 29 })
 const rgbOfVideo = (f, t) =>
-  ff(['-ss', String(t), '-i', f, '-frames:v', '1', '-vf', `scale=${W}:${H}`,
-    '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
+  ff([
+    '-ss',
+    String(t),
+    '-i',
+    f,
+    '-frames:v',
+    '1',
+    '-vf',
+    `scale=${W}:${H}`,
+    '-f',
+    'rawvideo',
+    '-pix_fmt',
+    'rgb24',
+    '-',
+  ])
 const rgbOfPng = f =>
   ff(['-i', f, '-vf', `scale=${W}:${H}:flags=lanczos`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
 
 const QUERY = process.env.FIT_QUERY || ''
 
-const chrome = spawn(CHROME, [
-  '--headless=new', `--remote-debugging-port=${PORT}`, '--hide-scrollbars', '--mute-audio',
-  '--autoplay-policy=no-user-gesture-required', '--user-data-dir=/tmp/tilt-profile', 'about:blank',
-], { stdio: 'ignore' })
-process.on('exit', () => { try { chrome.kill() } catch {} })
+const chrome = spawn(
+  CHROME,
+  [
+    '--headless=new',
+    `--remote-debugging-port=${PORT}`,
+    '--hide-scrollbars',
+    '--mute-audio',
+    '--autoplay-policy=no-user-gesture-required',
+    '--user-data-dir=/tmp/tilt-profile',
+    'about:blank',
+  ],
+  { stdio: 'ignore' },
+)
+process.on('exit', () => {
+  try {
+    chrome.kill()
+  } catch {}
+})
 
 class CDP {
   constructor(ws) {
-    this.ws = ws; this.id = 0; this.p = new Map()
+    this.ws = ws
+    this.id = 0
+    this.p = new Map()
     ws.addEventListener('message', e => {
-      const m = JSON.parse(e.data), q = this.p.get(m.id)
-      if (q) { this.p.delete(m.id); m.error ? q.reject(new Error(m.error.message)) : q.resolve(m.result) }
+      const m = JSON.parse(e.data),
+        q = this.p.get(m.id)
+      if (q) {
+        this.p.delete(m.id)
+        m.error ? q.reject(new Error(m.error.message)) : q.resolve(m.result)
+      }
     })
   }
   send(m, p = {}) {
@@ -73,7 +117,11 @@ class CDP {
     return new Promise((res, rej) => this.p.set(id, { resolve: res, reject: rej }))
   }
   async eval(x) {
-    const r = await this.send('Runtime.evaluate', { expression: x, returnByValue: true, awaitPromise: true })
+    const r = await this.send('Runtime.evaluate', {
+      expression: x,
+      returnByValue: true,
+      awaitPromise: true,
+    })
     if (r.exceptionDetails) throw new Error(r.exceptionDetails.text)
     return r.result.value
   }
@@ -171,18 +219,26 @@ function scoreAt(rgbA, rgbB, geo) {
 const main = async () => {
   mkdirSync(OUT, { recursive: true })
   const src = readFileSync(`${ROOT}src/story/slides.js`, 'utf8')
-  const SLIDES = [...src.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:\s*'([^']+)'/g)]
-    .map(m => ({ frame: +m[1], at: +m[2], page: m[3] }))
+  const SLIDES = [...src.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:\s*'([^']+)'/g)].map(
+    m => ({ frame: +m[1], at: +m[2], page: m[3] }),
+  )
   const want = flag('--slide')
   const list = argv.includes('--all') ? SLIDES : SLIDES.filter(s => s.frame === Number(want))
-  if (!list.length) { console.error('no such slide'); process.exit(1) }
+  if (!list.length) {
+    console.error('no such slide')
+    process.exit(1)
+  }
 
   const ws = new WebSocket(await findTarget())
   await new Promise(r => ws.addEventListener('open', r, { once: true }))
   const cdp = new CDP(ws)
   await cdp.send('Page.enable')
-  await cdp.send('Emulation.setDeviceMetricsOverride',
-    { width: 420, height: 747, deviceScaleFactor: 2, mobile: true })
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: 420,
+    height: 747,
+    deviceScaleFactor: 2,
+    mobile: true,
+  })
   await cdp.send('Page.navigate', { url: `${ORIGIN}/index.html${QUERY}` })
   await sleep(2500)
   if (!(await cdp.eval(READY))) throw new Error('story never became ready')
@@ -210,43 +266,59 @@ const main = async () => {
     let flat = null
     let best = null
     for (const persp of PERSPS) {
-    // THE LEAN THAT MATTERS IS AROUND THE VERTICAL, and that is not a guess about
-    // geometry - it is what the mechanism does. The page turn spins the journal
-    // around its vertical axis and lands it back at exactly zero; if the clip
-    // lands it short of zero, the page stays leaning, which is the trapezium.
-    // TILT_RX pins the other axis so a sweep costs eight renders, not sixty four.
-    for (const rx of RXS) {
-      for (const ry of grid) {
-        await cdp.eval(TILT(rx, ry, persp))
-        await sleep(45)
-        const geo = await cdp.eval(QUAD)
-        if (!geo) continue
-        const png = `${OUT}/.t.png`
-        const shot = await cdp.send('Page.captureScreenshot', { format: 'png' })
-        writeFileSync(png, Buffer.from(shot.data, 'base64'))
-        const r = scoreAt(rgbOfPng(png), rgbB, geo)
-        // The baseline is no-lean at the FIRST perspective in the list, so a run
-        // that sweeps only the near camera still has something to compare with.
-        if (rx === 0 && ry === 0 && persp === PERSPS[0]) flat = { v: r.v, s: r.s, dx: r.dx, dy: r.dy }
-        if (!best || r.v > best.v) best = { v: r.v, rx, ry, persp, s: r.s, dx: r.dx, dy: r.dy }
+      // THE LEAN THAT MATTERS IS AROUND THE VERTICAL, and that is not a guess about
+      // geometry - it is what the mechanism does. The page turn spins the journal
+      // around its vertical axis and lands it back at exactly zero; if the clip
+      // lands it short of zero, the page stays leaning, which is the trapezium.
+      // TILT_RX pins the other axis so a sweep costs eight renders, not sixty four.
+      for (const rx of RXS) {
+        for (const ry of grid) {
+          await cdp.eval(TILT(rx, ry, persp))
+          await sleep(45)
+          const geo = await cdp.eval(QUAD)
+          if (!geo) continue
+          const png = `${OUT}/.t.png`
+          const shot = await cdp.send('Page.captureScreenshot', { format: 'png' })
+          writeFileSync(png, Buffer.from(shot.data, 'base64'))
+          const r = scoreAt(rgbOfPng(png), rgbB, geo)
+          // The baseline is no-lean at the FIRST perspective in the list, so a run
+          // that sweeps only the near camera still has something to compare with.
+          if (rx === 0 && ry === 0 && persp === PERSPS[0])
+            flat = { v: r.v, s: r.s, dx: r.dx, dy: r.dy }
+          if (!best || r.v > best.v) best = { v: r.v, rx, ry, persp, s: r.s, dx: r.dx, dy: r.dy }
+        }
       }
     }
-    }
     await cdp.eval(TILT(0, 0, 1800))
-    if (!best) { console.log(String(sl.frame).padStart(5), sl.page.padEnd(20), '  no read'); continue }
+    if (!best) {
+      console.log(String(sl.frame).padStart(5), sl.page.padEnd(20), '  no read')
+      continue
+    }
     out.push({ frame: sl.frame, page: sl.page, t, ...best, flat: flat && flat.v })
     const gain = flat ? best.v - flat.v : null
     // 10 % better than flat, and at least 3 deg of lean, before it is called a lean
-    const leans = gain !== null && gain / Math.max(flat.v, 1e-6) > 0.10 &&
+    const leans =
+      gain !== null &&
+      gain / Math.max(flat.v, 1e-6) > 0.1 &&
       (Math.abs(best.rx) >= 3 || Math.abs(best.ry) >= 3)
-    console.log(String(sl.frame).padStart(5), sl.page.padEnd(20),
-      best.rx.toFixed(0).padStart(9) + '°', best.ry.toFixed(0).padStart(10) + '°', String(best.persp).padStart(7),
-      best.v.toFixed(3).padStart(8), (flat ? flat.v.toFixed(3) : '  -  ').padStart(9),
+    console.log(
+      String(sl.frame).padStart(5),
+      sl.page.padEnd(20),
+      best.rx.toFixed(0).padStart(9) + '°',
+      best.ry.toFixed(0).padStart(10) + '°',
+      String(best.persp).padStart(7),
+      best.v.toFixed(3).padStart(8),
+      (flat ? flat.v.toFixed(3) : '  -  ').padStart(9),
       (gain !== null ? ((gain / Math.max(flat.v, 1e-6)) * 100).toFixed(0) + '%' : '-').padStart(8),
-      leans ? '  <<< LEANS' : '   flat is as good')
+      leans ? '  <<< LEANS' : '   flat is as good',
+    )
   }
   writeFileSync(`${OUT}/tilt.json`, JSON.stringify(out, null, 1))
   console.log(`\n-> ${OUT}/tilt.json`)
-  ws.close(); process.exit(0)
+  ws.close()
+  process.exit(0)
 }
-main().catch(e => { console.error(e); process.exit(1) })
+main().catch(e => {
+  console.error(e)
+  process.exit(1)
+})

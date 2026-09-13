@@ -29,35 +29,98 @@
       under `import.meta.env.DEV`, and it is deliberately not a build input.
     -->
     <style>
-      :root { color-scheme: dark; }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0; background: #0b0b10; color: #e8e8f0; overflow: hidden;
-        font: 13px/1.4 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+      :root {
+        color-scheme: dark;
       }
-      #wrap { position: fixed; inset: 0 0 96px 0; }
-      iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #0b0b10;
+        color: #e8e8f0;
+        overflow: hidden;
+        font:
+          13px/1.4 -apple-system,
+          BlinkMacSystemFont,
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      #wrap {
+        position: fixed;
+        inset: 0 0 96px 0;
+      }
+      iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
       #clip {
-        position: absolute; object-fit: cover; pointer-events: none;
-        opacity: .5; transition: opacity .08s linear;
+        position: absolute;
+        object-fit: cover;
+        pointer-events: none;
+        opacity: 0.5;
+        transition: opacity 0.08s linear;
       }
       #bar {
-        position: fixed; left: 0; right: 0; bottom: 0; height: 96px;
-        display: grid; grid-template-columns: 1fr auto; gap: 8px 18px;
-        align-items: center; padding: 10px 16px;
-        background: #14141c; border-top: 1px solid #262633;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 96px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px 18px;
+        align-items: center;
+        padding: 10px 16px;
+        background: #14141c;
+        border-top: 1px solid #262633;
       }
-      .row { display: flex; align-items: center; gap: 12px; }
-      .row.wide { grid-column: 1 / -1; }
-      input[type=range] { width: 100%; accent-color: #ff3fb5; }
-      #op { width: 180px; }
-      button, select {
-        background: #23233010; border: 1px solid #3a3a4c; color: inherit;
-        border-radius: 6px; padding: 5px 10px; font: inherit; cursor: pointer;
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
       }
-      button.on { background: #ff3fb5; border-color: #ff3fb5; color: #14141c; font-weight: 600; }
-      code { font: 12px/1 ui-monospace, Menlo, monospace; color: #9fe; }
-      .hint { color: #8a8a9c; font-size: 12px; }
+      .row.wide {
+        grid-column: 1 / -1;
+      }
+      input[type='range'] {
+        width: 100%;
+        accent-color: #ff3fb5;
+      }
+      #op {
+        width: 180px;
+      }
+      button,
+      select {
+        background: #23233010;
+        border: 1px solid #3a3a4c;
+        color: inherit;
+        border-radius: 6px;
+        padding: 5px 10px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.on {
+        background: #ff3fb5;
+        border-color: #ff3fb5;
+        color: #14141c;
+        font-weight: 600;
+      }
+      code {
+        font:
+          12px/1 ui-monospace,
+          Menlo,
+          monospace;
+        color: #9fe;
+      }
+      .hint {
+        color: #8a8a9c;
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
@@ -79,8 +142,10 @@
         <button id="objs">our objects</button>
         <button id="drift">drift</button>
         <select id="lang">
-          <option value="en">en</option><option value="fr">fr</option>
-          <option value="de">de</option><option value="it">it</option>
+          <option value="en">en</option>
+          <option value="fr">fr</option>
+          <option value="de">de</option>
+          <option value="it">it</option>
         </select>
       </div>
       <div class="row hint">
@@ -143,8 +208,10 @@
         if (!st) return
         const r = st.getBoundingClientRect()
         Object.assign(clip.style, {
-          left: r.left + 'px', top: r.top + 'px',
-          width: r.width + 'px', height: r.height + 'px',
+          left: r.left + 'px',
+          top: r.top + 'px',
+          width: r.width + 'px',
+          height: r.height + 'px',
         })
       }
 
@@ -186,17 +253,29 @@
         }
         read.textContent =
           `t ${t.toFixed(3)}  frame ${Math.round(t * FPS)}` +
-          (story ? `  tl ${story.tl.time().toFixed(3)}  video ${story.video.currentTime.toFixed(3)}` : '')
+          (story
+            ? `  tl ${story.tl.time().toFixed(3)}  video ${story.video.currentTime.toFixed(3)}`
+            : '')
       }
 
       document.getElementById('play').onclick = () => {
         playing = !playing
         document.getElementById('play').textContent = playing ? 'pause' : 'play'
-        if (playing) { story?.tl.play(); story?.video.play(); clip.play() }
-        else { story?.tl.pause(); story?.video.pause(); clip.pause(); seek(clip.currentTime) }
+        if (playing) {
+          story?.tl.play()
+          story?.video.play()
+          clip.play()
+        } else {
+          story?.tl.pause()
+          story?.video.pause()
+          clip.pause()
+          seek(clip.currentTime)
+        }
       }
       tRange.oninput = () => seek(+tRange.value)
-      document.getElementById('op').oninput = e => { clip.style.opacity = e.target.value }
+      document.getElementById('op').oninput = e => {
+        clip.style.opacity = e.target.value
+      }
 
       document.getElementById('src').onclick = e => {
         const preview = clip.src.includes('preview')
@@ -219,8 +298,13 @@
         const hv = doc()?.querySelector('.journal-hover')
         if (!hv || !story) return
         const frozen = hv.style.transform === 'none'
-        if (frozen) { hv.style.transform = ''; story.hoverTl?.play() }
-        else { story.hoverTl?.pause(); hv.style.transform = 'none' }
+        if (frozen) {
+          hv.style.transform = ''
+          story.hoverTl?.play()
+        } else {
+          story.hoverTl?.pause()
+          hv.style.transform = 'none'
+        }
         e.target.classList.toggle('on', !frozen)
         e.target.textContent = frozen ? 'drift' : 'drift FROZEN'
       }
@@ -235,15 +319,23 @@
           const n = (e.shiftKey ? 10 : 1) * (e.key === 'ArrowRight' ? 1 : -1)
           seek(Math.max(0, Math.min(94.366, +tRange.value + n / FPS)))
           e.preventDefault()
-        } else if (e.key === ' ') { document.getElementById('play').click(); e.preventDefault() }
-        else if (e.key === 'o') document.getElementById('objs').click()
+        } else if (e.key === ' ') {
+          document.getElementById('play').click()
+          e.preventDefault()
+        } else if (e.key === 'o') document.getElementById('objs').click()
         else if (e.key === 'd') document.getElementById('drift').click()
       })
 
       addEventListener('resize', fit)
       app.onload = attach
       app.src = playerUrl(document.getElementById('lang').value)
-      setInterval(() => { fit(); if (playing) seek(clip.currentTime) }, playing ? 200 : 400)
+      setInterval(
+        () => {
+          fit()
+          if (playing) seek(clip.currentTime)
+        },
+        playing ? 200 : 400,
+      )
       attach()
     </script>
   </body>

@@ -40,7 +40,7 @@ motion designer can review the 3D presets on a phone.
 - Timings, poses and layouts are **data**: `story/slides.js`, `story/timing.js`,
   `story/flyObjects.js`, `story/pageLayouts.js`. No preset holds a bare number.
 - **Pages the link has no data for are dropped** and the story shortened —
-  `src/story/storyPlan.js`. See *URL parameters* below.
+  `src/story/storyPlan.js`. See _URL parameters_ below.
 
 ## URL parameters
 
@@ -64,22 +64,22 @@ Full example:
  &final_link=https://example.com/promotions/andromeda
 ```
 
-| Parameter | Page it fills | When the page is dropped |
-|---|---|---|
-| `name` | Cover, Editor's Note | never — greeting goes without a name |
-| `days` | Days in the Spotlight | missing, empty or `0` |
-| `points` | Seasonal Power | missing, empty or `0` |
-| `level` | VIP Status | missing or not one of the seven |
-| `total_wins` | Money Talks | missing, empty or `0` |
-| `biggest_win` | Headline Win | missing, empty or `0` |
-| `top_multiplier` | Multiplier Moment | missing, empty or `0` |
-| `favorite_game_name` / `favorite_game_thunbnail` | Player's Pick | both missing |
-| `bonuses` | Bonus Report | missing, empty or `0` |
-| `sports_wins` | Sports Desk | missing, empty or `0` |
-| `sports_multiplier` | Top Sport Signal | missing, empty or `0` |
-| `user_language` | locale | unknown → English |
-| `user_currency` | currency symbol | — |
-| `final_link` | CTA and close | missing → close just closes |
+| Parameter                                        | Page it fills         | When the page is dropped             |
+| ------------------------------------------------ | --------------------- | ------------------------------------ |
+| `name`                                           | Cover, Editor's Note  | never — greeting goes without a name |
+| `days`                                           | Days in the Spotlight | missing, empty or `0`                |
+| `points`                                         | Seasonal Power        | missing, empty or `0`                |
+| `level`                                          | VIP Status            | missing or not one of the seven      |
+| `total_wins`                                     | Money Talks           | missing, empty or `0`                |
+| `biggest_win`                                    | Headline Win          | missing, empty or `0`                |
+| `top_multiplier`                                 | Multiplier Moment     | missing, empty or `0`                |
+| `favorite_game_name` / `favorite_game_thunbnail` | Player's Pick         | both missing                         |
+| `bonuses`                                        | Bonus Report          | missing, empty or `0`                |
+| `sports_wins`                                    | Sports Desk           | missing, empty or `0`                |
+| `sports_multiplier`                              | Top Sport Signal      | missing, empty or `0`                |
+| `user_language`                                  | locale                | unknown → English                    |
+| `user_currency`                                  | currency symbol       | —                                    |
+| `final_link`                                     | CTA and close         | missing → close just closes          |
 
 **Levels:** `IRON`, `BRONZE`, `SILVER`, `GOLD`, `PLATINUM`, `DIAMOND`.
 `REGULAR` shows the Iron badge (`SHOW_IRON_FOR_REGULAR` in `levelConfig.js`).
@@ -113,14 +113,14 @@ into `MESSAGES` in `src/composables/useStoryData.js` and add the code to
 
 Sent to the parent frame as `{ source: 'alpa-vip-stories', message }`:
 
-| Event | When |
-|---|---|
-| `reach_end` | the timeline reached the end |
-| `bonuses_btn` | CONTINUE JOURNEY pressed |
-| `watch_again` | WATCH AGAIN pressed |
-| `close` | the cross pressed |
-| `click_forward` / `click_backward` | arrow or tap navigation |
-| `click_pause` / `click_start` | hold-to-pause and release |
+| Event                              | When                         |
+| ---------------------------------- | ---------------------------- |
+| `reach_end`                        | the timeline reached the end |
+| `bonuses_btn`                      | CONTINUE JOURNEY pressed     |
+| `watch_again`                      | WATCH AGAIN pressed          |
+| `close`                            | the cross pressed            |
+| `click_forward` / `click_backward` | arrow or tap navigation      |
+| `click_pause` / `click_start`      | hold-to-pause and release    |
 
 `getGift()` and `closeStory()` then move `window.parent.location.href` to
 `final_link`.

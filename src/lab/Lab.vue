@@ -391,7 +391,10 @@ function firePreset(name) {
     // `pageTurn` only yaws it — but the preset stays in the library and this
     // button is what exercises it.
     const i = Math.max(1, slideIndex())
-    current = fn(targets, poseFor(SLIDES[i - 1].frame), poseFor(SLIDES[i].frame), { flip: true, ...params })
+    current = fn(targets, poseFor(SLIDES[i - 1].frame), poseFor(SLIDES[i].frame), {
+      flip: true,
+      ...params,
+    })
   } else {
     current = fn(targets, params)
   }
@@ -523,7 +526,9 @@ function parkFlip() {
   const i = slideIndex()
   if (i < 1) return
   killCurrent()
-  current = presets.rePose(targets, poseFor(SLIDES[i - 1].frame), poseFor(slide.value.frame), { flip: true })
+  current = presets.rePose(targets, poseFor(SLIDES[i - 1].frame), poseFor(slide.value.frame), {
+    flip: true,
+  })
   current.time(flipLead) // stays paused: this renders the frame, it does not play it
 }
 function setBg(id) {

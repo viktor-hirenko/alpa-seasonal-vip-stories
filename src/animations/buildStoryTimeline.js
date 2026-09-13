@@ -81,8 +81,10 @@ export function buildStoryTimeline(targets, ctx) {
   // that the journal is hidden, so any value paints nothing. The path's first
   // row is used because it is a value in the file rather than a literal here.
   setPose(targets, {
-    rot: path[0][1], scale: path[0][2],
-    cx: path[0][3], cy: path[0][4],
+    rot: path[0][1],
+    scale: path[0][2],
+    cx: path[0][3],
+    cy: path[0][4],
   })
   // AND HIDDEN FROM THE FIRST PAINT. The timeline's own `set` at time 0 below
   // only lands once something renders the timeline, and nothing does until
@@ -145,19 +147,21 @@ export function buildStoryTimeline(targets, ctx) {
   // turn — 18 design px of silhouette width and 7 px of position, where the
   // neighbouring frames were moving under 2.5. Every later turn already begins
   // at zero, so they pass 0 and nothing changes for them.
-  slides.filter(s => s.frame >= 8 && s.frame <= 23).forEach((slide, i, arr) => {
-    // The face swap (cover 1465x1868 -> page 1564x1911) is a 6 % size change,
-    // so it goes where the content cut goes: the edge-on instant, where the
-    // front face is a hairline and nothing about it can be seen. It is applied
-    // from the clock alongside that cut, not scheduled here — see `setFace`.
-    // A TURN NOW STARTS WHERE THE PREVIOUS ONE LANDED. Leaving `from` at zero
-    // while `to` is a lean would throw the lean away in one frame at the head of
-    // the next turn - the same twitch the HANDOVER_YAW note below describes,
-    // only on every slide that leans.
-    const prev = arr[i - 1]
-    const from = i === 0 ? HANDOVER_YAW : (SLIDE_LEAN[prev.frame] ?? 0)
-    nest(tl, pageTurn(targets, { from, to: SLIDE_LEAN[slide.frame] ?? 0 }), snap(slide.at))
-  })
+  slides
+    .filter(s => s.frame >= 8 && s.frame <= 23)
+    .forEach((slide, i, arr) => {
+      // The face swap (cover 1465x1868 -> page 1564x1911) is a 6 % size change,
+      // so it goes where the content cut goes: the edge-on instant, where the
+      // front face is a hairline and nothing about it can be seen. It is applied
+      // from the clock alongside that cut, not scheduled here — see `setFace`.
+      // A TURN NOW STARTS WHERE THE PREVIOUS ONE LANDED. Leaving `from` at zero
+      // while `to` is a lean would throw the lean away in one frame at the head of
+      // the next turn - the same twitch the HANDOVER_YAW note below describes,
+      // only on every slide that leans.
+      const prev = arr[i - 1]
+      const from = i === 0 ? HANDOVER_YAW : (SLIDE_LEAN[prev.frame] ?? 0)
+      nest(tl, pageTurn(targets, { from, to: SLIDE_LEAN[slide.frame] ?? 0 }), snap(slide.at))
+    })
 
   // Nested at 0 because the flight timeline is already in absolute video time.
   nest(tl, fly.tl, 0)
@@ -173,11 +177,7 @@ export function buildStoryTimeline(targets, ctx) {
   // a button in the lab, the way `hover` did when the path replaced it.
   // `from` is the scale the path leaves behind, so the shrink starts from
   // exactly where the pose stopped rather than from a number repeated here.
-  nest(
-    tl,
-    journalDissolve(targets, { from: path[path.length - 1][2] }),
-    snap(timing.exit.at),
-  )
+  nest(tl, journalDissolve(targets, { from: path[path.length - 1][2] }), snap(timing.exit.at))
   nest(tl, hyperspaceBurst(targets), snap(timing.speed.at))
   // Nested at 88.10, the second the title's own first pixels appear — what the
   // old code called the flash was this arrival (TIMING.outro). Its exit leads

@@ -33,7 +33,10 @@ import { readFileSync } from 'node:fs'
 
 const args = process.argv.slice(2)
 const file = args.find(a => !a.startsWith('--')) || '_refs/smooth/full.json'
-const flag = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] ? args[i + 1] : d }
+const flag = (n, d) => {
+  const i = args.indexOf(n)
+  return i >= 0 && args[i + 1] ? args[i + 1] : d
+}
 const ti = args.indexOf('--t')
 const T0 = ti >= 0 ? Number(args[ti + 1]) : -1e9
 const T1 = ti >= 0 ? Number(args[ti + 2]) : 1e9
@@ -50,8 +53,18 @@ const SIGNALS = [
   // quad: the one number session K measured the entrance with.
   { key: 'edge', unit: 'px', floor: 0.8, get: r => (r.vis ? r.x : null) },
   { key: 'width', unit: 'px', floor: 0.8, get: r => (r.vis ? r.w : null) },
-  { key: 'cx', unit: 'px', floor: 0.5, get: r => (r.vis && r.cx != null ? (r.cx / 100) * 1080 : null) },
-  { key: 'cy', unit: 'px', floor: 0.5, get: r => (r.vis && r.cy != null ? (r.cy / 100) * 1920 : null) },
+  {
+    key: 'cx',
+    unit: 'px',
+    floor: 0.5,
+    get: r => (r.vis && r.cx != null ? (r.cx / 100) * 1080 : null),
+  },
+  {
+    key: 'cy',
+    unit: 'px',
+    floor: 0.5,
+    get: r => (r.vis && r.cy != null ? (r.cy / 100) * 1920 : null),
+  },
   { key: 'rotZ', unit: 'deg', floor: 0.05, get: r => (r.vis ? r.rotZ : null) },
   { key: 'rotY', unit: 'deg', floor: 0.05, get: r => (r.vis ? r.rotY : null) },
   { key: 'scale', unit: 'x', floor: 0.0008, get: r => (r.vis ? r.sc : null) },
@@ -66,15 +79,25 @@ const SIGNALS = [
 // series rather than a step from zero — the arrival is judged separately.
 const ids = [...new Set(rows.flatMap(r => r.objs.map(o => o.id)))]
 for (const id of ids) {
-  for (const [prop, unit, floor] of [['cx', 'px', 1], ['cy', 'px', 1], ['w', 'px', 0.6]]) {
+  for (const [prop, unit, floor] of [
+    ['cx', 'px', 1],
+    ['cy', 'px', 1],
+    ['w', 'px', 0.6],
+  ]) {
     SIGNALS.push({
-      key: `${id}.${prop}`, unit, floor, fly: id,
+      key: `${id}.${prop}`,
+      unit,
+      floor,
+      fly: id,
       get: r => r.objs.find(o => o.id === id)?.[prop] ?? null,
     })
   }
 }
 
-const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0 }
+const median = a => {
+  const s = [...a].sort((x, y) => x - y)
+  return s.length ? s[Math.floor(s.length / 2)] : 0
+}
 
 function analyse(sig) {
   const v = rows.map(sig.get)
@@ -98,7 +121,8 @@ function analyse(sig) {
       // every measured extremum in the tables. So a near-zero speed only counts
       // if the motion on both sides of it goes the SAME way — i.e. the journal
       // was travelling, stopped, and set off again in the direction it came.
-      let before = 0, after = 0
+      let before = 0,
+        after = 0
       for (let j = Math.max(1, i - WIN); j < i; j++) if (d[j] != null) before += d[j]
       for (let j = i + 1; j <= Math.min(d.length - 1, i + WIN); j++) if (d[j] != null) after += d[j]
       if (before * after > 0) {
@@ -119,10 +143,27 @@ function analyse(sig) {
   for (const e of events) {
     const last = runs[runs.length - 1]
     if (last && last.kind === e.kind && e.i - last.iEnd <= 3) {
-      last.iEnd = e.i; last.tEnd = e.t
-      if (e.sev > last.sev) { last.sev = e.sev; last.at = e.t; last.a = e.a; last.loc = e.loc; last.k = e.k }
+      last.iEnd = e.i
+      last.tEnd = e.t
+      if (e.sev > last.sev) {
+        last.sev = e.sev
+        last.at = e.t
+        last.a = e.a
+        last.loc = e.loc
+        last.k = e.k
+      }
     } else {
-      runs.push({ kind: e.kind, t: e.t, tEnd: e.t, iEnd: e.i, at: e.t, a: e.a, loc: e.loc, k: e.k, sev: e.sev })
+      runs.push({
+        kind: e.kind,
+        t: e.t,
+        tEnd: e.t,
+        iEnd: e.i,
+        at: e.t,
+        a: e.a,
+        loc: e.loc,
+        k: e.k,
+        sev: e.sev,
+      })
     }
   }
   return runs
@@ -130,9 +171,13 @@ function analyse(sig) {
 
 if (DUMP) {
   const sig = SIGNALS.find(s => s.key === DUMP)
-  if (!sig) { console.error(`no signal "${DUMP}"; have: ${SIGNALS.map(s => s.key).join(' ')}`); process.exit(1) }
+  if (!sig) {
+    console.error(`no signal "${DUMP}"; have: ${SIGNALS.map(s => s.key).join(' ')}`)
+    process.exit(1)
+  }
   console.log(`${DUMP}   t        value      speed/frame   accel`)
-  let prev = null, prevD = null
+  let prev = null,
+    prevD = null
   for (const r of rows) {
     if (r.t < T0 || r.t > T1) continue
     const x = sig.get(r)
@@ -140,9 +185,10 @@ if (DUMP) {
     const k = d != null && prevD != null ? d - prevD : null
     console.log(
       `      ${r.t.toFixed(3).padStart(7)}  ${x == null ? '   —   ' : x.toFixed(3).padStart(10)}` +
-      `  ${d == null ? '' : d.toFixed(3).padStart(11)}  ${k == null ? '' : k.toFixed(3).padStart(9)}`,
+        `  ${d == null ? '' : d.toFixed(3).padStart(11)}  ${k == null ? '' : k.toFixed(3).padStart(9)}`,
     )
-    prev = x; prevD = d
+    prev = x
+    prevD = d
   }
   process.exit(0)
 }
@@ -156,9 +202,10 @@ for (const sig of wanted) {
   console.log(`\n=== ${sig.key} (${sig.unit}/frame, floor ${sig.floor})`)
   for (const r of runs.slice(0, 12)) {
     const span = r.t === r.tEnd ? `${r.t.toFixed(3)}` : `${r.t.toFixed(3)}..${r.tEnd.toFixed(3)}`
-    const detail = r.kind === 'KINK'
-      ? `speed steps ${r.k.toFixed(3)} where it runs ${r.loc.toFixed(3)}`
-      : `${r.a.toFixed(3)} against a local ${r.loc.toFixed(3)}`
+    const detail =
+      r.kind === 'KINK'
+        ? `speed steps ${r.k.toFixed(3)} where it runs ${r.loc.toFixed(3)}`
+        : `${r.a.toFixed(3)} against a local ${r.loc.toFixed(3)}`
     console.log(`  ${r.kind.padEnd(5)} ${span.padEnd(18)} ${detail}   x${r.sev.toFixed(1)}`)
   }
   if (runs.length > 12) console.log(`  ... and ${runs.length - 12} more`)

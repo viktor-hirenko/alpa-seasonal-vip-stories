@@ -45,7 +45,10 @@ const FPS = 30
 
 const args = process.argv.slice(2)
 const has = n => args.includes(n)
-const flag = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] ? args[i + 1] : d }
+const flag = (n, d) => {
+  const i = args.indexOf(n)
+  return i >= 0 && args[i + 1] ? args[i + 1] : d
+}
 const ti = args.indexOf('--t')
 const T0 = ti >= 0 ? Number(args[ti + 1]) : 0
 const T1 = ti >= 0 ? Number(args[ti + 2]) : 94.3667
@@ -55,12 +58,25 @@ const OUT = flag('--out', null)
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-const chrome = spawn(CHROME, [
-  '--headless=new', `--remote-debugging-port=${PORT}`, '--hide-scrollbars', '--mute-audio',
-  '--autoplay-policy=no-user-gesture-required', '--window-size=420,747',
-  `--user-data-dir=${PROFILE}`, 'about:blank',
-], { stdio: 'ignore' })
-const cleanup = () => { try { chrome.kill() } catch {} }
+const chrome = spawn(
+  CHROME,
+  [
+    '--headless=new',
+    `--remote-debugging-port=${PORT}`,
+    '--hide-scrollbars',
+    '--mute-audio',
+    '--autoplay-policy=no-user-gesture-required',
+    '--window-size=420,747',
+    `--user-data-dir=${PROFILE}`,
+    'about:blank',
+  ],
+  { stdio: 'ignore' },
+)
+const cleanup = () => {
+  try {
+    chrome.kill()
+  } catch {}
+}
 process.on('exit', cleanup)
 
 async function findTarget() {
@@ -77,11 +93,16 @@ async function findTarget() {
 
 class CDP {
   constructor(ws) {
-    this.ws = ws; this.id = 0; this.pending = new Map()
+    this.ws = ws
+    this.id = 0
+    this.pending = new Map()
     ws.addEventListener('message', e => {
       const m = JSON.parse(e.data)
       const p = this.pending.get(m.id)
-      if (p) { this.pending.delete(m.id); m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result) }
+      if (p) {
+        this.pending.delete(m.id)
+        m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result)
+      }
     })
   }
   send(method, params = {}) {
@@ -91,10 +112,15 @@ class CDP {
   }
   async eval(expr, timeout = 120000) {
     const r = await this.send('Runtime.evaluate', {
-      expression: expr, returnByValue: true, awaitPromise: true, timeout,
+      expression: expr,
+      returnByValue: true,
+      awaitPromise: true,
+      timeout,
     })
     if (r.exceptionDetails) {
-      throw new Error(r.exceptionDetails.text + ' ' + (r.exceptionDetails.exception?.description || ''))
+      throw new Error(
+        r.exceptionDetails.text + ' ' + (r.exceptionDetails.exception?.description || ''),
+      )
     }
     return r.result.value
   }
@@ -217,19 +243,26 @@ const TEMPO_RUN = `(async () => {
 
 const wsUrl = await findTarget()
 const ws = new WebSocket(wsUrl)
-await new Promise((res, rej) => { ws.addEventListener('open', res); ws.addEventListener('error', rej) })
+await new Promise((res, rej) => {
+  ws.addEventListener('open', res)
+  ws.addEventListener('error', rej)
+})
 const cdp = new CDP(ws)
 await cdp.send('Runtime.enable')
 await cdp.send('Page.enable')
 await cdp.send('Emulation.setDeviceMetricsOverride', {
   width: Number(process.env.PROBE_VIEWPORT?.split('x')[0] || 420),
   height: Number(process.env.PROBE_VIEWPORT?.split('x')[1] || 747),
-  deviceScaleFactor: 1, mobile: true,
+  deviceScaleFactor: 1,
+  mobile: true,
 })
 await cdp.send('Page.navigate', { url: `${ORIGIN}/index.html` })
 
 const ready = await cdp.eval(READY)
-if (!ready?.ok) { console.error('the story never came up'); process.exit(1) }
+if (!ready?.ok) {
+  console.error('the story never came up')
+  process.exit(1)
+}
 
 mkdirSync(new URL('../_refs/smooth/', import.meta.url), { recursive: true })
 
@@ -239,7 +272,9 @@ if (TEMPO) {
   const sorted = [...ms].sort((a, b) => a - b)
   const med = sorted[Math.floor(sorted.length / 2)]
   const long = gaps.slice(1).filter(g => g[1] > 25)
-  console.log(`frames ${ms.length}  median ${med.toFixed(1)} ms  p95 ${sorted[Math.floor(sorted.length * 0.95)].toFixed(1)} ms  max ${sorted[sorted.length - 1].toFixed(1)} ms`)
+  console.log(
+    `frames ${ms.length}  median ${med.toFixed(1)} ms  p95 ${sorted[Math.floor(sorted.length * 0.95)].toFixed(1)} ms  max ${sorted[sorted.length - 1].toFixed(1)} ms`,
+  )
   console.log(`longer than 25 ms: ${long.length}`)
   for (const [t, g] of long) console.log(`   t=${t.toFixed(2)}  ${g.toFixed(1)} ms`)
   const path = new URL('../_refs/smooth/tempo.json', import.meta.url)

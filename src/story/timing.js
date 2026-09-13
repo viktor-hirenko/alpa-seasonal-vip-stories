@@ -155,7 +155,6 @@ export const TIMING = {
     stagger: 0.8,
   },
 
-
   /** The retired draw-back, kept for the lab's `recede` button. The story does
    *  not play it, and there is no flash for it to precede: the journal
    *  dissolves (TIMING.exit) and the clip has no white-out at all. */

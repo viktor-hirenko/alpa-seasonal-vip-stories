@@ -179,8 +179,18 @@
  * against the clip and found to be noise, ROUND_HOLD below overrides it.
  */
 export const ROUND_ASSETS = new Set([
-  'basketball', 'calendar', 'coin-b', 'coin-face', 'cross', 'gift', 'heart',
-  'planet-cow', 'points-b', 'report', 'spark', 'tennis',
+  'basketball',
+  'calendar',
+  'coin-b',
+  'coin-face',
+  'cross',
+  'gift',
+  'heart',
+  'planet-cow',
+  'points-b',
+  'report',
+  'spark',
+  'tennis',
 ])
 
 /**
@@ -322,27 +332,38 @@ export const FLY_Z_FRONT = 600
  * is up", not "in front for ever".
  */
 export const FLY_LAYER = {
-  'pen-1': 'front',                                              // slide 8
-  'calendar-1': 'front',                                         // slide 9
+  'pen-1': 'front', // slide 8
+  'calendar-1': 'front', // slide 9
   // ⚠️ THE TWO LOWER STARS OVERRIDE THE STORYBOARD, ON THE OWNER'S CALL
   // (12.09: "make the stars at the bottom of this slide behave like the ones at
   // the top — floating over the journal and hidden the same way"). The
   // storyboard draws slide 10's lower `Points icon` below the journal; he wants
   // all five stars on one side. Do not "correct" this back to the mock.
-  'spark-1': 'front', 'spark-2': 'front', 'spark-3': 'front',    // slide 10
-  'spark-4': 'front', 'spark-5': 'front',
-  'chip-1': 'behind', 'chip-2': 'behind',                        // slide 11
-  'coin-1': 'front', 'coin-2': 'front', 'coin-3': 'front',       // slide 12
-  'planet-1': 'behind',                                          // slide 13
-  'cross-1': 'behind', 'cross-2': 'front',                       // slide 14
-  'heart-1': 'front',                                            // slide 15
-  'report-1': 'behind', 'report-2': 'behind',                    // slide 16
-  'basketball-1': 'front', 'tennis-1': 'front',                  // slide 17
-  'soccer-1': 'front', 'cross-3': 'front',                       // slide 18
-  'planet-cow-1': 'front',                                       // slide 19
-  'milkpack-1': 'behind', 'milkpack-2': 'front',                 // slide 20
-  'milkpack-3': 'front',                                         // slide 21
-  'gift-1': 'front',                                             // slide 22
+  'spark-1': 'front',
+  'spark-2': 'front',
+  'spark-3': 'front', // slide 10
+  'spark-4': 'front',
+  'spark-5': 'front',
+  'chip-1': 'behind',
+  'chip-2': 'behind', // slide 11
+  'coin-1': 'front',
+  'coin-2': 'front',
+  'coin-3': 'front', // slide 12
+  'planet-1': 'behind', // slide 13
+  'cross-1': 'behind',
+  'cross-2': 'front', // slide 14
+  'heart-1': 'front', // slide 15
+  'report-1': 'behind',
+  'report-2': 'behind', // slide 16
+  'basketball-1': 'front',
+  'tennis-1': 'front', // slide 17
+  'soccer-1': 'front',
+  'cross-3': 'front', // slide 18
+  'planet-cow-1': 'front', // slide 19
+  'milkpack-1': 'behind',
+  'milkpack-2': 'front', // slide 20
+  'milkpack-3': 'front', // slide 21
+  'gift-1': 'front', // slide 22
 }
 
 /** @type {Omit<FlyRecord,'base'|'t0'|'t1'>[]} */

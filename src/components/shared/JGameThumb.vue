@@ -37,7 +37,10 @@ const props = defineProps({
 })
 
 const failed = ref(false)
-watch(() => props.src, () => (failed.value = false))
+watch(
+  () => props.src,
+  () => (failed.value = false),
+)
 
 const d = n => `calc(${+n.toFixed(3)} * var(--u))`
 

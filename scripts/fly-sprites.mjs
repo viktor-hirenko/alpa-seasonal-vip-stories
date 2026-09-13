@@ -148,8 +148,22 @@ function componentMaskPng(comp, file, n = N, grow = 5) {
   }
   execFileSync(
     'ffmpeg',
-    ['-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'gray', '-s', `${n}x${n}`, '-i', '-',
-      '-frames:v', '1', file],
+    [
+      '-v',
+      'error',
+      '-y',
+      '-f',
+      'rawvideo',
+      '-pix_fmt',
+      'gray',
+      '-s',
+      `${n}x${n}`,
+      '-i',
+      '-',
+      '-frames:v',
+      '1',
+      file,
+    ],
     { input: Buffer.from(d) },
   )
 }

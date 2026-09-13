@@ -69,8 +69,10 @@ const boxStyle = computed(() => {
   const position = `${d(props.maskX)} ${d(props.maskY)}`
   return {
     ...box,
-    maskSize: size, maskPosition: position,
-    WebkitMaskSize: size, WebkitMaskPosition: position,
+    maskSize: size,
+    maskPosition: position,
+    WebkitMaskSize: size,
+    WebkitMaskPosition: position,
   }
 })
 </script>

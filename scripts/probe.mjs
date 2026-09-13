@@ -77,22 +77,33 @@ const shotPath = flag('--shot', null)
 // fast-forwards timers but does NOT advance media decoding, so a page gated on
 // a video buffer never gets past its preloader under virtual time.
 const waitMs = Number(flag('--wait', 1400))
-const target = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--shot' && args[i - 1] !== '--wait') || 'lab.html?frame=11'
+const target =
+  args.find(
+    (a, i) => !a.startsWith('--') && args[i - 1] !== '--shot' && args[i - 1] !== '--wait',
+  ) || 'lab.html?frame=11'
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-const chrome = spawn(CHROME, [
-  '--headless=new',
-  `--remote-debugging-port=${PORT}`,
-  '--hide-scrollbars',
-  '--mute-audio',
-  '--autoplay-policy=no-user-gesture-required',
-  '--window-size=420,747',
-  '--user-data-dir=/tmp/probe-profile',
-  'about:blank',
-], { stdio: 'ignore' })
+const chrome = spawn(
+  CHROME,
+  [
+    '--headless=new',
+    `--remote-debugging-port=${PORT}`,
+    '--hide-scrollbars',
+    '--mute-audio',
+    '--autoplay-policy=no-user-gesture-required',
+    '--window-size=420,747',
+    '--user-data-dir=/tmp/probe-profile',
+    'about:blank',
+  ],
+  { stdio: 'ignore' },
+)
 
-const cleanup = () => { try { chrome.kill() } catch {} }
+const cleanup = () => {
+  try {
+    chrome.kill()
+  } catch {}
+}
 process.on('exit', cleanup)
 
 async function findTarget() {
@@ -109,11 +120,17 @@ async function findTarget() {
 }
 
 class CDP {
-  constructor(ws) { this.ws = ws; this.id = 0; this.pending = new Map()
+  constructor(ws) {
+    this.ws = ws
+    this.id = 0
+    this.pending = new Map()
     ws.addEventListener('message', e => {
       const msg = JSON.parse(e.data)
       const p = this.pending.get(msg.id)
-      if (p) { this.pending.delete(msg.id); msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result) }
+      if (p) {
+        this.pending.delete(msg.id)
+        msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result)
+      }
     })
   }
   send(method, params = {}) {
@@ -123,9 +140,14 @@ class CDP {
   }
   async eval(expr) {
     const r = await this.send('Runtime.evaluate', {
-      expression: expr, returnByValue: true, awaitPromise: true,
+      expression: expr,
+      returnByValue: true,
+      awaitPromise: true,
     })
-    if (r.exceptionDetails) throw new Error(r.exceptionDetails.text + ' ' + (r.exceptionDetails.exception?.description || ''))
+    if (r.exceptionDetails)
+      throw new Error(
+        r.exceptionDetails.text + ' ' + (r.exceptionDetails.exception?.description || ''),
+      )
     return r.result.value
   }
 }
@@ -232,7 +254,8 @@ const MEASURE_FLY = `(() => {
 /** Predict the AABB from a pose the same way the storyboard poses were solved. */
 function predict(pose, jw, jh) {
   const t = (pose.rot * Math.PI) / 180
-  const c = Math.abs(Math.cos(t)), s = Math.abs(Math.sin(t))
+  const c = Math.abs(Math.cos(t)),
+    s = Math.abs(Math.sin(t))
   return {
     w: pose.scale * (jw * c + jh * s),
     h: pose.scale * (jw * s + jh * c),
@@ -266,7 +289,9 @@ const flySrc = readFileSync(new URL('../src/story/flyObjects.js', import.meta.ur
  */
 const ROUND_ASSETS = new Set(
   (flySrc.match(/export const ROUND_ASSETS = new Set\(\[([^\]]*)\]/)?.[1] || '')
-    .split(',').map(x => x.trim().replace(/^'|'$/g, '')).filter(Boolean),
+    .split(',')
+    .map(x => x.trim().replace(/^'|'$/g, ''))
+    .filter(Boolean),
 )
 /**
  * THE TABLE IS A POLYLINE, and this parse has to read that shape (2026-09-06).
@@ -287,9 +312,11 @@ const ROUND_ASSETS = new Set(
  * why two of the checks below have to know about it.
  */
 const FLY_LAYER = Object.fromEntries(
-  [...(/export const FLY_LAYER = \{([\s\S]*?)\n\}/.exec(flySrc)?.[1] ?? '').matchAll(
-    /'([^']+)':\s*'(front|behind)'/g,
-  )].map(m => [m[1], m[2]]),
+  [
+    ...(/export const FLY_LAYER = \{([\s\S]*?)\n\}/.exec(flySrc)?.[1] ?? '').matchAll(
+      /'([^']+)':\s*'(front|behind)'/g,
+    ),
+  ].map(m => [m[1], m[2]]),
 )
 
 const FLIGHTS = [
@@ -326,7 +353,10 @@ const project = (a, size, P = 1800) => {
 let fails = 0
 const wsUrl = await findTarget()
 const ws = new WebSocket(wsUrl)
-await new Promise((res, rej) => { ws.addEventListener('open', res); ws.addEventListener('error', rej) })
+await new Promise((res, rej) => {
+  ws.addEventListener('open', res)
+  ws.addEventListener('error', rej)
+})
 const cdp = new CDP(ws)
 await cdp.send('Runtime.enable')
 await cdp.send('Page.enable')
@@ -342,7 +372,10 @@ await cdp.send('Page.enable')
  */
 const [VW, VH] = (process.env.PROBE_VIEWPORT || '420x747').split('x').map(Number)
 await cdp.send('Emulation.setDeviceMetricsOverride', {
-  width: VW, height: VH, deviceScaleFactor: 2, mobile: VW < 800,
+  width: VW,
+  height: VH,
+  deviceScaleFactor: 2,
+  mobile: VW < 800,
 })
 
 const consoleLines = []
@@ -350,10 +383,15 @@ await cdp.send('Log.enable').catch(() => {})
 ws.addEventListener('message', e => {
   const m = JSON.parse(e.data)
   if (m.method === 'Runtime.consoleAPICalled') {
-    consoleLines.push(`[${m.params.type}] ` + m.params.args.map(a => a.value ?? a.description ?? a.type).join(' '))
+    consoleLines.push(
+      `[${m.params.type}] ` + m.params.args.map(a => a.value ?? a.description ?? a.type).join(' '),
+    )
   }
   if (m.method === 'Runtime.exceptionThrown') {
-    consoleLines.push('[uncaught] ' + (m.params.exceptionDetails?.exception?.description || m.params.exceptionDetails?.text))
+    consoleLines.push(
+      '[uncaught] ' +
+        (m.params.exceptionDetails?.exception?.description || m.params.exceptionDetails?.text),
+    )
   }
   if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error') {
     consoleLines.push('[network] ' + m.params.entry.text + ' ' + (m.params.entry.url || ''))
@@ -411,8 +449,15 @@ if (fitMode) {
   console.log('viewport      device                  canvas       fit    crop   off-centre  video')
   let worst = 0
   for (const [w, h, name] of SHAPES) {
-    await cdp.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 2, mobile: w < 800 })
-    await cdp.send('Page.navigate', { url: `${ORIGIN}/lab.html?panel=0&bg=clean&journal=1&frame=8&t=14.5` })
+    await cdp.send('Emulation.setDeviceMetricsOverride', {
+      width: w,
+      height: h,
+      deviceScaleFactor: 2,
+      mobile: w < 800,
+    })
+    await cdp.send('Page.navigate', {
+      url: `${ORIGIN}/lab.html?panel=0&bg=clean&journal=1&frame=8&t=14.5`,
+    })
     await sleep(waitMs + 900)
     const m = await cdp.eval(`(() => {
       const st = document.querySelector('.stage'), sr = st.getBoundingClientRect()
@@ -435,13 +480,17 @@ if (fitMode) {
     if (bad) fails++
     worst = Math.max(worst, Math.abs(fit - 1))
     console.log(
-      `${w}x${h}`.padEnd(14) + name.padEnd(24) +
-      `${m.cw.toFixed(0)}x${m.ch.toFixed(0)}`.padEnd(12) +
-      fit.toFixed(3).padStart(6) +
-      crop.toFixed(0).padStart(7) + ' px' +
-      off.toFixed(1).padStart(11) + ' px' +
-      '  ' + m.bgFit +
-      (bad ? (Math.abs(fit - 1) > 0.005 ? '   OUT OF REGISTER' : '   CARD CROPS') : ''),
+      `${w}x${h}`.padEnd(14) +
+        name.padEnd(24) +
+        `${m.cw.toFixed(0)}x${m.ch.toFixed(0)}`.padEnd(12) +
+        fit.toFixed(3).padStart(6) +
+        crop.toFixed(0).padStart(7) +
+        ' px' +
+        off.toFixed(1).padStart(11) +
+        ' px' +
+        '  ' +
+        m.bgFit +
+        (bad ? (Math.abs(fit - 1) > 0.005 ? '   OUT OF REGISTER' : '   CARD CROPS') : ''),
     )
   }
   console.log(`\n${fails} viewport(s) bad; worst registration error ${(worst * 100).toFixed(1)} %`)
@@ -452,7 +501,9 @@ if (fitMode) {
   const f = FLIGHTS.find(x => x.id === occId)
   if (!f) throw new Error(`no flight "${occId}"; try ${FLIGHTS.map(x => x.id).join(', ')}`)
   const dur = f.t1 - f.t0
-  console.log(`${f.id} — frame ${f.frame}, ${f.t0.toFixed(2)}..${f.t1.toFixed(2)} s, ${f.keys.length} rows`)
+  console.log(
+    `${f.id} — frame ${f.frame}, ${f.t0.toFixed(2)}..${f.t1.toFixed(2)} s, ${f.keys.length} rows`,
+  )
   console.log(`in front until zFlip ${f.zFlip.toFixed(2)}, behind the page after it\n`)
   // `--step 0.4` walks the reference's own sampling grid, which turns this into
   // the movement comparison: the x%/y%/w% columns are directly the numbers the
@@ -513,7 +564,8 @@ if (fitMode) {
   // so the active page carries `visibility: visible` of its own and shrugs off a
   // hidden ancestor. And not `opacity` either — an opacity below 1 flattens a
   // preserve-3d subtree, which would change the very thing being measured.
-  const SHOW_JOURNAL = v => `document.querySelector('.journal-pos').style.display = '${v ? '' : 'none'}'`
+  const SHOW_JOURNAL = v =>
+    `document.querySelector('.journal-pos').style.display = '${v ? '' : 'none'}'`
   const BG = c => `document.querySelector('.stage').style.background = '${c}'`
   const HIDE_ONE = (id, v) =>
     `document.querySelector('.fly-obj[data-fly="${id}"]').style.display = '${v ? 'none' : ''}'`
@@ -554,17 +606,31 @@ if (fitMode) {
     const px = []
     for (let p = 0; p < W * H; p++) if (mask[p]) px.push(p)
     if (px.length < 40) return null
-    let sx = 0, sy = 0
-    for (const p of px) { sx += p % W; sy += (p / W) | 0 }
-    const n = px.length, cx = sx / n, cy = sy / n
-    let mxx = 0, myy = 0, mxy = 0
+    let sx = 0,
+      sy = 0
     for (const p of px) {
-      const dx = (p % W) - cx, dy = ((p / W) | 0) - cy
-      mxx += dx * dx; myy += dy * dy; mxy += dx * dy
+      sx += p % W
+      sy += (p / W) | 0
     }
-    mxx /= n; myy /= n; mxy /= n
+    const n = px.length,
+      cx = sx / n,
+      cy = sy / n
+    let mxx = 0,
+      myy = 0,
+      mxy = 0
+    for (const p of px) {
+      const dx = (p % W) - cx,
+        dy = ((p / W) | 0) - cy
+      mxx += dx * dx
+      myy += dy * dy
+      mxy += dx * dy
+    }
+    mxx /= n
+    myy /= n
+    mxy /= n
     const t = Math.sqrt((mxx - myy) ** 2 + 4 * mxy * mxy)
-    const l1 = (mxx + myy + t) / 2, l2 = (mxx + myy - t) / 2
+    const l1 = (mxx + myy + t) / 2,
+      l2 = (mxx + myy - t) / 2
     return {
       n,
       // design px, via the screenshot's own scale factor against the stage rect
@@ -624,9 +690,16 @@ if (fitMode) {
   // `step` is the one the crossing check below asserts: how much of the object
   // the page may take in the single frame the depth switch happens on.
   const TOL = { pos: 34, size: 0.3, deg: 12, elong: 0.28, step: 0.25 }
-  console.log(`${REF.flights.length} flights x ${REF.flights[0].samples.length} samples, against ${REF.source}\n`)
-  console.log('id             t       our cx/cy       ref cx/cy      d px    size      angle     aspect   behind journal')
-  let worstPos = 0, worstSize = 0, worstDeg = 0, worstStep = 0
+  console.log(
+    `${REF.flights.length} flights x ${REF.flights[0].samples.length} samples, against ${REF.source}\n`,
+  )
+  console.log(
+    'id             t       our cx/cy       ref cx/cy      d px    size      angle     aspect   behind journal',
+  )
+  let worstPos = 0,
+    worstSize = 0,
+    worstDeg = 0,
+    worstStep = 0
   for (const f of REF.flights) {
     // FLY_ONLY=<flight id> narrows a full pass to one flight: the whole run is
     // 135 samples at four screenshots each, and chasing one object should not
@@ -646,12 +719,12 @@ if (fitMode) {
     const rec = FLIGHTS.find(r => r.id === f.id)
     const drawnUntil = rec ? Math.min(rec.t1, slideEnd(rec.frame)) : Infinity
     for (const smp of f.samples) {
-      const [t, rx, ry, rsq, rdeg, relong, rhid] = smp   // see fly-reference.json's `units`
+      const [t, rx, ry, rsq, rdeg, relong, rhid] = smp // see fly-reference.json's `units`
       if (t > drawnUntil) {
         console.log(
-          `${f.id.padEnd(14)} ${t.toFixed(2).padStart(6)}   not judged: the page has turned at `
-          + `${drawnUntil.toFixed(2)} and we stop drawing there (the reference hides it `
-          + `${Math.round(rhid * 100)} % here anyway)`,
+          `${f.id.padEnd(14)} ${t.toFixed(2).padStart(6)}   not judged: the page has turned at ` +
+            `${drawnUntil.toFixed(2)} and we stop drawing there (the reference hides it ` +
+            `${Math.round(rhid * 100)} % here anyway)`,
         )
         continue
       }
@@ -676,20 +749,29 @@ if (fitMode) {
       await cdp.eval(BG('#fff'))
       const Aw = await shotGray()
       await cdp.eval(BG('#000'))
-      const W = VW * 2, H = VH * 2
+      const W = VW * 2,
+        H = VH * 2
       const alpha = new Uint8Array(W * H)
       for (let p = 0; p < W * H; p++) alpha[p] = Aw[p] - A[p] < 128 ? 1 : 0
       const rect = { x: g.x, y: g.y, w: g.w, h: g.h, u: g.u, sx: W / VW }
       const obj = measure(alpha, W, H, rect)
-      if (!obj) { console.log(`${f.id.padEnd(14)} ${t.toFixed(2).padStart(6)}   NOT RENDERED`); fails++; continue }
+      if (!obj) {
+        console.log(`${f.id.padEnd(14)} ${t.toFixed(2).padStart(6)}   NOT RENDERED`)
+        fails++
+        continue
+      }
       // An object still half outside the picture has no measurable size, angle
       // or centre — on either side of the comparison. Its position is the only
       // thing worth reading there, and the entry keys are extrapolated rather
       // than fitted anyway.
       let clipped = false
       for (const p of obj.px) {
-        const x = p % W, y = (p / W) | 0
-        if (x < 2 || x > W - 3 || y < 2 || y > H - 3) { clipped = true; break }
+        const x = p % W,
+          y = (p / W) | 0
+        if (x < 2 || x > W - 3 || y < 2 || y > H - 3) {
+          clipped = true
+          break
+        }
       }
 
       // Depth order, read off the pixels and nothing else — no z bookkeeping is
@@ -710,7 +792,8 @@ if (fitMode) {
       const J = await shotGray()
       await cdp.eval(HIDE_ONE(f.id, false))
       const C = await shotGray()
-      let hidden = 0, decidable = 0
+      let hidden = 0,
+        decidable = 0
       for (const p of obj.px) {
         if (Math.abs(A[p] - J[p]) <= 25) continue
         decidable++
@@ -732,8 +815,7 @@ if (fitMode) {
       // rules drifting apart is exactly how a frozen `calendar` ended up being
       // judged on an angle: the runtime called it round at 1.25 and this gate
       // called it measurable at 1.2. One list, used by both.
-      const degMatters =
-        !ROUND_ASSETS.has(f.asset) && relong > 1.2 && obj.elong > 1.2
+      const degMatters = !ROUND_ASSETS.has(f.asset) && relong > 1.2 && obj.elong > 1.2
       const bad = []
       let note = ''
       // Geometry is judged only where there is something on screen to judge.
@@ -824,7 +906,9 @@ if (fitMode) {
       const spread = Math.max(...spun) - Math.min(...spun)
       if (spread > 1) {
         fails++
-        console.log(`${f.id.padEnd(14)}   SPIN — a round sprite turned ${spread.toFixed(1)} deg over its flight`)
+        console.log(
+          `${f.id.padEnd(14)}   SPIN — a round sprite turned ${spread.toFixed(1)} deg over its flight`,
+        )
       }
     }
 
@@ -862,7 +946,8 @@ if (fitMode) {
       await cdp.eval(BG('#fff'))
       const Aw = await shotGray()
       await cdp.eval(BG('#000'))
-      const W = VW * 2, H = VH * 2
+      const W = VW * 2,
+        H = VH * 2
       const alpha = new Uint8Array(W * H)
       for (let p = 0; p < W * H; p++) alpha[p] = Aw[p] - A[p] < 128 ? 1 : 0
       const obj = measure(alpha, W, H, { x: g.x, y: g.y, w: g.w, h: g.h, u: g.u, sx: W / VW })
@@ -872,7 +957,8 @@ if (fitMode) {
         const J = await shotGray()
         await cdp.eval(HIDE_ONE(f.id, false))
         const C = await shotGray()
-        let hidden = 0, decidable = 0
+        let hidden = 0,
+          decidable = 0
         for (const p of obj.px) {
           if (Math.abs(A[p] - J[p]) <= 25) continue
           decidable++
@@ -926,7 +1012,9 @@ if (fitMode) {
    * absolute check would be measuring the layout, and would fail for the wrong
    * reason.
    */
-  const REFP = JSON.parse(readFileSync(new URL('./journal-reference.json', import.meta.url), 'utf8'))
+  const REFP = JSON.parse(
+    readFileSync(new URL('./journal-reference.json', import.meta.url), 'utf8'),
+  )
   const PARK = t => `(async () => {
     const s = window.__story, v = s.video
     s.seek(${t})
@@ -971,11 +1059,18 @@ if (fitMode) {
   await sleep(Math.max(waitMs, 7000))
 
   const TOL = { pos: 9, scale: 0.008, rot: 0.6 }
-  console.log(`The journal's MOTION against the clip's, from ${REFP.src || 'journal-reference.json'}.`)
-  console.log('Each row: how far our journal has moved since this slide\'s first')
-  console.log('measured second, against how far the clip\'s moved over the same seconds.\n')
-  console.log('frame page                     t    ours dcx/dcy   clip dcx/dcy    err px   dsize    drot')
-  let fails = 0, worstPos = 0, worstScale = 0, worstRot = 0
+  console.log(
+    `The journal's MOTION against the clip's, from ${REFP.src || 'journal-reference.json'}.`,
+  )
+  console.log("Each row: how far our journal has moved since this slide's first")
+  console.log("measured second, against how far the clip's moved over the same seconds.\n")
+  console.log(
+    'frame page                     t    ours dcx/dcy   clip dcx/dcy    err px   dsize    drot',
+  )
+  let fails = 0,
+    worstPos = 0,
+    worstScale = 0,
+    worstRot = 0
   for (const [frame, rows] of [...bySlide].sort((a, b) => a[0] - b[0])) {
     const page = SLIDES.find(x => x.frame === frame)?.page || ''
     let ourBase = null
@@ -984,7 +1079,10 @@ if (fitMode) {
       // The reference's own columns are ALREADY relative to the slide's first
       // sample — dx/dy in design px, size as a ratio, rot in degrees — so this
       // side only has to make ours relative too.
-      if (!ourBase) { ourBase = m; continue }
+      if (!ourBase) {
+        ourBase = m
+        continue
+      }
       const ourDx = ((m.cx - ourBase.cx) / 100) * 1080
       const ourDy = ((m.cy - ourBase.cy) / 100) * 1920
       const refDx = r.dx
@@ -1004,10 +1102,17 @@ if (fitMode) {
       worstScale = Math.max(worstScale, eScale)
       worstRot = Math.max(worstRot, eRot)
       console.log(
-        String(frame).padStart(5) + '  ' + page.padEnd(20) + r.t.toFixed(2).padStart(7) +
-          `${fmt(ourDx)}/${fmt(ourDy)}`.padStart(16) + `${fmt(refDx)}/${fmt(refDy)}`.padStart(16) +
-          ePos.toFixed(1).padStart(9) + (eScale * 100).toFixed(2).padStart(8) + '%' +
-          eRot.toFixed(2).padStart(8) + (!num ? '  NOT MEASURED' : bad ? '  OUT' : ''),
+        String(frame).padStart(5) +
+          '  ' +
+          page.padEnd(20) +
+          r.t.toFixed(2).padStart(7) +
+          `${fmt(ourDx)}/${fmt(ourDy)}`.padStart(16) +
+          `${fmt(refDx)}/${fmt(refDy)}`.padStart(16) +
+          ePos.toFixed(1).padStart(9) +
+          (eScale * 100).toFixed(2).padStart(8) +
+          '%' +
+          eRot.toFixed(2).padStart(8) +
+          (!num ? '  NOT MEASURED' : bad ? '  OUT' : ''),
       )
     }
   }

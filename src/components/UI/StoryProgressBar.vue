@@ -1,5 +1,11 @@
 <template>
-  <div class="steps" role="progressbar" :aria-valuenow="Math.round(overall)" aria-valuemin="0" aria-valuemax="100">
+  <div
+    class="steps"
+    role="progressbar"
+    :aria-valuenow="Math.round(overall)"
+    aria-valuemin="0"
+    aria-valuemax="100"
+  >
     <div v-for="(p, i) in fills" :key="i" class="steps__track">
       <div class="steps__fill" :style="{ width: p * 100 + '%' }" />
     </div>
@@ -36,6 +42,8 @@ const fills = computed(() =>
 )
 
 const overall = computed(() =>
-  props.segments.length ? (fills.value.reduce((a, b) => a + b, 0) / props.segments.length) * 100 : 0,
+  props.segments.length
+    ? (fills.value.reduce((a, b) => a + b, 0) / props.segments.length) * 100
+    : 0,
 )
 </script>

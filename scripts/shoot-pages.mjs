@@ -29,16 +29,30 @@ if (!outDir) {
   process.exit(1)
 }
 /** Every page of the deck, by slide frame — cover, editor's note, then the run. */
-const FRAMES = frameArgs.length ? frameArgs.map(Number)
+const FRAMES = frameArgs.length
+  ? frameArgs.map(Number)
   : [4, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-const chrome = spawn(CHROME, [
-  '--headless=new', `--remote-debugging-port=${PORT}`, '--hide-scrollbars', '--mute-audio',
-  '--autoplay-policy=no-user-gesture-required', '--window-size=420,747',
-  '--user-data-dir=/tmp/shoot-profile', 'about:blank',
-], { stdio: 'ignore' })
-process.on('exit', () => { try { chrome.kill() } catch {} })
+const chrome = spawn(
+  CHROME,
+  [
+    '--headless=new',
+    `--remote-debugging-port=${PORT}`,
+    '--hide-scrollbars',
+    '--mute-audio',
+    '--autoplay-policy=no-user-gesture-required',
+    '--window-size=420,747',
+    '--user-data-dir=/tmp/shoot-profile',
+    'about:blank',
+  ],
+  { stdio: 'ignore' },
+)
+process.on('exit', () => {
+  try {
+    chrome.kill()
+  } catch {}
+})
 
 async function findTarget() {
   for (let i = 0; i < 60; i++) {
@@ -54,10 +68,16 @@ async function findTarget() {
 
 class CDP {
   constructor(ws) {
-    this.ws = ws; this.id = 0; this.pending = new Map()
+    this.ws = ws
+    this.id = 0
+    this.pending = new Map()
     ws.addEventListener('message', e => {
-      const m = JSON.parse(e.data); const p = this.pending.get(m.id)
-      if (p) { this.pending.delete(m.id); m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result) }
+      const m = JSON.parse(e.data)
+      const p = this.pending.get(m.id)
+      if (p) {
+        this.pending.delete(m.id)
+        m.error ? p.reject(new Error(m.error.message)) : p.resolve(m.result)
+      }
     })
   }
   send(method, params = {}) {
@@ -66,22 +86,36 @@ class CDP {
     return new Promise((res, rej) => this.pending.set(id, { resolve: res, reject: rej }))
   }
   async eval(expression) {
-    const r = await this.send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })
+    const r = await this.send('Runtime.evaluate', {
+      expression,
+      returnByValue: true,
+      awaitPromise: true,
+    })
     if (r.exceptionDetails) throw new Error(r.exceptionDetails.text)
     return r.result.value
   }
 }
 
 const ws = new WebSocket(await findTarget())
-await new Promise((res, rej) => { ws.addEventListener('open', res); ws.addEventListener('error', rej) })
+await new Promise((res, rej) => {
+  ws.addEventListener('open', res)
+  ws.addEventListener('error', rej)
+})
 const cdp = new CDP(ws)
-await cdp.send('Runtime.enable'); await cdp.send('Page.enable')
-await cdp.send('Emulation.setDeviceMetricsOverride', { width: 420, height: 747, deviceScaleFactor: 2, mobile: true })
+await cdp.send('Runtime.enable')
+await cdp.send('Page.enable')
+await cdp.send('Emulation.setDeviceMetricsOverride', {
+  width: 420,
+  height: 747,
+  deviceScaleFactor: 2,
+  mobile: true,
+})
 mkdirSync(outDir, { recursive: true })
 
 for (const f of FRAMES) {
-  const url = `${ORIGIN}/lab.html?frame=${f}&rot=0&rotX=0&rotY=0&cx=50&cy=50&scale=0.62&jd=34`
-    + `&panel=0&bg=grid&objects=0&journal=1&lang=${lang}`
+  const url =
+    `${ORIGIN}/lab.html?frame=${f}&rot=0&rotX=0&rotY=0&cx=50&cy=50&scale=0.62&jd=34` +
+    `&panel=0&bg=grid&objects=0&journal=1&lang=${lang}`
   await cdp.send('Page.navigate', { url })
   // Real milliseconds: the page waits on fonts and on decoding its own art, and
   // a shot taken early lands on a half-drawn page that reads as a layout bug.
@@ -92,12 +126,19 @@ for (const f of FRAMES) {
     const r = el.getBoundingClientRect()
     return { x: r.x, y: r.y, width: r.width, height: r.height }
   })()`)
-  if (!box) { console.log(`frame ${f}: no active page`); continue }
+  if (!box) {
+    console.log(`frame ${f}: no active page`)
+    continue
+  }
   const r = await cdp.send('Page.captureScreenshot', {
-    format: 'png', clip: { ...box, scale: 2 }, captureBeyondViewport: true,
+    format: 'png',
+    clip: { ...box, scale: 2 },
+    captureBeyondViewport: true,
   })
   const file = `${outDir}/f${String(f).padStart(2, '0')}.png`
   writeFileSync(file, Buffer.from(r.data, 'base64'))
   console.log(`frame ${f}: ${box.width.toFixed(0)}x${box.height.toFixed(0)} -> ${file}`)
 }
-ws.close(); chrome.kill(); process.exit(0)
+ws.close()
+chrome.kill()
+process.exit(0)

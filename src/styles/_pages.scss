@@ -2,7 +2,6 @@
 @use 'units' as *;
 @use 'tokens' as *;
 
-
 ///
 /// FIGMA'S INNER SHADOW, DONE THE WAY FIGMA DOES IT (V-91).
 ///
@@ -48,15 +47,27 @@
     position: absolute;
     inset: 0;
     background: $colour;
-    mask-image: #{$src}, #{$src};
+    mask-image:
+      #{$src},
+      #{$src};
     mask-repeat: no-repeat, no-repeat;
-    mask-size: 100% 100%, 100% 100%;
-    mask-position: 0 0, du($dx) du($dy);
+    mask-size:
+      100% 100%,
+      100% 100%;
+    mask-position:
+      0 0,
+      du($dx) du($dy);
     mask-composite: subtract;
-    -webkit-mask-image: #{$src}, #{$src};
+    -webkit-mask-image:
+      #{$src},
+      #{$src};
     -webkit-mask-repeat: no-repeat, no-repeat;
-    -webkit-mask-size: 100% 100%, 100% 100%;
-    -webkit-mask-position: 0 0, du($dx) du($dy);
+    -webkit-mask-size:
+      100% 100%,
+      100% 100%;
+    -webkit-mask-position:
+      0 0,
+      du($dx) du($dy);
     -webkit-mask-composite: source-out;
   }
 }

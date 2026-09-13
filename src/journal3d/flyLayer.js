@@ -85,7 +85,11 @@ export function buildFlyLayer(layerEl, records, slides = SLIDES) {
     // costs nothing and a frame short is a visible pop.
     const at = snap(rec.t0)
     entries.push({
-      rec, el: pos, at, live: null, front: null,
+      rec,
+      el: pos,
+      at,
+      live: null,
+      front: null,
       // ...and it stops being drawn there too. Every flight in the table
       // outlives its own slide by 0.8-2.5 s, and for 24 of the 27 those seconds
       // are spent 100 % behind the page, so cutting them changes nothing on

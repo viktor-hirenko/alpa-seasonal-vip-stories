@@ -3,7 +3,11 @@
   height: 100%;
   background: #05060c;
   color: #e8e6f0;
-  font: 400 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font:
+    400 13px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
 }
 
 .lab__viewport {
@@ -120,7 +124,9 @@
   display: grid;
   place-items: center;
   color: #ffd84d;
-  font: 800 calc(110 * var(--u)) / 1 'Rubik', sans-serif;
+  font:
+    800 calc(110 * var(--u)) / 1 'Rubik',
+    sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }

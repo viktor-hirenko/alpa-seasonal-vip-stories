@@ -69,7 +69,15 @@
  */
 import { execFileSync } from 'node:child_process'
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs'
-import { pyramid, maskPyramid, register, margin, quadMask, reachMask, offsetQuad } from './lib/gradfit.mjs'
+import {
+  pyramid,
+  maskPyramid,
+  register,
+  margin,
+  quadMask,
+  reachMask,
+  offsetQuad,
+} from './lib/gradfit.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
 const CLIP = `${ROOT}_refs/DP-15152 - preview.mp4`
@@ -93,7 +101,8 @@ const DZ = JD / 2
  */
 const TURN_BLIND = 0.14 + 0.79 + 0.04
 
-const ff = (a, stdin) => execFileSync('ffmpeg', ['-v', 'error', ...a], { maxBuffer: 1 << 30, input: stdin })
+const ff = (a, stdin) =>
+  execFileSync('ffmpeg', ['-v', 'error', ...a], { maxBuffer: 1 << 30, input: stdin })
 
 // ===========================================================================
 // THE FORWARD MODEL
@@ -146,8 +155,21 @@ export function quadOf(pose, face = 'page') {
 
 /** One frame of the clip as raw rgb24 on the canvas grid. */
 const clipFrame = t =>
-  ff(['-ss', String(t), '-i', CLIP, '-frames:v', '1', '-vf', `scale=${W}:${H}`,
-    '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
+  ff([
+    '-ss',
+    String(t),
+    '-i',
+    CLIP,
+    '-frames:v',
+    '1',
+    '-vf',
+    `scale=${W}:${H}`,
+    '-f',
+    'rawvideo',
+    '-pix_fmt',
+    'rgb24',
+    '-',
+  ])
 
 /** A still on the canvas grid — used by the self-test on our own renders. */
 const pngFrame = f =>
@@ -588,8 +610,23 @@ function drawQuad(rgb, quad, file, colour = [255, 240, 0]) {
     for (let i = 0; i <= n; i++) put(a[0] + ((c[0] - a[0]) * i) / n, a[1] + ((c[1] - a[1]) * i) / n)
   }
   mkdirSync(OUT, { recursive: true })
-  ff(['-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${W}x${H}`, '-i', 'pipe:0',
-    '-frames:v', '1', file], b)
+  ff(
+    [
+      '-y',
+      '-f',
+      'rawvideo',
+      '-pix_fmt',
+      'rgb24',
+      '-s',
+      `${W}x${H}`,
+      '-i',
+      'pipe:0',
+      '-frames:v',
+      '1',
+      file,
+    ],
+    b,
+  )
 }
 
 // ===========================================================================
@@ -708,8 +745,25 @@ function blurLuma(g, sigma) {
  * side. If it ever drifts from journal-path.mjs the printout is wrong and
  * nothing else is: it is a comment with a value, not a source of truth.
  */
-const MOCK_ROT = { 7: 3.1, 8: 3.1, 9: 4.15, 10: 7.1, 11: 12.9, 12: 12.75, 13: 7.05, 14: 2.75,
-  15: 2.75, 16: 6.3, 17: 4.35, 18: 4.35, 19: 4.37, 20: 3.53, 21: 3.53, 22: 1.65, 23: 1.65 }
+const MOCK_ROT = {
+  7: 3.1,
+  8: 3.1,
+  9: 4.15,
+  10: 7.1,
+  11: 12.9,
+  12: 12.75,
+  13: 7.05,
+  14: 2.75,
+  15: 2.75,
+  16: 6.3,
+  17: 4.35,
+  18: 4.35,
+  19: 4.37,
+  20: 3.53,
+  21: 3.53,
+  22: 1.65,
+  23: 1.65,
+}
 
 const ROLL_BINS = 720 // 0.25 deg
 const ROLL_LIMIT = 45 // the roll the window is allowed to describe
@@ -766,7 +820,7 @@ function rollOf(rgb, quad, opt = {}) {
   }
 
   const deg = b => (b * 180) / ROLL_BINS
-  const bin = d => Math.round((((d % 180) + 180) % 180 / 180) * ROLL_BINS) % ROLL_BINS
+  const bin = d => Math.round(((((d % 180) + 180) % 180) / 180) * ROLL_BINS) % ROLL_BINS
   /** Strongest bin whose angle lies within `lo..hi` degrees, and its centroid. */
   const peakIn = (lo, hi) => {
     let bb = -1,
@@ -863,7 +917,8 @@ function drawRoll(rgb, quad, roll, file, shrink = 150) {
     }
   }
   const inner = offsetQuad(quad, shrink)
-  for (let e = 0; e < 4; e++) seg(inner[e][0], inner[e][1], inner[(e + 1) % 4][0], inner[(e + 1) % 4][1], [90, 90, 255], 0)
+  for (let e = 0; e < 4; e++)
+    seg(inner[e][0], inner[e][1], inner[(e + 1) % 4][0], inner[(e + 1) % 4][1], [90, 90, 255], 0)
 
   const cx = inner.reduce((a, p) => a + p[0], 0) / 4
   const cy = inner.reduce((a, p) => a + p[1], 0) / 4
@@ -885,8 +940,23 @@ function drawRoll(rgb, quad, roll, file, shrink = 150) {
     }
   }
   mkdirSync(OUT, { recursive: true })
-  ff(['-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${W}x${H}`, '-i', 'pipe:0',
-    '-frames:v', '1', file], b)
+  ff(
+    [
+      '-y',
+      '-f',
+      'rawvideo',
+      '-pix_fmt',
+      'rgb24',
+      '-s',
+      `${W}x${H}`,
+      '-i',
+      'pipe:0',
+      '-frames:v',
+      '1',
+      file,
+    ],
+    b,
+  )
 }
 
 // ===========================================================================
@@ -937,7 +1007,9 @@ if (has('--redraw')) {
   const rows = want.length ? src.filter(r => want.some(w => Math.abs(r.t - w) < 0.06)) : src
   for (const r of rows) {
     drawQuad(clipFrame(r.t), quadOf(r, r.face), `${OUT}/redraw-${r.t.toFixed(2)}.png`)
-    console.log(`${r.t.toFixed(2)}  frame ${r.frame}  ${fmtPose(r)}  score ${r.score}  sharp ${r.sharp}`)
+    console.log(
+      `${r.t.toFixed(2)}  frame ${r.frame}  ${fmtPose(r)}  score ${r.score}  sharp ${r.sharp}`,
+    )
   }
   console.log(`\n-> ${OUT}/redraw-*.png`)
   process.exit(0)
@@ -964,13 +1036,17 @@ if (has('--yawscan')) {
   console.log(`YAW LANDSCAPE of ${png}, seeded at ${fmtPose({ ...seed, rotY: 0 })}\n`)
   console.log('  rotY    score      rot    scale       cx      cy   sharp')
   for (let y = -14; y <= 14.001; y += 1) {
-    const p = solveFlat(fld, { ...seed, rotY: 0 }, face, y,
-      [{ centre: { ...seed, rotY: 0 }, span: { cx: 12, cy: 12, rot: 14, scale: 0.2 } }])
+    const p = solveFlat(fld, { ...seed, rotY: 0 }, face, y, [
+      { centre: { ...seed, rotY: 0 }, span: { cx: 12, cy: 12, rot: 14, scale: 0.2 } },
+    ])
     const q = quadOf(p, face)
     console.log(
-      y.toFixed(1).padStart(6) + fieldScore(fld, q, 12).toFixed(4).padStart(9) +
-        p.rot.toFixed(2).padStart(9) + p.scale.toFixed(4).padStart(9) +
-        p.cx.toFixed(2).padStart(9) + p.cy.toFixed(2).padStart(8) +
+      y.toFixed(1).padStart(6) +
+        fieldScore(fld, q, 12).toFixed(4).padStart(9) +
+        p.rot.toFixed(2).padStart(9) +
+        p.scale.toFixed(4).padStart(9) +
+        p.cx.toFixed(2).padStart(9) +
+        p.cy.toFixed(2).padStart(8) +
         sharpScore(fld, q).toFixed(2).padStart(8),
     )
   }
@@ -982,45 +1058,95 @@ if (has('--selftest')) {
   console.log('SELF-TEST — the method against answers known in advance.\n')
   let fails = 0
 
-  console.log('1. THE FORWARD MODEL against the browser\'s own projection.')
+  console.log("1. THE FORWARD MODEL against the browser's own projection.")
   console.log('   Three poses whose quads clip-fit --pose read out of the DOM.')
   const known = [
-    { pose: { rot: -8.75, scale: 0.679, cx: 44.5, cy: 48 },
-      q: [[-149, 355], [910, 192], [1109, 1487], [50, 1650]] },
-    { pose: { rot: 2.75, scale: 0.681, cx: 54.8, cy: 50.0 },
-      q: [[87, 278], [1161, 330], [1098, 1642], [24, 1590]] },
-    { pose: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7 },
-      q: [[-73, 280], [1017, 141], [1186, 1473], [96, 1612]] },
+    {
+      pose: { rot: -8.75, scale: 0.679, cx: 44.5, cy: 48 },
+      q: [
+        [-149, 355],
+        [910, 192],
+        [1109, 1487],
+        [50, 1650],
+      ],
+    },
+    {
+      pose: { rot: 2.75, scale: 0.681, cx: 54.8, cy: 50.0 },
+      q: [
+        [87, 278],
+        [1161, 330],
+        [1098, 1642],
+        [24, 1590],
+      ],
+    },
+    {
+      pose: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7 },
+      q: [
+        [-73, 280],
+        [1017, 141],
+        [1186, 1473],
+        [96, 1612],
+      ],
+    },
     // ...and with the yaw the clip turns out to have, both ways.
-    { pose: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: 8 },
-      q: [[-93, 249], [994, 175], [1157, 1453], [84, 1640]] },
-    { pose: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: -8 },
-      q: [[-46, 307], [1030, 106], [1207, 1497], [117, 1585]] },
+    {
+      pose: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: 8 },
+      q: [
+        [-93, 249],
+        [994, 175],
+        [1157, 1453],
+        [84, 1640],
+      ],
+    },
+    {
+      pose: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: -8 },
+      q: [
+        [-46, 307],
+        [1030, 106],
+        [1207, 1497],
+        [117, 1585],
+      ],
+    },
   ]
   for (const k of known) {
     const mine = quadOf(k.pose, 'page')
     const worst = Math.max(...mine.map((c, i) => Math.hypot(c[0] - k.q[i][0], c[1] - k.q[i][1])))
     const ok = worst <= 2
     if (!ok) fails++
-    console.log(`   ${fmtPose(k.pose).padEnd(56)} worst corner ${worst.toFixed(1)} px  ${ok ? 'ok' : 'FAIL'}`)
+    console.log(
+      `   ${fmtPose(k.pose).padEnd(56)} worst corner ${worst.toFixed(1)} px  ${ok ? 'ok' : 'FAIL'}`,
+    )
   }
 
   console.log('\n2. THE SOLVER against OUR OWN renders, whose pose is known exactly.')
   console.log('   Seeded deliberately wrong, so the search has to travel.')
   const cases = [
-    { png: `${ROOT}_refs/fit/.pose-1242.png`, truth: { rot: -8.75, scale: 0.679, cx: 44.5, cy: 48 } },
-    { png: `${ROOT}_refs/fit/.pose-1278.png`, truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7 } },
-    { png: `${ROOT}_refs/fit/.pose-1242b.png`, truth: { rot: 2.75, scale: 0.681, cx: 54.8, cy: 50.0 } },
+    {
+      png: `${ROOT}_refs/fit/.pose-1242.png`,
+      truth: { rot: -8.75, scale: 0.679, cx: 44.5, cy: 48 },
+    },
+    {
+      png: `${ROOT}_refs/fit/.pose-1278.png`,
+      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7 },
+    },
+    {
+      png: `${ROOT}_refs/fit/.pose-1242b.png`,
+      truth: { rot: 2.75, scale: 0.681, cx: 54.8, cy: 50.0 },
+    },
     // THE YAW, AGAINST A TRUTH THAT IS NOT ZERO. Every case above was rendered
     // flat, so the one axis this measurement leans on hardest had no test that
     // could fail. These are the calibration renders behind V-24 — case 2's pose,
     // yawed +8 and -8. Which render carries which yaw was settled by the
     // browser's own quads in table 1, not by this solver: the true quad scores
     // 22-25 grey levels per pixel under its outline, the two wrong ones 1-3.
-    { png: `${ROOT}_refs/fit/.pose-900b.png`,
-      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: 8 } },
-    { png: `${ROOT}_refs/fit/.pose-900c.png`,
-      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: -8 } },
+    {
+      png: `${ROOT}_refs/fit/.pose-900b.png`,
+      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: 8 },
+    },
+    {
+      png: `${ROOT}_refs/fit/.pose-900c.png`,
+      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: -8 },
+    },
   ]
   // The third case is the worst geometry the story contains — its right-hand
   // side is off the canvas entirely and its left-hand side sits against the
@@ -1038,12 +1164,20 @@ if (has('--selftest')) {
       continue
     }
     const fld = chamfer(rgb)
-    const seed = { rot: c.truth.rot + 3, scale: c.truth.scale * 1.05, cx: c.truth.cx - 3,
-      cy: c.truth.cy + 3, rotY: 6 }
+    const seed = {
+      rot: c.truth.rot + 3,
+      scale: c.truth.scale * 1.05,
+      cx: c.truth.cx - 3,
+      cy: c.truth.cy + 3,
+      rotY: 6,
+    }
     const r = solvePose(fld, seed, 'page')
     const dRot = Math.abs(r.pose.rot - c.truth.rot)
     const dSc = Math.abs(r.pose.scale / c.truth.scale - 1)
-    const dPos = Math.hypot(((r.pose.cx - c.truth.cx) / 100) * W, ((r.pose.cy - c.truth.cy) / 100) * H)
+    const dPos = Math.hypot(
+      ((r.pose.cx - c.truth.cx) / 100) * W,
+      ((r.pose.cy - c.truth.cy) / 100) * H,
+    )
     // Judge each axis only where the picture actually constrains it. An axis the
     // solver reports as soft is not a wrong answer, it is a refusal — and the
     // test is that it says so, not that it guesses right.
@@ -1062,7 +1196,6 @@ if (has('--selftest')) {
         (softs.length ? `   soft: ${softs.join(',')}` : ''),
     )
   }
-
 
   console.log('\n3. THE ROLL OFF THE TYPE, on the same renders, whose roll is known.')
   console.log('   No edge of the journal enters this one — only the print on the page.')
@@ -1140,9 +1273,9 @@ if (has('--selftest')) {
 if (has('--motion')) {
   const want = has('--slide')
     ? SLIDES.filter(s => s.frame === Number(val('--slide')))
-    // Frame 23 is excluded: its slide starts exactly where the recede does, so
-    // every second of it is the outro's own move, not a slide's drift.
-    : SLIDES.filter(s => s.frame >= 8 && s.frame <= 22)
+    : // Frame 23 is excluded: its slide starts exactly where the recede does, so
+      // every second of it is the outro's own move, not a slide's drift.
+      SLIDES.filter(s => s.frame >= 8 && s.frame <= 22)
   const step = Number(val('--step') || 0.5)
   /**
    * `--t0`/`--t1` OVERRIDE THE WINDOW, and `--seed` the region it starts from.
@@ -1192,9 +1325,8 @@ if (has('--motion')) {
     const w = { ...windowOf(s.frame) }
     if (has('--t0')) w.t0 = +Number(val('--t0')).toFixed(3)
     if (has('--t1')) w.t1 = +Number(val('--t1')).toFixed(3)
-    const seedPose = seed.length === 4
-      ? { rot: seed[0], scale: seed[1], cx: seed[2], cy: seed[3] }
-      : poseAt(w.t0)
+    const seedPose =
+      seed.length === 4 ? { rot: seed[0], scale: seed[1], cx: seed[2], cy: seed[3] } : poseAt(w.t0)
     // THE CHAIN, not a common reference. Registering every second against the
     // slide's first second looks tidier and measures worse: by the end of a
     // slide the journal has moved 150 design px and turned, and the peak falls
@@ -1217,10 +1349,22 @@ if (has('--motion')) {
     }
     for (let t = w.t0; t <= w.t1 + 1e-6; t = +(t + step).toFixed(3)) {
       if (first) {
-        out.push({ t: +t.toFixed(3), frame: s.frame, page: s.page, dx: 0, dy: 0,
-          size: 1, rot: 0, score: 1, rival: 0 })
+        out.push({
+          t: +t.toFixed(3),
+          frame: s.frame,
+          page: s.page,
+          dx: 0,
+          dy: 0,
+          size: 1,
+          rot: 0,
+          score: 1,
+          rival: 0,
+        })
         console.log(
-          String(s.frame).padStart(5) + '  ' + s.page.padEnd(20) + t.toFixed(2).padStart(7) +
+          String(s.frame).padStart(5) +
+            '  ' +
+            s.page.padEnd(20) +
+            t.toFixed(2).padStart(7) +
             '     0.0     0.0   1.0000     0.00   (reference)',
         )
         first = false
@@ -1229,8 +1373,12 @@ if (has('--motion')) {
       // The region follows the journal: quad at the pose we have accumulated so
       // far, grown outward, so a slide that drifts 150 px does not end up
       // measuring the room on one side.
-      const here = { rot: seedPose.rot + acc.rot, scale: seedPose.scale * acc.size,
-        cx: seedPose.cx + (acc.dx / W) * 100, cy: seedPose.cy + (acc.dy / H) * 100 }
+      const here = {
+        rot: seedPose.rot + acc.rot,
+        scale: seedPose.scale * acc.size,
+        cx: seedPose.cx + (acc.dx / W) * 100,
+        cy: seedPose.cy + (acc.dy / H) * 100,
+      }
       const quad = quadOf(here, s.face)
       const mask = quadMask(quad, -50)
       const piv = [(quad[0][0] + quad[2][0]) / 2, (quad[0][1] + quad[2][1]) / 2]
@@ -1241,33 +1389,62 @@ if (has('--motion')) {
       const best = register(Ap, Bp, Mp, piv, { dSpan: 80, sRange: [0.94, 1.07] })
       const rival = margin(Ap, Bp, Mp, piv, best)
       prevRgb = cur
-      acc = { dx: acc.dx + best.dx, dy: acc.dy + best.dy,
-        size: acc.size * best.s, rot: acc.rot + best.rot }
+      acc = {
+        dx: acc.dx + best.dx,
+        dy: acc.dy + best.dy,
+        size: acc.size * best.s,
+        rot: acc.rot + best.rot,
+      }
       // Read on the region THIS sample was registered into, and it replaces the
       // accumulator rather than being reported beside it: the region of the next
       // sample is cut at `acc.rot`, so leaving the coarse value in would keep
       // aiming the window with the number this flag exists to distrust.
       let rollNote = ''
       if (rollTyped) {
-        const now = { rot: seedPose.rot + acc.rot, scale: seedPose.scale * acc.size,
-          cx: seedPose.cx + (acc.dx / W) * 100, cy: seedPose.cy + (acc.dy / H) * 100 }
+        const now = {
+          rot: seedPose.rot + acc.rot,
+          scale: seedPose.scale * acc.size,
+          cx: seedPose.cx + (acc.dx / W) * 100,
+          cy: seedPose.cy + (acc.dy / H) * 100,
+        }
         const rt = rollOf(cur, quadOf(now, s.face), ropt)
         if (rt.ok) acc.rot = +(rt.roll - roll0).toFixed(2)
         else rollNote = '  TYPE UNREADABLE, ROT LEFT COARSE'
       }
-      const row = { t: +t.toFixed(3), frame: s.frame, page: s.page,
-        dx: +acc.dx.toFixed(1), dy: +acc.dy.toFixed(1), size: +acc.size.toFixed(4),
-        rot: +acc.rot.toFixed(2), score: +best.v.toFixed(3), rival: +rival.toFixed(3),
-        step: { dx: +best.dx.toFixed(1), dy: +best.dy.toFixed(1), s: +best.s.toFixed(4), rot: +best.rot.toFixed(2) } }
+      const row = {
+        t: +t.toFixed(3),
+        frame: s.frame,
+        page: s.page,
+        dx: +acc.dx.toFixed(1),
+        dy: +acc.dy.toFixed(1),
+        size: +acc.size.toFixed(4),
+        rot: +acc.rot.toFixed(2),
+        score: +best.v.toFixed(3),
+        rival: +rival.toFixed(3),
+        step: {
+          dx: +best.dx.toFixed(1),
+          dy: +best.dy.toFixed(1),
+          s: +best.s.toFixed(4),
+          rot: +best.rot.toFixed(2),
+        },
+      }
       out.push(row)
       console.log(
-        String(s.frame).padStart(5) + '  ' + s.page.padEnd(20) + t.toFixed(2).padStart(7) +
-          row.dx.toFixed(1).padStart(8) + row.dy.toFixed(1).padStart(8) +
-          row.size.toFixed(4).padStart(9) + row.rot.toFixed(2).padStart(9) +
-          row.score.toFixed(3).padStart(8) + row.rival.toFixed(3).padStart(7) +
+        String(s.frame).padStart(5) +
+          '  ' +
+          s.page.padEnd(20) +
+          t.toFixed(2).padStart(7) +
+          row.dx.toFixed(1).padStart(8) +
+          row.dy.toFixed(1).padStart(8) +
+          row.size.toFixed(4).padStart(9) +
+          row.rot.toFixed(2).padStart(9) +
+          row.score.toFixed(3).padStart(8) +
+          row.rival.toFixed(3).padStart(7) +
           (row.score - row.rival < 0.15 ? '  NO CONFIDENT PEAK' : '') +
-          (Math.abs(best.dx) > 78 || Math.abs(best.dy) > 78 ||
-            best.s < 0.945 || best.s > 1.065 ? '  AT THE SEARCH BOUND' : '') + rollNote,
+          (Math.abs(best.dx) > 78 || Math.abs(best.dy) > 78 || best.s < 0.945 || best.s > 1.065
+            ? '  AT THE SEARCH BOUND'
+            : '') +
+          rollNote,
       )
     }
   }
@@ -1297,7 +1474,9 @@ if (has('--motion')) {
     measured = `${prev.measured}, frame ${[...mine].join('/')} ${measured}`
   }
   writeFileSync(dest, JSON.stringify({ measured, rows }, null, 1))
-  console.log(`\n-> ${dest}  (${out.length} samples${rows.length !== out.length ? `, ${rows.length} in the file` : ''})`)
+  console.log(
+    `\n-> ${dest}  (${out.length} samples${rows.length !== out.length ? `, ${rows.length} in the file` : ''})`,
+  )
   process.exit(0)
 }
 
@@ -1361,14 +1540,19 @@ if (has('--roll')) {
       byFrame.get(r.frame).push(r)
     }
     const N = Number(val('--n') || 5)
-    console.log('THE ROLL AT EACH SLIDE\'S ANCHOR SECOND, from the type on its page.')
+    console.log("THE ROLL AT EACH SLIDE'S ANCHOR SECOND, from the type on its page.")
     console.log('Each sample is carried back to the anchor second by subtracting the')
     console.log('drift `--motion` measured for it, so the columns are comparable and')
     console.log('their spread is a check on both measurements at once.\n')
-    console.log('frame page                  anchor   mock   samples (roll @ t, corrected)                    median  spread')
+    console.log(
+      'frame page                  anchor   mock   samples (roll @ t, corrected)                    median  spread',
+    )
     const outRows = []
     for (const s of SLIDES.filter(x => byFrame.has(x.frame))) {
-      const rows = byFrame.get(s.frame).slice().sort((a, b) => a.t - b.t)
+      const rows = byFrame
+        .get(s.frame)
+        .slice()
+        .sort((a, b) => a.t - b.t)
       const pick = []
       for (let i = 0; i < N; i++) pick.push(rows[Math.round((i * (rows.length - 1)) / (N - 1))])
       const seen = new Set()
@@ -1390,21 +1574,33 @@ if (has('--roll')) {
       vals.sort((a, b) => a - b)
       const med = vals.length ? vals[(vals.length - 1) >> 1] : null
       const spread = vals.length ? vals[vals.length - 1] - vals[0] : null
-      outRows.push({ frame: s.frame, page: s.page, t0: rows[0].t, roll: med === null ? null : +med.toFixed(2),
-        spread: spread === null ? null : +spread.toFixed(2), n: vals.length, samples: parts })
+      outRows.push({
+        frame: s.frame,
+        page: s.page,
+        t0: rows[0].t,
+        roll: med === null ? null : +med.toFixed(2),
+        spread: spread === null ? null : +spread.toFixed(2),
+        n: vals.length,
+        samples: parts,
+      })
       console.log(
-        String(s.frame).padStart(5) + '  ' + s.page.padEnd(20) +
+        String(s.frame).padStart(5) +
+          '  ' +
+          s.page.padEnd(20) +
           (med === null ? '     --' : med.toFixed(2).padStart(8)) +
           (MOCK_ROT[s.frame] === undefined ? '     --' : MOCK_ROT[s.frame].toFixed(2).padStart(7)) +
-          '   ' + parts.join(' ').padEnd(46) +
+          '   ' +
+          parts.join(' ').padEnd(46) +
           (med === null ? '      --' : med.toFixed(2).padStart(8)) +
           (spread === null ? '      --' : spread.toFixed(2).padStart(8)) +
           (spread !== null && spread > 3 ? '  SPREAD' : ''),
       )
     }
     mkdirSync(OUT, { recursive: true })
-    writeFileSync(`${OUT}/roll-anchor.json`,
-      JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows: outRows }, null, 1))
+    writeFileSync(
+      `${OUT}/roll-anchor.json`,
+      JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows: outRows }, null, 1),
+    )
     console.log(`\n-> ${OUT}/roll-anchor.json`)
     console.log('\nPaste the `median` column into ANCHOR in scripts/journal-path.mjs as `rot`,')
     console.log('then re-run `npm run journal:path`. Do not hand-edit JOURNAL_PATH.')
@@ -1425,7 +1621,9 @@ if (has('--roll')) {
   console.log('own journal must be set to. `base` is the baseline family, kept as a')
   console.log('witness — it is pulled off `roll` by the yaw and by where the copy')
   console.log('happens to sit on the page, so it is printed and not used.\n')
-  console.log('    t  frame page                    roll    ours    diff    base   conf  rival      px')
+  console.log(
+    '    t  frame page                    roll    ours    diff    base   conf  rival      px',
+  )
   for (const t of want) {
     const s = slideAt(t)
     const rgb = clipFrame(t)
@@ -1435,22 +1633,37 @@ if (has('--roll')) {
     const row = { t, frame: s.frame, page: s.page, ours: +ours.rot.toFixed(2), ...r }
     rows.push(row)
     if (!r.ok) {
-      console.log(t.toFixed(2).padStart(5) + String(s.frame).padStart(7) + '  ' + s.page.padEnd(20) + '   ' + r.why)
+      console.log(
+        t.toFixed(2).padStart(5) +
+          String(s.frame).padStart(7) +
+          '  ' +
+          s.page.padEnd(20) +
+          '   ' +
+          r.why,
+      )
       continue
     }
     console.log(
-      t.toFixed(2).padStart(5) + String(s.frame).padStart(7) + '  ' + s.page.padEnd(20) +
-        r.roll.toFixed(2).padStart(8) + row.ours.toFixed(2).padStart(8) +
+      t.toFixed(2).padStart(5) +
+        String(s.frame).padStart(7) +
+        '  ' +
+        s.page.padEnd(20) +
+        r.roll.toFixed(2).padStart(8) +
+        row.ours.toFixed(2).padStart(8) +
         (r.roll - row.ours).toFixed(2).padStart(8) +
         (r.baseline === null ? '     --' : r.baseline.toFixed(2).padStart(8)) +
-        r.conf.toFixed(3).padStart(7) + r.rival.toFixed(3).padStart(7) +
+        r.conf.toFixed(3).padStart(7) +
+        r.rival.toFixed(3).padStart(7) +
         String(r.px).padStart(8) +
         (r.conf < 0.35 || r.rival > 0.8 ? '   WEAK' : ''),
     )
     if (draw) drawRoll(rgb, quad, r.roll, `${OUT}/roll-${t.toFixed(2)}.png`, ropt.shrink)
   }
   mkdirSync(OUT, { recursive: true })
-  writeFileSync(`${OUT}/roll.json`, JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows }, null, 1))
+  writeFileSync(
+    `${OUT}/roll.json`,
+    JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows }, null, 1),
+  )
   console.log(`\n-> ${OUT}/roll.json  (${rows.length} rows)`)
   process.exit(0)
 }
@@ -1515,7 +1728,8 @@ if (has('--t')) {
     times.push(Number(argv[i]))
 } else if (has('--slide') || has('--all')) {
   const step = Number(val('--step') || 0.4)
-  const want = has('--all') ? SLIDES.filter(s => s.frame >= 7 && s.frame <= 23)
+  const want = has('--all')
+    ? SLIDES.filter(s => s.frame >= 7 && s.frame <= 23)
     : SLIDES.filter(s => s.frame === Number(val('--slide')))
   for (const s of want) {
     const w = windowOf(s.frame)
@@ -1526,23 +1740,33 @@ if (has('--t')) {
   process.exit(2)
 }
 
-console.log('THE CLIP\'S JOURNAL, POSE BY POSE, from its four edges.')
-console.log('seed = our table\'s pose for that slide; pose = what the clip is doing.\n')
-const HEAD = '     t  frame page                    rot   scale     cx     cy    rotY   score  sharp    seed   soft'
+console.log("THE CLIP'S JOURNAL, POSE BY POSE, from its four edges.")
+console.log("seed = our table's pose for that slide; pose = what the clip is doing.\n")
+const HEAD =
+  '     t  frame page                    rot   scale     cx     cy    rotY   score  sharp    seed   soft'
 console.log(HEAD)
 const chain = !has('--nochain') && !has('--t')
 
 const rowAt = (t, seed, how) => {
   const slide = slideAt(t)
   const keep = { centre: { ...poseAt(t), rotY: 0 }, span: KEEP_SPAN }
-  const r = solvePose(fldOf(t), seed, slide.face,
-    how === 'table'
-      ? { span: KEEP_SPAN }
-      : { span: CHAIN_SPAN, keep, yawNear: seed.rotY })
-  return { t, frame: slide.frame, page: slide.page, face: slide.face, ...r.pose,
-    score: +r.score.toFixed(3), sharp: +r.sharp.toFixed(2),
+  const r = solvePose(
+    fldOf(t),
+    seed,
+    slide.face,
+    how === 'table' ? { span: KEEP_SPAN } : { span: CHAIN_SPAN, keep, yawNear: seed.rotY },
+  )
+  return {
+    t,
+    frame: slide.frame,
+    page: slide.page,
+    face: slide.face,
+    ...r.pose,
+    score: +r.score.toFixed(3),
+    sharp: +r.sharp.toFixed(2),
     soft: ['rot', 'scale', 'cx', 'cy', 'rotY'].filter(k => r.stiff[k] < SOFT),
-    seeded: how }
+    seeded: how,
+  }
 }
 
 /**
@@ -1564,11 +1788,19 @@ const bestOf = (t, prev) => {
 }
 const poseOf = r => ({ rot: r.rot, scale: r.scale, cx: r.cx, cy: r.cy, rotY: r.rotY })
 const line = r =>
-  r.t.toFixed(2).padStart(6) + String(r.frame).padStart(6) + '  ' + r.page.padEnd(20) +
-  r.rot.toFixed(2).padStart(8) + r.scale.toFixed(3).padStart(8) +
-  r.cx.toFixed(1).padStart(7) + r.cy.toFixed(1).padStart(7) +
-  r.rotY.toFixed(2).padStart(8) + r.score.toFixed(3).padStart(8) +
-  r.sharp.toFixed(1).padStart(7) + '  ' + r.seeded.padEnd(6) +
+  r.t.toFixed(2).padStart(6) +
+  String(r.frame).padStart(6) +
+  '  ' +
+  r.page.padEnd(20) +
+  r.rot.toFixed(2).padStart(8) +
+  r.scale.toFixed(3).padStart(8) +
+  r.cx.toFixed(1).padStart(7) +
+  r.cy.toFixed(1).padStart(7) +
+  r.rotY.toFixed(2).padStart(8) +
+  r.score.toFixed(3).padStart(8) +
+  r.sharp.toFixed(1).padStart(7) +
+  '  ' +
+  r.seeded.padEnd(6) +
   ('  ' + r.soft.join(',')).padEnd(12)
 
 const rows = []
@@ -1609,7 +1841,9 @@ if (chain && rows.length > 1) {
       better++
     }
   }
-  console.log(`\nBACKWARD PASS: ${better} of ${rows.length} seconds did better from the other side.`)
+  console.log(
+    `\nBACKWARD PASS: ${better} of ${rows.length} seconds did better from the other side.`,
+  )
   if (better) {
     console.log(HEAD)
     for (const r of rows) if (r.seeded === 'back') console.log(line(r))
@@ -1617,11 +1851,13 @@ if (chain && rows.length > 1) {
 }
 
 if (has('--overlay'))
-  for (const r of rows)
-    drawQuad(clipFrame(r.t), quadOf(r, r.face), `${OUT}/pose-${r.t}.png`)
+  for (const r of rows) drawQuad(clipFrame(r.t), quadOf(r, r.face), `${OUT}/pose-${r.t}.png`)
 
 if (has('--write')) {
-  writeFileSync(REF, JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows }, null, 1))
+  writeFileSync(
+    REF,
+    JSON.stringify({ measured: new Date().toISOString().slice(0, 10), rows }, null, 1),
+  )
   console.log(`\n-> ${REF}  (${rows.length} samples)`)
 } else {
   mkdirSync(OUT, { recursive: true })

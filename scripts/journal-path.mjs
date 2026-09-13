@@ -43,8 +43,9 @@ const SRC = process.argv[2] || `${ROOT}_refs/pose/motion.json`
 const REF = `${ROOT}scripts/journal-reference.json`
 
 const slidesSrc = readFileSync(`${ROOT}src/story/slides.js`, 'utf8')
-const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:\s*'([^']+)'/g)]
-  .map(m => ({ frame: +m[1], at: +m[2], page: m[3] }))
+const SLIDES = [
+  ...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:\s*'([^']+)'/g),
+].map(m => ({ frame: +m[1], at: +m[2], page: m[3] }))
 
 /**
  * THE ANCHORS — the pose each slide's measured motion is added to.
@@ -185,15 +186,15 @@ const SLIDES = [...slidesSrc.matchAll(/frame:\s*(\d+),\s*at:\s*([\d.]+),\s*page:
 const ANCHOR = {
   // MEASURED OFF THE CLIP 2026-09-07 where the row says so, storyboard where it
   // does not. `rot` is the clip's on every row and has been since 05.09.
-  7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 },      // storyboard — the handover
-  8: { rot: -10.94, scale: 0.6871, cx: 53.0, cy: 53.24 },   // clip: position and size
-  9: { rot: 13.96, scale: 0.6505, cx: 53.01, cy: 49.02 },   // clip: position and size
-  10: { rot: -7.59, scale: 0.6673, cx: 48.1, cy: 50.17 },   // clip: position and size
-  11: { rot: -0.25, scale: 0.6206, cx: 60.89, cy: 52.27 },  // clip: position and size
-  12: { rot: -4.72, scale: 0.6551, cx: 58.11, cy: 48.51 },  // clip: position and size
-  13: { rot: 13.2, scale: 0.6631, cx: 50.94, cy: 54.51 },   // clip: position and size
-  14: { rot: -8.43, scale: 0.6985, cx: 50.17, cy: 53.65 },  // clip: position and size
-  15: { rot: 10.28, scale: 0.6498, cx: 51.37, cy: 48.01 },  // clip: position and size
+  7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 }, // storyboard — the handover
+  8: { rot: -10.94, scale: 0.6871, cx: 53.0, cy: 53.24 }, // clip: position and size
+  9: { rot: 13.96, scale: 0.6505, cx: 53.01, cy: 49.02 }, // clip: position and size
+  10: { rot: -7.59, scale: 0.6673, cx: 48.1, cy: 50.17 }, // clip: position and size
+  11: { rot: -0.25, scale: 0.6206, cx: 60.89, cy: 52.27 }, // clip: position and size
+  12: { rot: -4.72, scale: 0.6551, cx: 58.11, cy: 48.51 }, // clip: position and size
+  13: { rot: 13.2, scale: 0.6631, cx: 50.94, cy: 54.51 }, // clip: position and size
+  14: { rot: -8.43, scale: 0.6985, cx: 50.17, cy: 53.65 }, // clip: position and size
+  15: { rot: 10.28, scale: 0.6498, cx: 51.37, cy: 48.01 }, // clip: position and size
   16: { rot: -21.89, scale: 0.6016, cx: 54.96, cy: 51.61 }, // clip: position and size
   // `cy` RE-READ 2026-09-09 (session V): the page sat too low, and two
   // independent flights on this very slide say so in mirror image — the
@@ -233,9 +234,9 @@ const ANCHOR = {
   //
   // `scale` and `cx` are NOT touched: -3.4 % and +8 px are each inside the
   // spread of those same readings, so neither is a measurement of anything.
-  17: { rot: 15.07, scale: 0.6561, cx: 59.68, cy: 48.85 },   // clip: position and size
+  17: { rot: 15.07, scale: 0.6561, cx: 59.68, cy: 48.85 }, // clip: position and size
   18: { rot: -11.58, scale: 0.6602, cx: 54.36, cy: 59.02 }, // clip: position and size
-  19: { rot: 8.36, scale: 0.6885, cx: 46.08, cy: 54.33 },   // clip: position and size
+  19: { rot: 8.36, scale: 0.6885, cx: 46.08, cy: 54.33 }, // clip: position and size
   // `cx` RE-READ 2026-09-09 (session U): 52.84 was the odd one out. Four
   // window runs — session Q's two on 07.09 and session U's two today, each ten
   // seconds of the slide carried back to 68.037 and filtered by the 1.0 deg
@@ -248,15 +249,32 @@ const ANCHOR = {
   // T-2's page box). `scale` and `cy` are NOT touched: both windows answer
   // 0.7060 and 46.9-47.0 against the shipped 0.7083 and 47.0, which is inside
   // their own spread and so is not a measurement of anything.
-  20: { rot: -24.28, scale: 0.7083, cx: 54.0, cy: 47.0 },   // clip: position and size
-  21: { rot: 11.03, scale: 0.6677, cx: 51.41, cy: 52.21 },  // clip: position and size
-  22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 },    // storyboard — the two windows disagreed
-  23: { rot: 13.21, scale: 0.681, cx: 52.0, cy: 50.2 },     // storyboard — the outro, out of scope
+  20: { rot: -24.28, scale: 0.7083, cx: 54.0, cy: 47.0 }, // clip: position and size
+  21: { rot: 11.03, scale: 0.6677, cx: 51.41, cy: 52.21 }, // clip: position and size
+  22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 }, // storyboard — the two windows disagreed
+  23: { rot: 13.21, scale: 0.681, cx: 52.0, cy: 50.2 }, // storyboard — the outro, out of scope
 }
 
 /** The storyboard's own `rot`, kept so the two can be printed side by side. */
-const MOCK_ROT = { 7: 3.1, 8: 3.1, 9: 4.15, 10: 7.1, 11: 12.9, 12: 12.75, 13: 7.05, 14: 2.75,
-  15: 2.75, 16: 6.3, 17: 4.35, 18: 4.35, 19: 4.37, 20: 3.53, 21: 3.53, 22: 1.65, 23: 1.65 }
+const MOCK_ROT = {
+  7: 3.1,
+  8: 3.1,
+  9: 4.15,
+  10: 7.1,
+  11: 12.9,
+  12: 12.75,
+  13: 7.05,
+  14: 2.75,
+  15: 2.75,
+  16: 6.3,
+  17: 4.35,
+  18: 4.35,
+  19: 4.37,
+  20: 3.53,
+  21: 3.53,
+  22: 1.65,
+  23: 1.65,
+}
 
 const slideOf = t => {
   let s = SLIDES[0]
@@ -280,7 +298,8 @@ for (const r of good) {
 }
 
 /** Anchor + motion, per the rule in the header. */
-const W0 = 1080, H0 = 1920
+const W0 = 1080,
+  H0 = 1920
 const keysOf = (frame, samples) => {
   const a = ANCHOR[frame]
   if (!a || !samples.length) return []
@@ -332,14 +351,19 @@ function hermite(keys, ch) {
 }
 
 function worstError(kept, all) {
-  const f = { rot: hermite(kept, 'rot'), scale: hermite(kept, 'scale'), cx: hermite(kept, 'cx'), cy: hermite(kept, 'cy') }
+  const f = {
+    rot: hermite(kept, 'rot'),
+    scale: hermite(kept, 'scale'),
+    cx: hermite(kept, 'cx'),
+    cy: hermite(kept, 'cy'),
+  }
   let worst = { e: -1, row: null }
   for (const r of all) {
     const e = Math.max(
       Math.abs(f.rot(r.t) - r.rot) / TOL.rot,
       Math.abs(f.scale(r.t) / r.scale - 1) / TOL.scale,
-      (Math.abs(f.cx(r.t) - r.cx) / 100) * W / TOL.pos,
-      (Math.abs(f.cy(r.t) - r.cy) / 100) * H / TOL.pos,
+      ((Math.abs(f.cx(r.t) - r.cx) / 100) * W) / TOL.pos,
+      ((Math.abs(f.cy(r.t) - r.cy) / 100) * H) / TOL.pos,
     )
     if (e > worst.e) worst = { e, row: r }
   }
@@ -462,10 +486,18 @@ for (const s of SLIDES) {
   // where it started — the second number is the one that says "this slide
   // drifts" rather than "this slide ends up somewhere else".
   const span = samples.reduce((m, x) => Math.max(m, Math.hypot(x.dx, x.dy)), 0)
-  report.push({ frame: s.frame, page: s.page, samples: samples.length, keys: 0,
-    rotFrom: 0, rotTo: samples[samples.length - 1].rot, span,
-    dCx: samples[samples.length - 1].dx, dCy: samples[samples.length - 1].dy,
-    dScale: +((samples[samples.length - 1].size - 1) * 100).toFixed(1) })
+  report.push({
+    frame: s.frame,
+    page: s.page,
+    samples: samples.length,
+    keys: 0,
+    rotFrom: 0,
+    rotTo: samples[samples.length - 1].rot,
+    span,
+    dCx: samples[samples.length - 1].dx,
+    dCy: samples[samples.length - 1].dy,
+    dScale: +((samples[samples.length - 1].size - 1) * 100).toFixed(1),
+  })
 }
 /**
  * THE HANDOVER ROLL, read off the clip at 6.00 exactly the way the anchors are.
@@ -499,7 +531,13 @@ for (const r of report)
     for (const x of SLIDES) if (x.at <= k.t + 1e-6) f = x.frame
     return f === r.frame
   }).length
-const out = keptAll.map(k => [k.t, +k.rot.toFixed(2), +k.scale.toFixed(4), +k.cx.toFixed(2), +k.cy.toFixed(2)])
+const out = keptAll.map(k => [
+  k.t,
+  +k.rot.toFixed(2),
+  +k.scale.toFixed(4),
+  +k.cx.toFixed(2),
+  +k.cy.toFixed(2),
+])
 /**
  * ONE ROW THAT IS NOT MEASURED, added to the pool above before thinning.
  *
@@ -517,23 +555,46 @@ const out = keptAll.map(k => [k.t, +k.rot.toFixed(2), +k.scale.toFixed(4), +k.cx
  * is measured like the rest of it and the path owns the journal until the flash.
  */
 
-console.log(`${rows.length} samples in, ${dropped} dropped as unconfident, ${out.length} keys out.\n`)
-console.log('frame page                 n  keys   drot     dcx    dcy   dsize   farthest    rot: mock -> clip')
+console.log(
+  `${rows.length} samples in, ${dropped} dropped as unconfident, ${out.length} keys out.\n`,
+)
+console.log(
+  'frame page                 n  keys   drot     dcx    dcy   dsize   farthest    rot: mock -> clip',
+)
 for (const r of report)
   console.log(
-    String(r.frame).padStart(5) + '  ' + r.page.padEnd(20) + String(r.samples).padStart(3) +
-      String(r.keys).padStart(6) + r.rotTo.toFixed(2).padStart(8) +
-      r.dCx.toFixed(0).padStart(8) + r.dCy.toFixed(0).padStart(7) +
-      ((r.dScale >= 0 ? '+' : '') + r.dScale.toFixed(1)).padStart(7) + ' %' +
-      r.span.toFixed(0).padStart(10) + ' px' +
-      MOCK_ROT[r.frame].toFixed(2).padStart(12) + ' ->' +
+    String(r.frame).padStart(5) +
+      '  ' +
+      r.page.padEnd(20) +
+      String(r.samples).padStart(3) +
+      String(r.keys).padStart(6) +
+      r.rotTo.toFixed(2).padStart(8) +
+      r.dCx.toFixed(0).padStart(8) +
+      r.dCy.toFixed(0).padStart(7) +
+      ((r.dScale >= 0 ? '+' : '') + r.dScale.toFixed(1)).padStart(7) +
+      ' %' +
+      r.span.toFixed(0).padStart(10) +
+      ' px' +
+      MOCK_ROT[r.frame].toFixed(2).padStart(12) +
+      ' ->' +
       ANCHOR[r.frame].rot.toFixed(2).padStart(8) +
       (Math.sign(MOCK_ROT[r.frame]) !== Math.sign(ANCHOR[r.frame].rot) ? '   SIGN' : ''),
   )
 
-writeFileSync(REF, JSON.stringify({ measured: new Date().toISOString().slice(0, 10), src: SRC,
-  tol: TOL, units: 'dx/dy design px, size ratio, rot degrees, all relative to the slide\'s first sample',
-  rows: good }, null, 1))
+writeFileSync(
+  REF,
+  JSON.stringify(
+    {
+      measured: new Date().toISOString().slice(0, 10),
+      src: SRC,
+      tol: TOL,
+      units: "dx/dy design px, size ratio, rot degrees, all relative to the slide's first sample",
+      rows: good,
+    },
+    null,
+    1,
+  ),
+)
 console.log(`\n-> ${REF}`)
 
 console.log('\n// paste into src/story/slides.js\n')
@@ -545,6 +606,8 @@ for (const k of out) {
     console.log(`  // frame ${f.frame} ${f.page}`)
     lastFrame = f.frame
   }
-  console.log(`  [${k[0].toFixed(2)}, ${k[1].toFixed(2)}, ${k[2].toFixed(4)}, ${k[3].toFixed(2)}, ${k[4].toFixed(2)}],`)
+  console.log(
+    `  [${k[0].toFixed(2)}, ${k[1].toFixed(2)}, ${k[2].toFixed(4)}, ${k[3].toFixed(2)}, ${k[4].toFixed(2)}],`,
+  )
 }
 console.log(']')

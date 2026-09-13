@@ -61,7 +61,14 @@
          its are not set identically — and using it as the budget grew the long
          value to 205.5, i.e. 9 % past the size the mock draws, on a page nobody
          complained about. Measured in the DOM, both ways, session S. -->
-    <JValue :value="points" :center-y="1579" :size="382" :left="233.5" :width="933" v-bind="L.value" />
+    <JValue
+      :value="points"
+      :center-y="1579"
+      :size="382"
+      :left="233.5"
+      :width="933"
+      v-bind="L.value"
+    />
   </PageChrome>
 </template>
 

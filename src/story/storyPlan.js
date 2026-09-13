@@ -91,9 +91,7 @@ const shiftTiming = (timing, toStory) => ({
  */
 export function buildStoryPlan(skip = {}, opts = {}) {
   const FLIGHTS = opts.flights ?? []
-  const dropped = new Set(
-    SLIDES.filter(s => s.skip && skip[s.skip]).map(s => s.frame),
-  )
+  const dropped = new Set(SLIDES.filter(s => s.skip && skip[s.skip]).map(s => s.frame))
 
   // ⚠️ THE FIRST AND LAST PAGES ARE NEVER DROPPED, and the ten that can be are
   // one unbroken run in the middle (frames 9..18, 17.1 s to 57.07 s). So the
@@ -114,8 +112,7 @@ export function buildStoryPlan(skip = {}, opts = {}) {
     const slide = kept[i]
     const prev = kept[i - 1]
     // Slides between this one and the previous kept one, in the original table.
-    const skippedBefore =
-      prev && SLIDES.indexOf(slide) - SLIDES.indexOf(prev) > 1
+    const skippedBefore = prev && SLIDES.indexOf(slide) - SLIDES.indexOf(prev) > 1
 
     if (skippedBefore) {
       // The hole runs from the first dropped page's own cut — the hairline

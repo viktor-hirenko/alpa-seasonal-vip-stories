@@ -201,11 +201,17 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
 }
 
 .story-arrow--back {
-  right: min(calc(50% + #{$card-half} + #{$arrow-gap}), calc(100% - #{$arrow-size} - #{$arrow-edge}));
+  right: min(
+    calc(50% + #{$card-half} + #{$arrow-gap}),
+    calc(100% - #{$arrow-size} - #{$arrow-edge})
+  );
 }
 
 .story-arrow--forward {
-  left: min(calc(50% + #{$card-half} + #{$arrow-gap}), calc(100% - #{$arrow-size} - #{$arrow-edge}));
+  left: min(
+    calc(50% + #{$card-half} + #{$arrow-gap}),
+    calc(100% - #{$arrow-size} - #{$arrow-edge})
+  );
 
   svg {
     transform: rotate(180deg);

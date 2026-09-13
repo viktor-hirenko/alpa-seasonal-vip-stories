@@ -434,8 +434,6 @@ export const JOURNAL_PATH = [
   [88.03, 14.27, 0.6592, 47.46, 45.51],
 ]
 
-
-
 /** Where the last PAGE segment ends for the progress bar: the second the outro
  *  title arrives (TIMING.outro.at). Not the journal's exit — that is a dissolve
  *  at 88.35 (TIMING.exit) — and not the path's end, which is 88.03. */
@@ -465,7 +463,8 @@ export function poseAt(t) {
   if (t >= P[P.length - 1][0]) t = P[P.length - 1][0]
   let i = 0
   while (i < P.length - 2 && t >= P[i + 1][0]) i++
-  const a = P[i], b = P[i + 1]
+  const a = P[i],
+    b = P[i + 1]
   const u = b[0] > a[0] ? (t - a[0]) / (b[0] - a[0]) : 0
   const m = (x, y) => x + (y - x) * u
   return { rot: m(a[1], b[1]), scale: m(a[2], b[2]), cx: m(a[3], b[3]), cy: m(a[4], b[4]) }
@@ -500,9 +499,7 @@ export const STORY_SEGMENTS = PAGE_ORDER.map((page, index) => {
   const own = SLIDES.filter(s => s.page === page)
   const first = own[0]
   const nextPage = PAGE_ORDER[index + 1]
-  const end = nextPage
-    ? SLIDES.find(s => s.page === nextPage).at
-    : STORY_END
+  const end = nextPage ? SLIDES.find(s => s.page === nextPage).at : STORY_END
   return {
     page,
     index,

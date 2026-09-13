@@ -4,7 +4,7 @@
       <div class="page__art art-box" :style="artBox(-637, -136, 1501.563, 1258.608)">
         <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
-          <JGlow :left="-435.2" :top="1070.59" :width="2272.4" :height="1136.2" />
+      <JGlow :left="-435.2" :top="1070.59" :width="2272.4" :height="1136.2" />
     </template>
 
     <template #art>

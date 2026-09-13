@@ -63,7 +63,13 @@ export function flyInFromFloor(t, params) {
   )
   const s = tl()
   s.set(t.pos, { xPercent: p.fromCx, yPercent: p.fromCy })
-  s.set(t.box, { rotationX: p.floorRotX, rotationY: 0, rotationZ: p.floorRotZ, scale: p.fromScale, z: 0 })
+  s.set(t.box, {
+    rotationX: p.floorRotX,
+    rotationY: 0,
+    rotationZ: p.floorRotZ,
+    scale: p.fromScale,
+    z: 0,
+  })
   s.set(t.stage, { '--persp': p.perspDip }, 0)
   s.to(t.box, { rotationX: p.liftToRotX, duration: p.dur, ease: p.ease }, 0)
   s.to(t.pos, { xPercent: 46, yPercent: 96, duration: p.dur, ease: p.ease }, 0)
@@ -202,7 +208,9 @@ export function swingOpen(t, params) {
   // leaves at. Yaw has no continuation to lean on — nothing drives rotationY
   // between the handover and the first page turn — so the ghost holds it.
   const last = p.keys[p.keys.length - 1]
-  const rows = p.next ? [...p.keys, [p.next[0], last[1], p.next[1], p.next[2], p.next[3], p.next[4]]] : p.keys
+  const rows = p.next
+    ? [...p.keys, [p.next[0], last[1], p.next[1], p.next[2], p.next[3], p.next[4]]]
+    : p.keys
 
   const at = splineReader(rows)
   const t0 = p.keys[0][0]
@@ -309,7 +317,10 @@ journalPath.PARAM_SCHEMA = {}
  * The measurement behind `peak`, `out` and `back` is in TIMING.flip.
  */
 export function pageTurn(t, params) {
-  const p = P({ ...TIMING.flip, from: 0, to: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack }, params)
+  const p = P(
+    { ...TIMING.flip, from: 0, to: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack },
+    params,
+  )
   const s = tl()
   s.set(t.box, { rotationY: p.from }, 0)
   yawTurn(s, t, p)
@@ -425,11 +436,36 @@ function yawTurn(s, t, p) {
 export function hover(t, params) {
   const p = P({ amp: HOVER_AMP, period: TIMING.hover, ease: EASE.hoverDrift }, params)
   const s = gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: p.ease } })
-  s.fromTo(t.hover, { rotationZ: -p.amp.rotZ }, { rotationZ: p.amp.rotZ, duration: p.period.rotZ }, 0)
-  s.fromTo(t.hover, { rotationY: -p.amp.rotY }, { rotationY: p.amp.rotY, duration: p.period.rotY }, p.period.stagger * 0)
-  s.fromTo(t.hover, { rotationX: -p.amp.rotX }, { rotationX: p.amp.rotX, duration: p.period.rotX }, p.period.stagger * 1)
-  s.fromTo(t.hover, { yPercent: -p.amp.y }, { yPercent: p.amp.y, duration: p.period.y }, p.period.stagger * 2)
-  s.fromTo(t.hover, { scale: 1 - p.amp.scale }, { scale: 1 + p.amp.scale, duration: p.period.scale }, p.period.stagger * 3)
+  s.fromTo(
+    t.hover,
+    { rotationZ: -p.amp.rotZ },
+    { rotationZ: p.amp.rotZ, duration: p.period.rotZ },
+    0,
+  )
+  s.fromTo(
+    t.hover,
+    { rotationY: -p.amp.rotY },
+    { rotationY: p.amp.rotY, duration: p.period.rotY },
+    p.period.stagger * 0,
+  )
+  s.fromTo(
+    t.hover,
+    { rotationX: -p.amp.rotX },
+    { rotationX: p.amp.rotX, duration: p.period.rotX },
+    p.period.stagger * 1,
+  )
+  s.fromTo(
+    t.hover,
+    { yPercent: -p.amp.y },
+    { yPercent: p.amp.y, duration: p.period.y },
+    p.period.stagger * 2,
+  )
+  s.fromTo(
+    t.hover,
+    { scale: 1 - p.amp.scale },
+    { scale: 1 + p.amp.scale, duration: p.period.scale },
+    p.period.stagger * 3,
+  )
   return s
 }
 hover.PARAM_SCHEMA = {}
@@ -453,8 +489,14 @@ hover.PARAM_SCHEMA = {}
  */
 export function rePose(t, from, to, params) {
   const p = P(
-    { dur: TIMING.rePose, ease: EASE.rePose, flip: false, ...TIMING.flip,
-      easeOut: EASE.flipOut, easeBack: EASE.flipBack },
+    {
+      dur: TIMING.rePose,
+      ease: EASE.rePose,
+      flip: false,
+      ...TIMING.flip,
+      easeOut: EASE.flipOut,
+      easeBack: EASE.flipBack,
+    },
     params,
   )
   const s = tl()
@@ -590,11 +632,7 @@ export function outroText(t, params) {
   if (!t.outro) return s
   s.set(t.outro, { scale: p.scale })
   s.to(t.outro, { scale: 1, duration: p.dur, ease: EASE.outroIn }, 0)
-  s.to(
-    t.outro,
-    { scale: p.exitScale, duration: p.exitDur, ease: EASE.outroOut },
-    p.exitAt - p.at,
-  )
+  s.to(t.outro, { scale: p.exitScale, duration: p.exitDur, ease: EASE.outroOut }, p.exitAt - p.at)
   return s
 }
 outroText.PARAM_SCHEMA = {
@@ -611,10 +649,20 @@ outroText.PARAM_SCHEMA = {
 
 /** Exactly the brief: y 100vh, z -500, rotationX -45 -> 0/0/10, back.out(1.5). */
 export function flyInFromBelow(t, params) {
-  const p = P({ fromY: 100, fromZ: -500, fromRotX: -45, toRotX: 10, dur: 1.2, ease: EASE.backOut }, params)
+  const p = P(
+    { fromY: 100, fromZ: -500, fromRotX: -45, toRotX: 10, dur: 1.2, ease: EASE.backOut },
+    params,
+  )
   const s = tl()
   s.set(t.pos, { xPercent: 50, yPercent: 50 })
-  s.set(t.box, { yPercent: p.fromY, z: p.fromZ, rotationX: p.fromRotX, rotationY: 0, rotationZ: 0, scale: 1 })
+  s.set(t.box, {
+    yPercent: p.fromY,
+    z: p.fromZ,
+    rotationX: p.fromRotX,
+    rotationY: 0,
+    rotationZ: 0,
+    scale: 1,
+  })
   s.to(t.box, { yPercent: 0, z: 0, rotationX: p.toRotX, duration: p.dur, ease: p.ease }, 0)
   return s
 }
@@ -679,4 +727,3 @@ edgeOnPose.PARAM_SCHEMA = {
   rotationY: { min: 0, max: 180, step: 1 },
   scale: { min: 0.2, max: 2, step: 0.01 },
 }
-

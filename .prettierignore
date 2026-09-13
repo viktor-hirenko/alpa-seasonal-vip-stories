@@ -4,3 +4,9 @@ _refs
 _context
 public/video
 src/assets
+
+# Generated measurement tables. Their shape is the tool's, not a style choice,
+# and reformatting them turns a data file into a thousand-line diff that hides
+# whatever real change is in the same commit.
+scripts/fly-reference.json
+scripts/journal-reference.json

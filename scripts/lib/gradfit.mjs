@@ -35,9 +35,13 @@ function blur(src, w, h, sigma) {
   const r = Math.max(1, Math.ceil(sigma * 3))
   const k = new Float32Array(2 * r + 1)
   let sum = 0
-  for (let i = -r; i <= r; i++) { k[i + r] = Math.exp(-(i * i) / (2 * sigma * sigma)); sum += k[i + r] }
+  for (let i = -r; i <= r; i++) {
+    k[i + r] = Math.exp(-(i * i) / (2 * sigma * sigma))
+    sum += k[i + r]
+  }
   for (let i = 0; i < k.length; i++) k[i] /= sum
-  const t = new Float32Array(w * h), d = new Float32Array(w * h)
+  const t = new Float32Array(w * h),
+    d = new Float32Array(w * h)
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       let a = 0
@@ -93,9 +97,14 @@ function edgeField(l, w, h, keep, region) {
   for (let y = 1; y < h - 1; y++)
     for (let x = 1; x < w - 1; x++) {
       const p = y * w + x
-      const a = l[p - w - 1], b = l[p - w], c = l[p - w + 1]
-      const d = l[p - 1], f = l[p + 1]
-      const g = l[p + w - 1], i = l[p + w], j = l[p + w + 1]
+      const a = l[p - w - 1],
+        b = l[p - w],
+        c = l[p - w + 1]
+      const d = l[p - 1],
+        f = l[p + 1]
+      const g = l[p + w - 1],
+        i = l[p + w],
+        j = l[p + w + 1]
       const sx = a + 2 * d + g - c - 2 * f - j
       const sy = a + 2 * b + c - g - 2 * i - j
       gx[p] = sx
@@ -107,7 +116,9 @@ function edgeField(l, w, h, keep, region) {
   const step = region ? 1 : 7
   for (let p = 0; p < w * h; p += step) if (!region || region[p]) sample.push(mag[p])
   sample.sort((a, b) => a - b)
-  const cut = sample.length ? sample[Math.min(sample.length - 1, Math.floor((1 - keep) * sample.length))] : 0
+  const cut = sample.length
+    ? sample[Math.min(sample.length - 1, Math.floor((1 - keep) * sample.length))]
+    : 0
   const ex = new Float32Array(w * h)
   const ey = new Float32Array(w * h)
   // Direction with a SOFT weight, not a hard cut. A hard cut gives a grain of
@@ -140,7 +151,10 @@ function edgeField(l, w, h, keep, region) {
  * reach puts both pictures on comparable footing.
  */
 function reachMask(quad, pivot, grow = 2.0) {
-  const q = quad.map(([x, y]) => [pivot[0] + (x - pivot[0]) * grow, pivot[1] + (y - pivot[1]) * grow])
+  const q = quad.map(([x, y]) => [
+    pivot[0] + (x - pivot[0]) * grow,
+    pivot[1] + (y - pivot[1]) * grow,
+  ])
   return quadMask(q, 0)
 }
 
@@ -176,7 +190,8 @@ function pyramid(rgb, keep, region0) {
   for (let k = 0; k < LEVELS.length; k++) {
     out.push(edgeField(blur(l, w, h, LEVELS[k].sigma), w, h, keep, r))
     if (k < LEVELS.length - 1) {
-      const nw = w >> 1, nh = h >> 1
+      const nw = w >> 1,
+        nh = h >> 1
       if (r) {
         const nr = new Uint8Array(nw * nh)
         for (let y = 0; y < nh; y++)
@@ -197,9 +212,12 @@ function pyramid(rgb, keep, region0) {
 /** Mask pyramid to match. */
 function maskPyramid(m0) {
   const out = [m0]
-  let m = m0, w = W, h = H
+  let m = m0,
+    w = W,
+    h = H
   for (let k = 0; k < LEVELS.length - 1; k++) {
-    const nw = w >> 1, nh = h >> 1
+    const nw = w >> 1,
+      nh = h >> 1
     const n = new Uint8Array(nw * nh)
     for (let y = 0; y < nh; y++)
       for (let x = 0; x < nw; x++) {
@@ -250,21 +268,33 @@ function score(A, B, pts, pivot, s, dx, dy, rot) {
   const { ex: ax, ey: ay, w } = A
   const { ex: bx, ey: by, w: bw, h: bh } = B
   const [px, py] = pivot
-  let num = 0, da = 0, db = 0, cov = 0, n = 0
+  let num = 0,
+    da = 0,
+    db = 0,
+    cov = 0,
+    n = 0
   for (let k = 0; k < pts.length; k++) {
     const p = pts[k]
-    const x = p % w, y = (p / w) | 0
-    const ux = x - px, uy = y - py
+    const x = p % w,
+      y = (p / w) | 0
+    const ux = x - px,
+      uy = y - py
     const qx = px + co * ux - si * uy + dx
     const qy = py + si * ux + co * uy + dy
     if (qx < 0 || qy < 0 || qx >= bw - 1 || qy >= bh - 1) continue
-    const x0 = qx | 0, y0 = qy | 0
-    const fx = qx - x0, fy = qy - y0
+    const x0 = qx | 0,
+      y0 = qy | 0
+    const fx = qx - x0,
+      fy = qy - y0
     const i0 = y0 * bw + x0
-    const w00 = (1 - fx) * (1 - fy), w10 = fx * (1 - fy), w01 = (1 - fx) * fy, w11 = fx * fy
+    const w00 = (1 - fx) * (1 - fy),
+      w10 = fx * (1 - fy),
+      w01 = (1 - fx) * fy,
+      w11 = fx * fy
     const vx = bx[i0] * w00 + bx[i0 + 1] * w10 + bx[i0 + bw] * w01 + bx[i0 + bw + 1] * w11
     const vy = by[i0] * w00 + by[i0 + 1] * w10 + by[i0 + bw] * w01 + by[i0 + bw + 1] * w11
-    const uxx = ax[p], uyy = ay[p]
+    const uxx = ax[p],
+      uyy = ay[p]
     num += uxx * vx + uyy * vy
     da += uxx * uxx + uyy * uyy
     db += vx * vx + vy * vy
@@ -303,10 +333,12 @@ function register(Ap, Bp, Mp, pivot0, opt = {}) {
   const k = 1 / LEVELS[L].down
   let best = null
   {
-    const A = Ap[L], B = Bp[L]
+    const A = Ap[L],
+      B = Bp[L]
     const pts = points(Mp[L], A.w, A.h, 1)
     const piv = [pivot0[0] * k, pivot0[1] * k]
-    const span = Math.round(dSpan * k), step = 2
+    const span = Math.round(dSpan * k),
+      step = 2
     // One rung every 4 %: at 1/8 scale a blurred edge is ~4 px wide over a
     // ~80 px radius, so 4 % is half a peak and nothing can hide between rungs.
     const rungs = []
@@ -326,11 +358,12 @@ function register(Ap, Bp, Mp, pivot0, opt = {}) {
   }
   // --- each finer level only has to look in the window the last one left.
   for (let l = L - 1; l >= 0; l--) {
-    const A = Ap[l], B = Bp[l]
+    const A = Ap[l],
+      B = Bp[l]
     const kk = 1 / LEVELS[l].down
     const pts = points(Mp[l], A.w, A.h, l === 0 ? 2 : 1)
     const piv = [pivot0[0] * kk, pivot0[1] * kk]
-    const steps = [0.006 * LEVELS[l].down / 2, 1 / kk, 0.5 * LEVELS[l].down / 2]
+    const steps = [(0.006 * LEVELS[l].down) / 2, 1 / kk, (0.5 * LEVELS[l].down) / 2]
     best = descend(A, B, pts, piv, kk, best, steps, sRange, rRange, 5)
   }
   return best
@@ -357,16 +390,27 @@ function descend(A, B, pts, piv, k, start, steps, sRange, rRange, rounds) {
       for (let iy = -3; iy <= 3; iy++)
         for (let ix = -3; ix <= 3; ix++) {
           if (!is && !ix && !iy) continue
-          const tx = dx + ix * dd, ty = dy + iy * dd
+          const tx = dx + ix * dd,
+            ty = dy + iy * dd
           const v = at(ts, tx, ty, rot)
-          if (v.v > cur.v) { cur = v; s = ts; dx = tx; dy = ty; moved = true }
+          if (v.v > cur.v) {
+            cur = v
+            s = ts
+            dx = tx
+            dy = ty
+            moved = true
+          }
         }
     }
     for (let i = -6; i <= 6; i++) {
       if (!i) continue
       const t = Math.min(rRange[1], Math.max(rRange[0], rot + i * dr))
       const v = at(s, dx, dy, t)
-      if (v.v > cur.v) { cur = v; rot = t; moved = true }
+      if (v.v > cur.v) {
+        cur = v
+        rot = t
+        moved = true
+      }
     }
     if (!moved) break
   }
@@ -379,14 +423,17 @@ function descend(A, B, pts, piv, k, start, steps, sRange, rRange, rounds) {
  * barely beats its neighbourhood is a coincidence, not a measurement.
  */
 function margin(Ap, Bp, Mp, pivot0, best) {
-  const L = 2, k = 1 / LEVELS[2].down
-  const A = Ap[L], B = Bp[L]
+  const L = 2,
+    k = 1 / LEVELS[2].down
+  const A = Ap[L],
+    B = Bp[L]
   const pts = points(Mp[L], A.w, A.h, 2)
   const piv = [pivot0[0] * k, pivot0[1] * k]
   let rival = -2
   for (let dy = -60; dy <= 60; dy += 2)
     for (let dx = -60; dx <= 60; dx += 2) {
-      const gx = best.dx + dx / k * 1, gy = best.dy + dy / k * 1
+      const gx = best.dx + (dx / k) * 1,
+        gy = best.dy + (dy / k) * 1
       if (Math.hypot(gx - best.dx, gy - best.dy) < 60) continue
       const v = score(A, B, pts, piv, best.s, gx * k, gy * k, best.rot)
       if (v.v > rival) rival = v.v
@@ -409,12 +456,18 @@ function offsetQuad(quad, d) {
   const cy = quad.reduce((a, p) => a + p[1], 0) / n
   const lines = []
   for (let i = 0; i < n; i++) {
-    const [ax, ay] = quad[i], [bx, by] = quad[(i + 1) % n]
-    let nx = -(by - ay), ny = bx - ax
+    const [ax, ay] = quad[i],
+      [bx, by] = quad[(i + 1) % n]
+    let nx = -(by - ay),
+      ny = bx - ax
     const L = Math.hypot(nx, ny) || 1
-    nx /= L; ny /= L
+    nx /= L
+    ny /= L
     // point the normal at the centroid, so `d > 0` always means inward
-    if (nx * (cx - ax) + ny * (cy - ay) < 0) { nx = -nx; ny = -ny }
+    if (nx * (cx - ax) + ny * (cy - ay) < 0) {
+      nx = -nx
+      ny = -ny
+    }
     lines.push([nx, ny, nx * (ax + nx * d) + ny * (ay + ny * d)])
   }
   const out = []
@@ -437,21 +490,32 @@ function quadMask(quad, shrink = 0) {
   for (let y = y0; y <= y1; y++) {
     const xs = []
     for (let i = 0; i < q.length; i++) {
-      const [ax, ay] = q[i], [bx, by] = q[(i + 1) % q.length]
+      const [ax, ay] = q[i],
+        [bx, by] = q[(i + 1) % q.length]
       if (ay === by) continue
       if (y + 0.5 >= Math.min(ay, by) && y + 0.5 < Math.max(ay, by))
         xs.push(ax + ((y + 0.5 - ay) / (by - ay)) * (bx - ax))
     }
     xs.sort((a, b) => a - b)
     for (let i = 0; i + 1 < xs.length; i += 2) {
-      const a = Math.max(0, Math.ceil(xs[i])), b = Math.min(W - 1, Math.floor(xs[i + 1]))
+      const a = Math.max(0, Math.ceil(xs[i])),
+        b = Math.min(W - 1, Math.floor(xs[i + 1]))
       for (let x = a; x <= b; x++) m[y * W + x] = 1
     }
   }
   return m
 }
 
-const boxMask = (x, y, w, h) => quadMask([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], 0)
+const boxMask = (x, y, w, h) =>
+  quadMask(
+    [
+      [x, y],
+      [x + w, y],
+      [x + w, y + h],
+      [x, y + h],
+    ],
+    0,
+  )
 
 /**
  * THE MASK IS THE JOURNAL'S FACE WITH ITS MARGIN CUT AWAY.
@@ -520,7 +584,12 @@ function silhouetteBox(a, b, opt = {}) {
       let on = false
       if (x < W) {
         const q = (y * W + x) * 3
-        on = Math.max(Math.abs(a[q] - b[q]), Math.abs(a[q + 1] - b[q + 1]), Math.abs(a[q + 2] - b[q + 2])) > T
+        on =
+          Math.max(
+            Math.abs(a[q] - b[q]),
+            Math.abs(a[q + 1] - b[q + 1]),
+            Math.abs(a[q + 2] - b[q + 2]),
+          ) > T
       }
       if (on) run++
       else {
@@ -535,26 +604,75 @@ function silhouetteBox(a, b, opt = {}) {
     for (let x = 1; x < W - 1; x++) {
       const p = y * W + x
       if (!mask[p]) continue
-      const gx = la[p - W - 1] + 2 * la[p - 1] + la[p + W - 1] - la[p - W + 1] - 2 * la[p + 1] - la[p + W + 1]
-      const gy = la[p - W - 1] + 2 * la[p - W] + la[p - W + 1] - la[p + W - 1] - 2 * la[p + W] - la[p + W + 1]
+      const gx =
+        la[p - W - 1] +
+        2 * la[p - 1] +
+        la[p + W - 1] -
+        la[p - W + 1] -
+        2 * la[p + 1] -
+        la[p + W + 1]
+      const gy =
+        la[p - W - 1] +
+        2 * la[p - W] +
+        la[p - W + 1] -
+        la[p + W - 1] -
+        2 * la[p + W] -
+        la[p + W + 1]
       mag[p] = Math.hypot(gx, gy)
       vals.push(mag[p])
     }
   if (!vals.length) return null
   vals.sort((p, q) => p - q)
   const cut = vals[Math.floor((1 - KEEP) * (vals.length - 1))]
-  const xs = [], ys = []
+  const xs = [],
+    ys = []
   for (let y = 0; y < H; y++) {
-    let lo = -1, hi = -1
-    for (let x = 0; x < W; x++) if (mag[y * W + x] > cut) { if (lo < 0) lo = x; hi = x }
-    if (lo >= 0) { xs.push([lo, hi]); ys.push(y) }
+    let lo = -1,
+      hi = -1
+    for (let x = 0; x < W; x++)
+      if (mag[y * W + x] > cut) {
+        if (lo < 0) lo = x
+        hi = x
+      }
+    if (lo >= 0) {
+      xs.push([lo, hi])
+      ys.push(y)
+    }
   }
   if (!xs.length) return null
-  const q = (arr, f) => { const c = [...arr].sort((p, r) => p - r); return c[Math.min(c.length - 1, Math.max(0, Math.round(f * (c.length - 1))))] }
-  const x0 = q(xs.map(v => v[0]), 0.02), x1 = q(xs.map(v => v[1]), 0.98)
-  const y0 = q(ys, 0.01), y1 = q(ys, 0.99)
+  const q = (arr, f) => {
+    const c = [...arr].sort((p, r) => p - r)
+    return c[Math.min(c.length - 1, Math.max(0, Math.round(f * (c.length - 1))))]
+  }
+  const x0 = q(
+      xs.map(v => v[0]),
+      0.02,
+    ),
+    x1 = q(
+      xs.map(v => v[1]),
+      0.98,
+    )
+  const y0 = q(ys, 0.01),
+    y1 = q(ys, 0.99)
   return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, rows: ys.length }
 }
 
-
-export { reachMask, luma, half, edgeField, pyramid, maskPyramid, points, score, register, descend, margin, offsetQuad, quadMask, boxMask, bandWidth, pageMask, silhouetteBox }
+export {
+  reachMask,
+  luma,
+  half,
+  edgeField,
+  pyramid,
+  maskPyramid,
+  points,
+  score,
+  register,
+  descend,
+  margin,
+  offsetQuad,
+  quadMask,
+  boxMask,
+  bandWidth,
+  pageMask,
+  silhouetteBox,
+}

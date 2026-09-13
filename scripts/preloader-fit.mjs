@@ -44,28 +44,36 @@ const arg = (n, d) => {
 }
 // Both phone shapes the other gates use, plus the desktop card, which takes its
 // scale from the card and not the window and so is a separate branch in the CSS.
-const VIEWPORTS = (arg('--vp', '430x932,393x852,360x800,1440x900')).split(',')
+const VIEWPORTS = arg('--vp', '430x932,393x852,360x800,1440x900').split(',')
 
 // What the eye starts to catch on a 0.35 s crossfade. Sub-pixel is not the goal;
 // "does not jump" is.
-const TOL_SIZE = 0.03   // 3 % of the clip's trefoil width
-const TOL_SHIFT = 3     // CSS px
+const TOL_SIZE = 0.03 // 3 % of the clip's trefoil width
+const TOL_SHIFT = 3 // CSS px
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 rmSync(PROFILE, { recursive: true, force: true })
 
-const chrome = spawn(CHROME, [
-  '--headless=new',
-  `--remote-debugging-port=${PORT}`,
-  '--hide-scrollbars',
-  '--mute-audio',
-  '--autoplay-policy=no-user-gesture-required',
-  `--user-data-dir=${PROFILE}`,
-  'about:blank',
-], { stdio: 'ignore' })
+const chrome = spawn(
+  CHROME,
+  [
+    '--headless=new',
+    `--remote-debugging-port=${PORT}`,
+    '--hide-scrollbars',
+    '--mute-audio',
+    '--autoplay-policy=no-user-gesture-required',
+    `--user-data-dir=${PROFILE}`,
+    'about:blank',
+  ],
+  { stdio: 'ignore' },
+)
 // SIGTERM, never -9: killing headless Chrome hard makes macOS spend minutes in
 // ReportCrash, and anything measured meanwhile is a lie (see 20-log.md, 08.09).
-const cleanup = () => { try { chrome.kill() } catch {} }
+const cleanup = () => {
+  try {
+    chrome.kill()
+  } catch {}
+}
 process.on('exit', cleanup)
 
 async function endpoint() {
@@ -87,7 +95,10 @@ const pending = new Map()
 ws.addEventListener('message', e => {
   const msg = JSON.parse(e.data)
   const p = pending.get(msg.id)
-  if (p) { pending.delete(msg.id); msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result) }
+  if (p) {
+    pending.delete(msg.id)
+    msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result)
+  }
 })
 const send = (method, params = {}) => {
   const id = ++seq
@@ -147,7 +158,12 @@ const rows = []
 for (const vp of VIEWPORTS) {
   const [W, H] = vp.split('x').map(Number)
   const dpr = 2
-  await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: dpr, mobile: W < 800 })
+  await send('Emulation.setDeviceMetricsOverride', {
+    width: W,
+    height: H,
+    deviceScaleFactor: dpr,
+    mobile: W < 800,
+  })
   await send('Page.navigate', { url: ORIGIN + '/' })
 
   // Real time, not --virtual-time-budget: virtual time fast-forwards timers but
@@ -155,11 +171,16 @@ for (const vp of VIEWPORTS) {
   // gets past its own preloader under it.
   let ready = false
   for (let i = 0; i < 200 && !ready; i++) {
-    ready = await evaluate(`(() => { const v = document.querySelector('video'); return !!v && v.readyState >= 2 })()`)
+    ready = await evaluate(
+      `(() => { const v = document.querySelector('video'); return !!v && v.readyState >= 2 })()`,
+    )
     if (!ready) await sleep(100)
   }
-  if (!ready) throw new Error(`${vp}: the backdrop video never presented a frame — is ${ORIGIN} up?`)
-  await evaluate(`(() => { const v = document.querySelector('video'); v.pause(); v.currentTime = 0; return true })()`)
+  if (!ready)
+    throw new Error(`${vp}: the backdrop video never presented a frame — is ${ORIGIN} up?`)
+  await evaluate(
+    `(() => { const v = document.querySelector('video'); v.pause(); v.currentTime = 0; return true })()`,
+  )
   await sleep(700)
 
   await evaluate(`(() => {
@@ -187,24 +208,28 @@ for (const vp of VIEWPORTS) {
   rows.push({ vp, loader: loader.w, clip: clip.w, size, dx, dy, bad })
 }
 
-console.log('\nLoading-screen mark vs the clip\'s opening frame, at the handoff.')
+console.log("\nLoading-screen mark vs the clip's opening frame, at the handoff.")
 console.log('Both measured on the same page, video pinned on frame zero.\n')
 console.log('viewport      loader    clip     size      dx       dy')
 for (const r of rows) {
   console.log(
     r.vp.padEnd(13) +
-    `${r.loader}`.padStart(6) + ' px' +
-    `${r.clip}`.padStart(7) + ' px' +
-    `${(100 * r.size).toFixed(1)} %`.padStart(9) +
-    `${r.dx.toFixed(1)}`.padStart(8) +
-    `${r.dy.toFixed(1)}`.padStart(9) +
-    (r.bad ? '   <-- OUT' : '')
+      `${r.loader}`.padStart(6) +
+      ' px' +
+      `${r.clip}`.padStart(7) +
+      ' px' +
+      `${(100 * r.size).toFixed(1)} %`.padStart(9) +
+      `${r.dx.toFixed(1)}`.padStart(8) +
+      `${r.dy.toFixed(1)}`.padStart(9) +
+      (r.bad ? '   <-- OUT' : ''),
   )
 }
 const bad = rows.filter(r => r.bad).length
-console.log(`\n${bad} viewport(s) out of tolerance (size ${100 * TOL_SIZE} %, shift ${TOL_SHIFT} px).`)
+console.log(
+  `\n${bad} viewport(s) out of tolerance (size ${100 * TOL_SIZE} %, shift ${TOL_SHIFT} px).`,
+)
 if (bad) {
-  console.log('The clip\'s opening changed, or index.html did. Re-read the loader block')
+  console.log("The clip's opening changed, or index.html did. Re-read the loader block")
   console.log('in index.html: the 707 and the -18 are design px measured off this.')
 }
 

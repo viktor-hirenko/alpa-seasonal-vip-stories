@@ -9,12 +9,22 @@ const d = n => `calc(${+Number(n).toFixed(3)} * var(--u))`
 
 export function alignStyle({ align, left, right, width }) {
   if (align === 'left') {
-    return { insetInline: 'auto', left: d(left), marginInline: '0', textAlign: 'left', width: width ? d(width) : 'max-content' }
+    return {
+      insetInline: 'auto',
+      left: d(left),
+      marginInline: '0',
+      textAlign: 'left',
+      width: width ? d(width) : 'max-content',
+    }
   }
   if (align === 'right') {
-    return { insetInline: 'auto', right: d(1443 - right), marginInline: '0', textAlign: 'right', width: width ? d(width) : 'max-content' }
+    return {
+      insetInline: 'auto',
+      right: d(1443 - right),
+      marginInline: '0',
+      textAlign: 'right',
+      width: width ? d(width) : 'max-content',
+    }
   }
-  return width
-    ? { insetInline: 'auto', left: d(left), width: d(width), marginInline: '0' }
-    : {}
+  return width ? { insetInline: 'auto', left: d(left), width: d(width), marginInline: '0' } : {}
 }
