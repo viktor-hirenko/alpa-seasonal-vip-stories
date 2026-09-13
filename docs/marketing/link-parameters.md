@@ -1,18 +1,17 @@
-# Alpa Seasonal VIP Stories — link parameters
+# Alpa Seasonal VIP Stories — документація для маркетингу
 
-How to build the link that opens a player's personal season story.
+Як зібрати посилання, що відкриє гравцеві його персональну історію сезону.
 
-The story is one page; everything a player sees inside the journal comes from
-the query string on that link. Nothing is looked up server-side, so a parameter
-that is not on the link does not exist for that player.
+Сторіс — це одна сторінка; усе, що гравець бачить усередині журнала, приходить із
+query-рядка цього посилання. Нічого не підтягується з сервера, тож параметр, якого
+немає в посиланні, для цього гравця не існує.
 
-**Source of truth for names and types:** `src/story/params.js`. This document is
-that table in prose; if the two ever disagree, the code is right and this file
-is stale.
+**Джерело істини для імен і типів:** `src/story/params.js`. Цей документ — та сама
+таблиця словами; якщо вони колись розійдуться, правий код, а цей файл застарів.
 
 ---
 
-## Shape of a link
+## Форма посилання
 
 ```
 https://<host>/vip-stories/?user_language=de&user_currency=EUR
@@ -28,161 +27,151 @@ https://<host>/vip-stories/?user_language=de&user_currency=EUR
   &final_link=https://example.com/promotions/andromeda
 ```
 
-Rules that apply to every parameter:
+Правила, що діють для кожного параметра:
 
-- **Spaces.** Send `+` or `%20`; both arrive as a space. A literal plus sign in
-  a game name must be sent as `%2B`.
-- **Ampersands and equals signs inside a value** must be percent-encoded
-  (`%26`, `%3D`), or the link will be cut short at that point.
-- **An absent parameter and an empty one mean the same thing:** the value is
-  missing. Sending `days=` is the same as not sending `days`.
-- **Unknown parameters are ignored.** Campaign tracking (`utm_*` and friends)
-  can be appended freely.
-- **Case matters** for parameter names, not for `level` (`gold`, `Gold` and
-  `GOLD` all work).
-
----
-
-## Language and currency
-
-| Parameter       | Values                 | Notes                                                         |
-| --------------- | ---------------------- | ------------------------------------------------------------- |
-| `user_language` | `en` `fr` `de` `it`    | Preferred. Also accepts `de-DE` style codes.                  |
-| `language`      | same                   | Same thing; `user_language` wins if both are sent.            |
-| `lang`          | same                   | Shorthand, used by the internal preview lab. Lowest priority. |
-| `user_currency` | e.g. `EUR` `USD` `CAD` | Shown as a three-letter code next to money values.            |
-| `currency`      | same                   | `user_currency` wins if both are sent.                        |
-
-If no language is sent, the story uses the browser's language when it is one of
-the four, and English otherwise. If no currency is sent it shows **USD**.
-
-Anything outside the four languages falls back to English rather than failing —
-a typo in `user_language` will not blank the story.
+- **Пробіли.** Надсилати `+` або `%20`, обидва приходять пробілом. Літерний плюс
+  усередині назви гри надсилати як `%2B`.
+- **Амперсанди і знаки рівності всередині значення** мають бути закодовані
+  (`%26`, `%3D`), інакше посилання обірветься на цьому місці.
+- **Відсутній і порожній параметр означають одне й те саме:** значення немає.
+  Надіслати `days=` — те саме, що не надсилати `days` узагалі.
+- **Невідомі параметри ігноруються.** Кампанійні мітки (`utm_*` і подібні) можна
+  дописувати вільно.
+- **Регістр має значення** для імен параметрів, але не для `level` (`gold`,
+  `Gold` і `GOLD` працюють однаково).
 
 ---
 
-## The pages and what each one needs
+## Мова і валюта
 
-Each row is one page of the journal. **"Gates the page"** means the page has
-nothing to say without that parameter — see _Missing values_ below.
+| Параметр        | Значення            | Нотатки                                     |
+| --------------- | ------------------- | ------------------------------------------- |
+| `user_language` | `en` `fr` `de` `it` | Бажаний. Приймає і коди виду `de-DE`.       |
+| `user_currency` | `EUR`, `USD`, …     | Символ підставляється в сторінки з грошима. |
 
-| #     | Page                  | Parameter                       | Type         | Gates the page              |
-| ----- | --------------------- | ------------------------------- | ------------ | --------------------------- |
-| 1     | Cover                 | `name`                          | text         | no                          |
-| 2     | Editor's Note         | `name`                          | text         | no                          |
-| 3     | Days in the Spotlight | `days`                          | whole number | **yes**                     |
-| 4     | Seasonal Power        | `points`                        | whole number | **yes**                     |
-| 5     | VIP Status            | `level`                         | see below    | **yes**                     |
-| 6     | Money Talks           | `total_wins`                    | whole number | **yes**                     |
-| 7     | Headline Win          | `biggest_win`                   | whole number | **yes**                     |
-| 7     | Headline Win          | `biggest_win_game`              | text         | no                          |
-| 7     | Headline Win          | `biggest_win_game_thunbnail`    | image URL    | no                          |
-| 8     | Multiplier Moment     | `top_multiplier`                | number       | **yes**                     |
-| 8     | Multiplier Moment     | `top_multiplier_game`           | text         | no                          |
-| 8     | Multiplier Moment     | `top_multiplier_game_thunbnail` | image URL    | no                          |
-| 9     | Player's Pick         | `favorite_game_name`            | text         | **yes**                     |
-| 9     | Player's Pick         | `favorite_game_thunbnail`       | image URL    | (either one)                |
-| 10    | Bonus Report          | `bonuses`                       | whole number | **yes**                     |
-| 11    | Sports Desk           | `sports_wins`                   | whole number | **yes**                     |
-| 12    | Top Sport Signal      | `sports_multiplier`             | number       | **yes**                     |
-| 14    | Space Milk            | `days`                          | whole number | no (re-uses page 3's value) |
-| 16    | Gift                  | `promocode`                     | text         | no                          |
-| 16    | Gift                  | `bonus_label`                   | text         | no                          |
-| 16/17 | Gift, Final           | `final_link`                    | URL          | no                          |
+Невідома мова мовчки дає англійську — одрук у `user_language` не залишить історію
+порожньою.
 
-Pages 13 (Sponsor), 15 (Joke) and 17 (Final) carry no personal data.
+> У Thor п'ять мов (ще `pt`). Тут `pt` не падає, але покаже англійську.
+
+---
+
+## Сторінки і що кожній потрібно
+
+Кожен рядок — одна сторінка журнала. **«Вирішує долю сторінки»** означає, що без
+цього параметра сторінці нічого сказати — див. розділ _Коли даних немає_.
+
+| #     | Сторінка              | Параметр                        | Тип          | Вирішує долю                  |
+| ----- | --------------------- | ------------------------------- | ------------ | ----------------------------- |
+| 1     | Cover                 | `name`                          | текст        | ні                            |
+| 2     | Editor's Note         | `name`                          | текст        | ні                            |
+| 3     | Days in the Spotlight | `days`                          | ціле         | **так**                       |
+| 4     | Seasonal Power        | `points`                        | ціле         | **так**                       |
+| 5     | VIP Status            | `level`                         | див. нижче   | **так**                       |
+| 6     | Money Talks           | `total_wins`                    | ціле         | **так**                       |
+| 7     | Headline Win          | `biggest_win`                   | ціле         | **так**                       |
+| 7     | Headline Win          | `biggest_win_game`              | текст        | ні                            |
+| 7     | Headline Win          | `biggest_win_game_thunbnail`    | URL картинки | ні                            |
+| 8     | Multiplier Moment     | `top_multiplier`                | число        | **так**                       |
+| 8     | Multiplier Moment     | `top_multiplier_game`           | текст        | ні                            |
+| 8     | Multiplier Moment     | `top_multiplier_game_thunbnail` | URL картинки | ні                            |
+| 9     | Player's Pick         | `favorite_game_name`            | текст        | **так**                       |
+| 9     | Player's Pick         | `favorite_game_thunbnail`       | URL картинки | (досить одного з двох)        |
+| 10    | Bonus Report          | `bonuses`                       | ціле         | **так**                       |
+| 11    | Sports Desk           | `sports_wins`                   | ціле         | **так**                       |
+| 12    | Top Sport Signal      | `sports_multiplier`             | число        | **так**                       |
+| 14    | Space Milk            | `days`                          | ціле         | ні (бере значення сторінки 3) |
+| 16    | Gift                  | `promocode`                     | текст        | ні                            |
+| 16    | Gift                  | `bonus_label`                   | текст        | ні                            |
+| 16/17 | Gift, Final           | `final_link`                    | URL          | ні                            |
+
+Сторінки 13 (Sponsor), 15 (Joke) і 17 (Final) персональних даних не несуть.
 
 ### `level`
 
-One of `IRON`, `BRONZE`, `SILVER`, `GOLD`, `PLATINUM`, `DIAMOND`, or `REGULAR`.
+Одне з `IRON`, `BRONZE`, `SILVER`, `GOLD`, `PLATINUM`, `DIAMOND` або `REGULAR`.
 
-`REGULAR` currently shows the **Iron** badge, matching Thor season 2. Any other
-value is treated as no level at all, and a warning is logged in the browser
-console.
+`REGULAR` наразі показує бейдж **Iron**, як у Thor сезон 2. Будь-яке інше значення
+вважається відсутнім рівнем, і в консоль браузера пишеться попередження.
 
-Level names are product nouns and are **not translated** — a German player also
-sees "Gold".
+Назви рівнів — продуктові іменники, вони **не перекладаються**: німецький гравець
+теж бачить «Gold».
 
-### Numbers
+### Числа
 
-- Send them plain: `1200000`, not `1 200 000` and not `1,200,000`. Grouping is
-  applied by the story, in the typography the design calls for.
-- A decimal comma is accepted (`1234,56`), because some back ends send it that
-  way.
-- Money values are rounded to whole units. Multipliers may carry up to two
-  decimals.
-- Negative values are treated as missing.
+- Надсилати без форматування: `1200000`, а не `1 200 000` і не `1,200,000`.
+  Групування розставляє сама історія, у тій типографіці, якої вимагає дизайн.
+- Десяткова кома приймається (`1234,56`) — деякі бекенди шлють саме так.
+- Грошові значення округлюються до цілих. Множники можуть мати до двох знаків.
+- Від'ємні значення вважаються відсутніми.
 
-### Image URLs
+### URL картинок
 
-`*_thunbnail` (yes, spelled that way — see below) must be a full `http://` or
-`https://` URL. Anything else is ignored.
+`*_thunbnail` (так, саме через таку орфографію — див. нижче) має бути повним
+`http://` або `https://` посиланням. Будь-що інше ігнорується.
 
-If the image fails to load — a blocked CDN domain for that player, a dead link —
-the card falls back to showing the game's name instead of a broken image. That
-is why it is worth sending `*_game` / `favorite_game_name` even when you are
-sending a thumbnail.
+Картинки беруться з CDN самого продукту, у формі
+`https://<домен>/svc/img/i/<Бренд>/games/<Назва_гри>_400x560_jpg`. Правильні
+адреси знає бекенд продукту.
+
+Якщо картинка не завантажилась — домен заблокований у цього гравця, посилання
+мертве — або якщо її взагалі не передали, картка показує **назву гри** замість
+битого зображення. Ніяких підставних картинок: раніше тут підставлялась обкладинка
+чужої гри, і гравець бачив назву своєї гри над картинкою іншої.
 
 ### `final_link`
 
-Where the player is sent when they close the story or reach the end. Must be a
-full `http(s)` URL. If it is missing, closing the story just closes it.
+Куди веде гравця закриття історії або кнопка наприкінці. Має бути повним
+`http(s)` посиланням. Якщо його немає, хрестик просто закриває історію.
 
 ---
 
-## `thunbnail` is misspelt on purpose
+## `thunbnail` написано з помилкою навмисно
 
-`favorite_game_thunbnail` has a typo in it. It is the name already used by the
-existing Thor VIP Stories links and by the campaign templates built on them, so
-renaming it would silently drop the thumbnail on every link already scheduled.
-
-Alpa has **three** game thumbnails where Thor had one. The two new ones copy the
-same misspelling so that all three read alike:
-
-- `favorite_game_thunbnail`
-- `biggest_win_game_thunbnail`
-- `top_multiplier_game_thunbnail`
+У `favorite_game_thunbnail` є одрук. Це ім'я вже використовується посиланнями
+чинних Thor VIP Stories і кампанійними шаблонами, побудованими на них, тож
+перейменування мовчки прибрало б картинку з кожного вже запланованого посилання.
 
 ---
 
-## Missing values
+## Коли даних немає
 
-A page whose gating parameter is missing (or zero) has nothing to say: "your
-biggest win: 0" is not a page worth showing anyone.
+Сторінка, чий параметр не передано (або він нульовий), не має що сказати:
+«ваш найбільший виграш: 0» — не та сторінка, яку варто комусь показувати.
 
-**What happens:** the page is not shown at all. The journal turns straight from
-the page before it to the page after, and the story gets shorter by the seconds
-that page would have taken — about four and a half each. Nothing is left blank
-and no sentence is left half-finished.
+**Що відбувається:** сторінка не показується взагалі. Журнал гортається з
+попередньої одразу на наступну, а історія коротшає рівно на ті секунди, які ця
+сторінка б зайняла — приблизно чотири з половиною кожна. Нічого не лишається
+порожнім і жодна фраза не обривається.
 
-Ten pages work this way: Days in the Spotlight, Seasonal Power, VIP Status,
+Так працюють десять сторінок: Days in the Spotlight, Seasonal Power, VIP Status,
 Money Talks, Headline Win, Multiplier Moment, Player's Pick, Bonus Report,
-Sports Desk and Top Sport Signal. The cover, the editor's note and the whole
-closing run (sponsor, Space Milk, the joke, the gift, the final page) are always
-shown — they say nothing about a player's numbers, so there is nothing to drop.
+Sports Desk і Top Sport Signal. Обкладинка, слово редактора і весь фінальний блок
+(спонсор, Space Milk, жарт, подарунок, фінальна сторінка) показуються завжди —
+вони не говорять про числа гравця, тож і викидати нічого.
 
-A player with none of the ten gets a story of about 51 seconds instead of 94:
-cover, editor's note, and the closing run.
+Гравець, у якого немає жодного з десяти, отримує історію приблизно на 51 секунду
+замість 94: обкладинка, слово редактора і фінальний блок.
 
-**What this means for you:** you do not need a separate link variant for players
-who are missing something. Send the parameters you have; leave out the ones you
-do not. Sending `sports_wins=0` and leaving `sports_wins` out mean the same
-thing — the page is dropped either way.
+**Що це означає для вас:** окремий варіант посилання для гравців, у яких чогось
+немає, більше не потрібен. Надсилайте те, що маєте; те, чого немає, просто не
+пишіть. `sports_wins=0` і відсутній `sports_wins` означають одне й те саме —
+сторінка зникає в обох випадках.
 
-⚠️ **One thing to be careful about.** A typo in a parameter name now costs a
-page rather than showing a blank one. `bigest_win=5000` does not fill Headline
-Win — it drops it, silently, and the story is a page shorter. Check a link by
-opening it before a campaign goes out, and count the steps in the bar at the
-top: one per page.
+⚠️ **Одна річ, з якою треба бути обережним.** Одрук в імені параметра тепер коштує
+сторінки, а не показує порожню. `bigest_win=5000` не наповнить Headline Win — він
+її викине, мовчки, і історія стане на сторінку коротшою. Перевіряйте посилання,
+відкривши його перед виходом кампанії, і рахуйте кроки у смужці згори: по одному
+на сторінку.
 
 ---
 
-## Partial links — worked examples
+## Приклади неповних посилань
 
-Every parameter is optional. Send what you have; the pages you cannot fill are
-not shown and the story is shorter by them.
+Кожен параметр необов'язковий. Надсилайте те, що є; сторінки, які нічим наповнити,
+не показуються, і історія на них коротшає.
 
-**Everything (17 pages, 94 seconds):**
+**Усе (17 сторінок, 94 секунди):**
 
 ```
 https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
@@ -194,8 +183,8 @@ https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
   &final_link=https://example.com/x
 ```
 
-**A player who does not bet on sport (15 pages, 87 seconds)** — Sports Desk and
-Top Sport Signal are dropped:
+**Гравець, який не ставить на спорт (15 сторінок, 87 секунд)** — Sports Desk і
+Top Sport Signal зникають:
 
 ```
 https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
@@ -206,8 +195,8 @@ https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
   &final_link=https://example.com/x
 ```
 
-**A player with no wins to show (13 pages, 76 seconds)** — Money Talks,
-Headline Win, Multiplier Moment and Player's Pick are dropped:
+**Гравець без виграшів (13 сторінок, 76 секунд)** — Money Talks, Headline Win,
+Multiplier Moment і Player's Pick зникають:
 
 ```
 https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
@@ -216,26 +205,27 @@ https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
   &final_link=https://example.com/x
 ```
 
-**A brand-new player, name only (7 pages, 51 seconds)** — all ten data pages are
-dropped; the cover, the editor's note and the closing run remain:
+**Новачок, тільки ім'я (7 сторінок, 51 секунда)** — усі десять сторінок з даними
+зникають; лишаються обкладинка, слово редактора і фінальний блок:
 
 ```
 https://<host>/vip-stories/?user_language=en&name=Marianna
   &final_link=https://example.com/x
 ```
 
-A story this short is still a story: it greets the player by name, shows the
-sponsor, the joke, the gift and the final page with both buttons.
+Така коротка історія все одно лишається історією: вітає гравця на ім'я, показує
+спонсора, жарт, подарунок і фінальну сторінку з обома кнопками.
 
 ---
 
-## Checking a link before sending it
+## Як перевірити посилання перед розсилкою
 
-Open the link with the browser console visible. The story logs a warning for:
+Відкрийте його з видимою консоллю браузера. Історія пише попередження про:
 
-- a parameter name it does not recognise (usually a typo);
-- a `level` value that is not one of the seven;
-- a missing translation key.
+- ім'я параметра, якого не знає (зазвичай одрук);
+- значення `level`, якого немає серед семи;
+- відсутній ключ перекладу.
 
-There is no server-side validation, so a link that looks right and shows the
-right numbers is right.
+Серверної валідації немає, тож посилання, яке виглядає правильно і показує
+правильні числа, — правильне. І порахуйте кроки у смужці згори: їх має бути
+стільки, скільки сторінок ви очікуєте.

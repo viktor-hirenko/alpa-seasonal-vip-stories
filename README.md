@@ -1,55 +1,63 @@
 # Alpa Seasonal VIP Stories
 
-Personalised season-recap stories for Alpa / RocketPlay. A vertical 1080×1920
-scene runs inside an iframe on the product domain: a pre-rendered background
-video plays, and on top of it a **journal is animated in real CSS 3D with GSAP**
-while 3D objects fly around it. Per-player content arrives through query
-parameters.
+Персоналізовані сторіс-підсумки сезону для Alpa / RocketPlay. Вертикальна сцена
+1080×1920 працює в `iframe` на домені продукту: грає пререндерене фонове відео, а
+поверх нього **журнал анімується в справжньому CSS 3D через GSAP**, і навколо
+нього літають 3D-предмети. Персональний вміст приходить query-параметрами.
 
-Internal documentation (tickets, decisions, timecodes, pose tables, progress
-log) lives in `_context/` and is **not** in git — the canonical copy sits with
-the project in DevHubVault. Start at `_context/README.md`.
+> **Це не відео з накладеним текстом.** Фонове відео — тільки кімната: світло,
+> стіни, ілюмінатор, частинки. Журнал, усі його сторінки і всі предмети малює
+> браузер.
 
-## Run
+Внутрішня документація (тікети, рішення, тайм-коди, таблиці поз, лог прогресу)
+лежить у `_context/` і **не** в git — канонічна копія зберігається разом з
+проєктом у DevHubVault. Починати з `_context/README.md`.
+
+## Запуск
 
 ```sh
 npm install
-npm run dev        # story
-npm run lab        # 3D animation lab (the primary authoring surface)
+npm run dev        # сторіс
+npm run lab        # 3D-лабораторія (основна поверхня для авторської роботи)
 npm run build      # -> dist/
 npm run preview
 ```
 
-## Deploy
+## Деплой
 
-`vite.config.js` sets `base: './'`, so the build drops into any CDN
-subdirectory and is embedded on the product domain through an iframe.
-`lab.html` ships alongside it on purpose (~10 KB, linked from nowhere) so the
-motion designer can review the 3D presets on a phone.
+`vite.config.js` має `base: './'`, тож збірку можна класти в будь-яку
+CDN-піддиректорію і вбудовувати на домен продукту через `iframe`.
+`lab.html` їде в продакшн **навмисно** (~10 КБ, звідки не посилається), щоб
+моушн-дизайнер міг переглянути 3D-пресети з телефону.
 
-## Architecture in brief
+## Архітектура коротко
 
-- `public/video/story.{mp4,webm}` is the **master clock**; everything else reads
-  `video.currentTime`.
-- The journal is real DOM in a `preserve-3d` stage. Its pose is one measured
-  path (`JOURNAL_PATH` in `src/story/slides.js`), not a tween per slide.
-- 17 pages are mounted at once and switched by `visibility` from the rAF loop,
-  frame-exactly (ADR-0008).
-- Flying objects are siblings of the journal in the same 3D scene, so the
-  browser sorts them by depth (ADR-0006).
-- Timings, poses and layouts are **data**: `story/slides.js`, `story/timing.js`,
-  `story/flyObjects.js`, `story/pageLayouts.js`. No preset holds a bare number.
-- **Pages the link has no data for are dropped** and the story shortened —
-  `src/story/storyPlan.js`. See _URL parameters_ below.
+- `public/video/story.{mp4,webm}` — **головний годинник**; усе інше читає
+  `video.currentTime`, тобто `час відео === час анімації`.
+- Журнал — справжній DOM у сцені з `preserve-3d`. Його поза — один **виміряний
+  шлях** (`JOURNAL_PATH` у `src/story/slides.js`), а не твін на слайд.
+- 17 сторінок змонтовані одразу і перемикаються через `visibility` з rAF-циклу,
+  покадрово точно (ADR-0008).
+- Предмети — сіблінги журнала в тій самій 3D-сцені, тож браузер сортує їх за
+  глибиною сам (ADR-0006).
+- Тайминги, пози і розкладки — це **дані**: `story/slides.js`, `story/timing.js`,
+  `story/flyObjects.js`, `story/pageLayouts.js`. Жоден пресет не містить голого
+  числа.
+- **Сторінки, для яких у посиланні немає даних, викидаються**, а історія
+  коротшає — `src/story/storyPlan.js`. Див. розділ _URL-параметри_.
 
-## URL parameters
+⚠️ **Майже кожне число в `src/story/` — це ВИМІР**, знятий з еталонного відео або
+з макета, а не вибір розробника. Коментар поруч із числом каже, чим міряли і що
+вже спростували. «Красивіше» — не аргумент; аргумент — гейт і картинка.
 
-Everything a player sees comes off the query string; nothing is looked up
-server-side. **The full table with types, formats and examples is
-[`docs/marketing/link-parameters.md`](docs/marketing/link-parameters.md)** —
-that is the document to hand to marketing.
+## URL-параметри
 
-Full example:
+Усе, що бачить гравець, приходить з query-рядка; нічого не підтягується з
+сервера. **Повна таблиця з типами, форматами і прикладами —
+[`docs/marketing/link-parameters.md`](docs/marketing/link-parameters.md)**, це
+той документ, який віддають маркетингу.
+
+Повний приклад:
 
 ```
 ?user_language=de&user_currency=EUR&name=Marianna
@@ -64,152 +72,146 @@ Full example:
  &final_link=https://example.com/promotions/andromeda
 ```
 
-| Parameter                                        | Page it fills         | When the page is dropped             |
-| ------------------------------------------------ | --------------------- | ------------------------------------ |
-| `name`                                           | Cover, Editor's Note  | never — greeting goes without a name |
-| `days`                                           | Days in the Spotlight | missing, empty or `0`                |
-| `points`                                         | Seasonal Power        | missing, empty or `0`                |
-| `level`                                          | VIP Status            | missing or not one of the seven      |
-| `total_wins`                                     | Money Talks           | missing, empty or `0`                |
-| `biggest_win`                                    | Headline Win          | missing, empty or `0`                |
-| `top_multiplier`                                 | Multiplier Moment     | missing, empty or `0`                |
-| `favorite_game_name` / `favorite_game_thunbnail` | Player's Pick         | both missing                         |
-| `bonuses`                                        | Bonus Report          | missing, empty or `0`                |
-| `sports_wins`                                    | Sports Desk           | missing, empty or `0`                |
-| `sports_multiplier`                              | Top Sport Signal      | missing, empty or `0`                |
-| `user_language`                                  | locale                | unknown → English                    |
-| `user_currency`                                  | currency symbol       | —                                    |
-| `final_link`                                     | CTA and close         | missing → close just closes          |
+| Параметр                                         | Яку сторінку наповнює | Коли сторінка пропускається       |
+| ------------------------------------------------ | --------------------- | --------------------------------- |
+| `name`                                           | Cover, Editor's Note  | ніколи — привітання йде без імені |
+| `days`                                           | Days in the Spotlight | немає, порожнє або `0`            |
+| `points`                                         | Seasonal Power        | немає, порожнє або `0`            |
+| `level`                                          | VIP Status            | немає або не один із семи         |
+| `total_wins`                                     | Money Talks           | немає, порожнє або `0`            |
+| `biggest_win`                                    | Headline Win          | немає, порожнє або `0`            |
+| `top_multiplier`                                 | Multiplier Moment     | немає, порожнє або `0`            |
+| `favorite_game_name` / `favorite_game_thunbnail` | Player's Pick         | немає обох                        |
+| `bonuses`                                        | Bonus Report          | немає, порожнє або `0`            |
+| `sports_wins`                                    | Sports Desk           | немає, порожнє або `0`            |
+| `sports_multiplier`                              | Top Sport Signal      | немає, порожнє або `0`            |
+| `user_language`                                  | локаль                | невідома → англійська             |
+| `user_currency`                                  | символ валюти         | —                                 |
+| `final_link`                                     | CTA і закриття        | немає → хрестик просто закриває   |
 
-**Levels:** `IRON`, `BRONZE`, `SILVER`, `GOLD`, `PLATINUM`, `DIAMOND`.
-`REGULAR` shows the Iron badge (`SHOW_IRON_FOR_REGULAR` in `levelConfig.js`).
-Anything else drops the page.
+**Рівні:** `IRON`, `BRONZE`, `SILVER`, `GOLD`, `PLATINUM`, `DIAMOND`.
+`REGULAR` показує бейдж Iron (`SHOW_IRON_FOR_REGULAR` у `levelConfig.js`).
+Будь-що інше — сторінка пропускається.
 
-> The misspelling `thunbnail` is deliberate — it is the name already used by
-> Thor's links and by the campaign templates built on them.
+> Помилка `thunbnail` збережена навмисно — це ім'я вже використовується
+> посиланнями Thor і кампанійними шаблонами на їх основі.
 
-**Ten pages can be dropped** (the run from Days in the Spotlight to Top Sport
-Signal). The cover, the editor's note and the closing run always play. A player
-with none of the ten gets about 51 seconds instead of 94, and the steps bar
-counts only the pages that are shown.
+**Викинути можна десять сторінок** (суцільний ряд від Days in the Spotlight до
+Top Sport Signal). Обкладинка, слово редактора і весь фінальний блок грають
+завжди. Гравець без жодного з десяти отримує приблизно 51 секунду замість 94, а
+смужка кроків рахує лише показані сторінки.
 
-⚠️ **A typo in a parameter name now costs a page rather than showing a blank
-one.** `bigest_win=5000` does not fill Headline Win — it drops it, silently.
-Open a link before a campaign goes out and count the steps in the bar.
+⚠️ **Одрук в імені параметра тепер коштує сторінки, а не порожнього місця.**
+`bigest_win=5000` не наповнить Headline Win — він її викине, мовчки. Відкрийте
+посилання перед розсилкою і порахуйте кроки у смужці згори.
 
-## Localisation
+## Локалізація
 
-Files: `src/i18n/{en,fr,de,it}.json`. `npm run check-locales` verifies that all
-four carry the same keys and that every page is covered.
+Файли: `src/i18n/{en,fr,de,it}.json`. `npm run check-locales` перевіряє, що всі
+чотири несуть однакові ключі і що кожна сторінка покрита.
 
-To add a language: create `<lang>.json` with `en.json`'s keys, then import it
-into `MESSAGES` in `src/composables/useStoryData.js` and add the code to
-`LOCALES` in `src/story/params.js`.
+Додати мову: створити `<lang>.json` з ключами як в `en.json`, імпортувати його в
+`MESSAGES` у `src/composables/useStoryData.js` і додати код у `LOCALES` у
+`src/story/params.js`.
 
-> Thor has five languages (`pt` as well). A `language=pt` link here does not
-> fail — it silently shows English.
+> У Thor п'ять мов (ще `pt`). Посилання з `language=pt` тут не падає — воно мовчки
+> показує англійську.
 
-## Integration (postMessage)
+## Інтеграція (postMessage)
 
-Sent to the parent frame as `{ source: 'alpa-vip-stories', message }`:
+Надсилається в parent frame як `{ source: 'alpa-vip-stories', message }`:
 
-| Event                              | When                         |
-| ---------------------------------- | ---------------------------- |
-| `reach_end`                        | the timeline reached the end |
-| `bonuses_btn`                      | CONTINUE JOURNEY pressed     |
-| `watch_again`                      | WATCH AGAIN pressed          |
-| `close`                            | the cross pressed            |
-| `click_forward` / `click_backward` | arrow or tap navigation      |
-| `click_pause` / `click_start`      | hold-to-pause and release    |
+| Подія                              | Коли                              |
+| ---------------------------------- | --------------------------------- |
+| `reach_end`                        | таймлайн дійшов до кінця          |
+| `bonuses_btn`                      | натиснуто CONTINUE JOURNEY        |
+| `watch_again`                      | натиснуто WATCH AGAIN             |
+| `close`                            | натиснуто хрестик                 |
+| `click_forward` / `click_backward` | навігація стрілками або тапом     |
+| `click_pause` / `click_start`      | утримання для паузи і відпускання |
 
-`getGift()` and `closeStory()` then move `window.parent.location.href` to
-`final_link`.
+`getGift()` і `closeStory()` після події переводять
+`window.parent.location.href` на `final_link`.
 
-## Verification
+## Перевірка
 
-Run the gates **one at a time**: two headless Chromes fight over the profile
-directory and produce phantom failures and hangs.
+Гейти запускати **по одному**: два headless Chrome б'ються за профільну
+директорію і дають фантомні падіння та зависання.
 
 ```sh
-npm run check-locales   # all four locales carry the same keys
-npm run build           # must be clean
-npm run fit:check       # the scene fits the stage whole, the video covers it
-npm run pose:check      # every slide's on-screen box against slides.js
+npm run check-locales   # усі чотири локалі несуть однакові ключі
+npm run build           # має бути чисто
+npm run fit:check       # сцена влазить у стейдж цілком, відео її вкриває
+npm run pose:check      # екранний бокс кожного слайда проти slides.js
 npm run journal:selftest
 npm run clip:selftest
-npm run tiles:fit       # a report, not a verdict
-npm run fly:check       # flights against scripts/fly-reference.json
-npm run preloader:fit   # the loading logo against the clip's opening frame
+npm run tiles:fit       # звіт, не вирок
+npm run fly:check       # польоти проти scripts/fly-reference.json
+npm run preloader:fit   # лого завантаження проти першого кадру кліпу
 npm run smooth:scan && node scripts/smooth-report.mjs _refs/smooth/scan-0-94.3667.json
 ```
 
-⚠️ **A green gate is not a correct build.** Every gate above except the last two
-compares the build against a TABLE that was itself derived from the mock —
-`pose:check` cannot report a pose error, because the pose table is what it
-checks against, and it was green throughout a build the owner rejected on sight.
+⚠️ **Зелений гейт — це не правильна збірка.** Кожен гейт вище, крім двох
+останніх, порівнює збірку з ТАБЛИЦЕЮ, яка сама виведена з макета — `pose:check`
+не може повідомити про помилку пози, бо перевіряє проти тієї самої таблиці, і він
+був зеленим усю дорогу тієї збірки, яку власник відхилив з першого погляду.
 
-**What actually compares us with the mock** is the pair written in session AE:
+**Що справді порівнює нас із макетом** — пара, написана в сесії AE:
 
 ```sh
-node scripts/shoot-pages.mjs /tmp/pages en     # 17 pages shot flat, one PNG each
-python3 scripts/mock-overlay.py <config.json>  # each page against its Figma node
+node scripts/shoot-pages.mjs /tmp/pages en     # 17 сторінок знято плоско, по PNG на кожну
+python3 scripts/mock-overlay.py <config.json>  # кожна сторінка проти свого вузла Figma
 ```
 
-It prints the share of disagreeing pixels per page and writes a red/cyan
-overlay where agreement is grey, the mock red and us cyan. The ranking of all
-17 pages is in `_context/90-next-session.md`.
+Друкує частку незгодних пікселів на сторінку і пише червоно-блакитне накладання,
+де збіг сірий, макет червоний, а ми блакитні. Ранг усіх 17 сторінок — у
+`_context/90-next-session.md`.
 
-⚠️ Take the Figma export at its **natural size** (`get_screenshot`, `maxDimension`
-at or above `original_width`), or the tool aligns at the wrong scale and lies.
+⚠️ Експорт з Figma брати в **натуральному розмірі** (`get_screenshot`,
+`maxDimension` не менше за `original_width`), інакше інструмент вирівняється не в
+тому масштабі й збреше.
 
-> `npm run audit` used to stand here and was removed on 2026-09-13. It compared
-> our render, the clip and the storyboard frame by the width of the white
-> heading type — a cruder answer to the same question `mock-overlay.py` answers
-> per pixel, and its clip half stopped meaning anything when the reference pair
-> was re-rendered on 09-12. Its last run was 09-04. It is in git history.
+## Лабораторія
 
-## The lab
-
-`lab.html` renders the real journal in the real 3D stage with a control panel:
-fire any preset, drag its params, park a pose, walk the slides, and play the
-reference clip **underneath** the DOM journal. Every control is a URL param,
-which makes it scriptable:
+`lab.html` малює справжній журнал у справжній 3D-сцені з панеллю керування:
+запустити будь-який пресет, потягати його параметри, припаркувати позу, пройти
+слайди і програти еталонний кліп **під** DOM-журналом. Кожен контрол є ще й
+URL-параметром, тож лабораторія скриптується:
 
 ```
-lab.html?panel=0&bg=preview&frame=11&lead=2.4      # park slide 11 over the reference
-lab.html?panel=0&bg=grid&rotY=90&jd=34             # edge-on: proves the 3D volume
-lab.html?frame=13&rot=0&rotX=0&rotY=0&scale=0.62   # a page FLAT, for mock-overlay
+lab.html?panel=0&bg=preview&frame=11&lead=2.4      # припаркувати слайд 11 над еталоном
+lab.html?panel=0&bg=grid&rotY=90&jd=34             # ребром: доводить 3D-об'єм
+lab.html?frame=13&rot=0&rotX=0&rotY=0&scale=0.62   # сторінка ПЛОСКО, для mock-overlay
 ```
 
-`bg=preview|clean|grid` · `frame` (Figma frame №) · `lead` (seconds past the cut)
+`bg=preview|clean|grid` · `frame` (№ кадру Figma) · `lead` (секунди після зрізу)
 · `journal=0` · `rotX/rotY/rot/scale/z/cx/cy` · `persp` · `jd` · `face` ·
 `play=1` · `panel=0`
 
-## Video
+## Відео
 
-Raw motion-designer deliverables live in `_refs/` (gitignored, 187 MB each).
-`scripts/encode-video.sh dev|prod` is the only sanctioned way to produce
-`public/video/`, so the encode settings are versioned rather than living in
-someone's shell history. `-g 30` (1-second GOP) and `+faststart` are
-non-negotiable — the reasons are in the script's header.
+Сирі матеріали від моушн-дизайнера лежать у `_refs/` (в git не йдуть, по 187 МБ).
+`scripts/encode-video.sh dev|prod` — єдиний санкціонований спосіб зробити
+`public/video/`, щоб налаштування кодування були у версіонуванні, а не в чиїйсь
+історії шелу. `-g 30` (GOP в одну секунду) і `+faststart` не обговорюються —
+причини в шапці скрипта.
 
-⚠️ **`-an` strips the audio, and that is one of three things blocking sound.**
-The header's sound button is wired to nothing yet. When the soundtrack lands,
-all three have to change together: drop `-an` here, turn `muted` in `Story.vue`
-into a binding, and assign `video.muted` from `soundOn`. The
-start-muted-then-unmute-on-tap shape must stay — a browser refuses to autoplay
-a video with sound, so the button is the gesture that earns it.
+⚠️ **`-an` вирізає звук, і це одна з трьох речей, що блокують звук.** Кнопка
+динаміка в шапці поки ні з чим не з'єднана. Коли прийде звукова доріжка, змінити
+треба всі три разом: прибрати `-an` тут, перетворити `muted` у `Story.vue` на
+прив'язку і присвоювати `video.muted` з `soundOn`. Схема «стартуємо без звуку,
+вмикаємо по натисканню» має залишитись — браузер не дає автозапуск зі звуком, тож
+кнопка і є тим жестом, який його дозволяє.
 
-⚠️ The reference clips in `public/video/ref-*.mp4` are for the lab and the dev
-server. They are 34 MB and they ship, because `lab.html` ships; cut them only
-together with the lab.
+⚠️ Еталонні кліпи `public/video/ref-*.mp4` потрібні лабораторії й дев-серверу.
+Вони важать 34 МБ і їдуть у збірку, бо в неї їде `lab.html`; вирізати їх можна
+тільки разом з лабораторією.
 
-## The one rule that will bite you
+## Правило, яке вас вкусить
 
-Every element in the 3D chain has **exactly one author of its `transform`**.
-Elements GSAP animates carry no CSS `transform` at all — they are centred with
-negative margins. Break that and GSAP's transform cache freezes a percentage
-into stale pixels. The full contract, the layer-by-layer ownership table and the
-list of properties that silently flatten a 3D scene are at the top of
-`src/styles/_stage.scss`. Read it before editing anything under `src/styles/` or
-`src/journal3d/`.
+У кожного елемента 3D-ланцюга **рівно один автор `transform`**. Елементи, які
+анімує GSAP, не мають CSS-`transform` взагалі — вони центруються від'ємними
+маргінами. Порушите — і кеш трансформацій GSAP заморозить відсоток у застарілі
+пікселі. Повний контракт, пошарова таблиця власності і список властивостей, що
+мовчки роблять 3D-сцену пласкою, — у шапці `src/styles/_stage.scss`. Прочитайте
+перед тим, як правити будь-що в `src/styles/` або `src/journal3d/`.
