@@ -125,14 +125,37 @@
     0 0 du(110) rgba(255, 118, 204, 0.35);
 }
 
-/// Fore-edge (right) — the paper stack. The Figma ramp rotated 90deg and tiled
-/// across the depth so it reads as individual pages rather than a slab.
+/// Fore-edge (right) — the same magenta the spine carries, and for the same
+/// reason: in the clip both long edges of the journal read as one lit pink rim,
+/// not as two different materials.
+///
+/// ⚠️ THIS USED TO BE A TILED PAPER STACK: the Figma ramp at 9 design px,
+/// `background-repeat: repeat-y`, meant to read as individual pages. It read as
+/// BANDS ACROSS THE EDGE instead — the tile repeats DOWN the face, so every
+/// stripe runs the short way. The owner saw it on the cover, where the entrance
+/// turns the journal far enough to show this face, and said the clip has no such
+/// stripes: "keep the volume, but make the volume pink like the video"
+/// (2026-09-13). One gradient down the face, no tiling, so there is nothing left
+/// to run the wrong way.
+///
+/// The ramp is the spine's, darkened a little: this edge faces away from the
+/// room's key light on every pose the story holds, so matching the spine exactly
+/// made the two sides read as equally bright, which the clip's do not.
 .jedge--fore {
   @include j-face(var(--jd), calc(var(--jh) - var(--jseam)));
   transform: translateX(calc(var(--jw) * 0.5 * var(--u))) rotateY(90deg);
-  background-image: linear-gradient(180deg, #b26c3b 0%, #2c2c2c 45%, #562c26 100%);
-  background-size: 100% du(9);
-  background-repeat: repeat-y;
+  background: linear-gradient(
+    180deg,
+    #5c1741 0%,
+    #a52a72 14%,
+    #e477b8 30%,
+    #a52a72 58%,
+    #7a1f56 88%,
+    #3a0e2a 100%
+  );
+  box-shadow:
+    0 0 du(26) rgba(255, 118, 204, 0.42),
+    0 0 du(70) rgba(255, 118, 204, 0.2);
 }
 
 /// Top / bottom — a flat two-stop version of the same ramp. Only genuinely
