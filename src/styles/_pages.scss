@@ -648,7 +648,12 @@
   text-transform: uppercase;
   text-align: center;
   text-wrap: balance;
-  background: radial-gradient(120% 90% at 50% 30%, #2a1038 0%, #000a12 70%);
+  // ⚠️ ONE BACKGROUND, NOT TWO. This used to set a radial backdrop with the
+  // `background` shorthand and then `background-image: $accent-grad` on the very
+  // next line, which overwrites the shorthand's image — so the backdrop never
+  // painted and the card was a flat black rectangle. Only the accent gradient
+  // can live here, because `background-clip: text` clips whatever image is set
+  // to the glyphs. A backdrop, if one is ever wanted, belongs on `.j-thumb`.
   background-image: $accent-grad;
   background-clip: text;
   -webkit-background-clip: text;

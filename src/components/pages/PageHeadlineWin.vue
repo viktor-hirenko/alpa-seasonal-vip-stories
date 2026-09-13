@@ -45,19 +45,21 @@
     <!-- Currency and game name are right-aligned to 1334.38. -->
     <JCurrency :top="585" :size="82" align="right" :right="1334.38">{{ currency }}</JCurrency>
     <div class="hw__divider" />
-    <!-- The mock's game-name box is a fixed 1230 wide ending at 1334.38
-         (21770:3331), which is the budget useJournalFit shrinks into. Stating
-         the width changes nothing while the name fits: the box is
-         right-anchored either way. -->
-    <JValue
-      :value="gameName"
-      :top="787"
-      :size="96"
-      align="right"
-      :right="1334.38"
-      :width="1230"
-      v-bind="L.game"
-    />
+    <!-- CENTRED, like the thumbnail under it and like the game name on the
+         other two pages that have one.
+         ⚠️ IT USED TO BE `align="right"` PINNED TO 1334.38, AND THAT WAS WRONG
+         FOR EVERY NAME BUT THE MOCK'S OWN. The mock's node (21770:3319) is
+         1230 wide at x=104.38 — a box that spans the body and is centred in it
+         (centre 719.4 against the body's 721.5). Its width equals the text's
+         only because the designer typed "Dragon Coins Jackpot", which happens
+         to fill it; so the mock says where a FULL-WIDTH name sits and says
+         nothing about a short one. Right-anchoring guessed, and guessed wrong:
+         measured on the shipping build, "Dragon Coins" landed 69.6 screen px
+         right of the page axis while the card below it stayed centred. The
+         owner saw it on 2026-09-13 and was right. With the mock's own name the
+         two settings render identically — the text fills the box either way —
+         so this cannot move us away from the mock. -->
+    <JValue :value="gameName" :top="787" :size="96" v-bind="L.game" />
 
     <img class="page__art hw__coins" :src="coins" alt="" />
     <JGameThumb :src="gameImage" :name="gameName" :top="947" />
