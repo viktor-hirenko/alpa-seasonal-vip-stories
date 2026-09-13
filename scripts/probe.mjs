@@ -717,7 +717,14 @@ if (fitMode) {
     // 55 % of the flight's largest.
     const rmax = Math.max(...f.samples.map(s => s[3]))
     const rec = FLIGHTS.find(r => r.id === f.id)
-    const drawnUntil = rec ? Math.min(rec.t1, slideEnd(rec.frame)) : Infinity
+    // A flight is drawn to its own last keyframe: it goes behind the journal at
+    // the page turn and carries on there, it is not cut off (flyLayer.js). This
+    // used to carry the same clamp the layer did, so the samples after a turn
+    // went unjudged on both sides at once — the product stopped drawing them and
+    // the gate stopped looking. The reference HAS those samples; they are the
+    // seconds the object spends sliding under the turning page, and they are
+    // worth checking precisely because nothing else covers them.
+    const drawnUntil = rec ? rec.t1 : Infinity
     for (const smp of f.samples) {
       const [t, rx, ry, rsq, rdeg, relong, rhid] = smp // see fly-reference.json's `units`
       if (t > drawnUntil) {

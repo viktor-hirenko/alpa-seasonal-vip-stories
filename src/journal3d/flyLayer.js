@@ -90,13 +90,19 @@ export function buildFlyLayer(layerEl, records, slides = SLIDES) {
       at,
       live: null,
       front: null,
-      // ...and it stops being drawn there too. Every flight in the table
-      // outlives its own slide by 0.8-2.5 s, and for 24 of the 27 those seconds
-      // are spent 100 % behind the page, so cutting them changes nothing on
-      // screen. For the other three it is the fix: the object was still out in
-      // the open beside the turned page, shrinking, which is what the owner
-      // called ugly.
-      end: Math.min(rec.t1, slideEnd(rec.frame, slides)),
+      // A FLIGHT PLAYS TO ITS OWN LAST KEYFRAME. It is not cut short at the page
+      // turn: it goes BEHIND the journal there (`frontUntil` below) and carries
+      // on towards the centre, where the page covers it and it is gone. That is
+      // what the reference does and what the owner asked for twice.
+      //
+      // ⚠️ IT USED TO BE `Math.min(rec.t1, slideEnd(...))` AND THAT WAS WRONG
+      // FOR ALL 27, not the three the note claimed. Every flight in the table
+      // outlives its own slide by 0.8-2.5 s, so clamping the end deleted the
+      // whole tail of every one of them: the objects blinked out at the cut
+      // instead of sliding under the turning page. The clamp was meant to cure
+      // an object still shrinking in the open beside a turned page; the cure for
+      // that is depth, which is the line below, not erasure.
+      end: rec.t1,
       // ONE depth for the whole flight, from the storyboard (FLY_LAYER), and
       // it ends at the page turn. There is no mid-slide crossing any more: that
       // crossing was a visible pop, because the object was already overlapping
