@@ -339,11 +339,8 @@ export const FLY_LAYER = {
   // the top — floating over the journal and hidden the same way"). The
   // storyboard draws slide 10's lower `Points icon` below the journal; he wants
   // all five stars on one side. Do not "correct" this back to the mock.
-  'spark-1': 'front',
-  'spark-2': 'front',
-  'spark-3': 'front', // slide 10
-  'spark-4': 'front',
-  'spark-5': 'front',
+  'points-2': 'front', // slide 10
+  'points-1': 'front',
   'chip-1': 'behind',
   'chip-2': 'behind', // slide 11
   'coin-1': 'front',
@@ -446,105 +443,85 @@ const RAW = [
     [ 23.54,   51.5,   68.1,  226,   46.3],
     [ 23.67,   51.7,   67.8,  223,   46.3],
   ] },
-  // spark-1 — frame 10, 21.87..26.94 s
-  { id: 'spark-1', asset: 'spark', frame: 10, zFlip: 22.57, keys: [
-    [21.87,   56.1,   -2.6,  109,  -97.5],
-    [21.97,   56.4,    1.1,  109,  -97.5],
-    [22.17,   57.0,    8.6,  107,  -97.5],
-    [22.37,   57.3,   13.2,  103,  -97.5],
-    [22.57,   57.6,   15.7,  100,  -96.0],
-    [22.77,   57.8,   17.2,   96,  -96.0],
-    [22.97,   57.8,   18.1,   94,  -96.0],
-    [23.17,   57.6,   18.6,   93,  -96.0],
-    [23.40,   57.3,   18.7,   91,  -96.0],
-    [23.94,   55.8,   18.6,   88,  -97.5],
-    [24.20,   55.0,   19.1,   87,  -97.5],
-    [24.47,   54.4,   19.7,   86,  -97.5],
-    [25.27,   55.0,   22.8,   81,  -97.5],
-    [25.80,   55.4,   24.6,   74,  -96.0],
-    [26.07,   55.0,   25.8,   71,  -96.0],
-    [26.34,   54.1,   27.9,   68,  -96.0],
-    [26.60,   52.6,   31.6,   66,  -97.5],
-    [26.94,   50.8,   36.2,   63,  -97.5],
+  // points-2 — frame 10, 21.87..26.94 s. THE TOP CLUSTER, ALSO ONE OBJECT.
+  //
+  // Same story as points-1 below, same reason, same method. The mock's frame 10
+  // holds TWO `Points icon` nodes and this is the upper one; it was split into
+  // `spark-1`, `spark-2` and `spark-3`, three flights that drifted apart.
+  //
+  // Fitted from the two stars the difference sees clearly, then CHECKED against
+  // the third: at 22.60 the model puts the tiny star at 575,258 and the clip has
+  // it at 585,251 — ten pixels, on a star measured at 88 wide. That check is why
+  // the rigid-group model can be trusted here rather than just assumed.
+  //
+  //   t      large x,y     medium x,y      -> centre x%,y%   size   rot
+  //   22.60  445,89        659,113            49.89,  6.62    521   -22.8
+  //   23.00  432,136       636,160            48.27,  9.00    497   -22.5
+  //   25.00  475,205       664,221            51.72, 12.31    459   -24.3
+  //   25.40  479,235       658,249            51.69, 13.76    434   -24.7
+  //
+  // ⚠️ Between 23.4 and 24.8 the journal's top edge covers the pair, so there is
+  // nothing to read; the spline carries it across, which is what the clip does
+  // too. The 21.87 entry and the 26.94 exit continue the measured trend and are
+  // marked as such.
+  { id: 'points-2', asset: 'points-a', frame: 10, zFlip: 22.40, keys: [
+    [21.87,   52.9,    2.3,  565,  -22.8],
+    [22.60,   49.9,    6.6,  521,  -22.8],
+    [23.00,   48.3,    9.0,  497,  -22.5],
+    [25.00,   51.7,   12.3,  459,  -24.3],
+    [25.40,   51.7,   13.8,  434,  -24.7],
+    [26.94,   51.7,   19.4,  338,  -26.2],
   ] },
-  // spark-2 — frame 10, 21.97..26.94 s
-  { id: 'spark-2', asset: 'spark', frame: 10, zFlip: 23.17, keys: [
-    [21.97,   69.2,   -0.4,  199,  -16.5],
-    [22.07,   68.2,    1.1,  199,  -16.5],
-    [22.27,   66.3,    4.2,  197,  -16.5],
-    [22.47,   65.9,    7.8,  194,  -16.5],
-    [22.67,   65.6,   10.0,  190,  -16.5],
-    [22.87,   65.3,   11.3,  185,  -12.0],
-    [23.27,   64.6,   12.5,  179,  -12.0],
-    [23.80,   62.9,   12.4,  177,  -13.5],
-    [24.34,   61.0,   13.3,  176,  -13.5],
-    [24.60,   60.6,   14.1,  175,  -13.5],
-    [25.14,   61.0,   16.4,  171,  -13.5],
-    [25.67,   61.4,   18.6,  161,  -16.5],
-    [25.94,   60.9,   19.9,  154,  -16.5],
-    [26.20,   59.8,   22.0,  144,  -16.5],
-    [26.47,   57.9,   25.5,  137,  -16.5],
-    [26.74,   55.5,   30.1,  130,  -16.5],
-    [26.94,   53.7,   33.6,  125,  -16.5],
-  ] },
-  // spark-3 — frame 10, 21.87..26.94 s
-  { id: 'spark-3', asset: 'spark', frame: 10, zFlip: 23.44, keys: [
-    [21.87,   39.2,   -6.6,  246,  -48.0],
-    [22.03,   41.8,   -2.5,  246,  -48.0],
-    [22.07,   41.5,   -1.7,  246,  -48.0],
-    [22.27,   44.7,    3.2,  247,  -24.0],
-    [22.47,   46.2,    5.5,  249,  -21.0],
-    [22.67,   46.2,    7.6,  252,  -21.0],
-    [22.87,   46.3,    9.2,  252,  -21.0],
-    [23.07,   46.3,   10.2,  250,  -22.5],
-    [23.27,   46.0,   10.6,  248,  -22.5],
-    [23.54,   45.4,   10.6,  246,  -22.5],
-    [23.80,   44.6,   10.6,  245,  -22.5],
-    [24.07,   43.5,   11.0,  243,  -21.0],
-    [24.34,   42.9,   11.7,  243,  -19.5],
-    [24.60,   42.7,   12.7,  243,  -19.5],
-    [25.14,   44.4,   15.0,  243,  -19.5],
-    [25.67,   46.1,   17.3,  230,  -21.0],
-    [25.94,   46.5,   18.7,  218,  -21.0],
-    [26.20,   46.8,   20.9,  202,  -21.0],
-    [26.47,   46.6,   24.6,  191,  -21.0],
-    [26.74,   46.6,   29.4,  181,  -21.0],
-    [26.94,   46.6,   33.1,  173,  -21.0],
-  ] },
-  // spark-4 — frame 10, 22.10..26.90 s
-  { id: 'spark-4', asset: 'spark', frame: 10, zFlip: 22.57, keys: [
-    [22.10,    4.2,  106.7,  250,   49.5],
-    [22.23,   10.0,  101.9,  250,   49.5],
-    [22.27,   10.6,  100.9,  250,   49.5],
-    [22.43,   17.9,   94.8,  251,   42.0],
-    [22.63,   24.1,   88.3,  253,   42.0],
-    [22.83,   26.9,   84.8,  254,   42.0],
-    [23.03,   28.5,   83.1,  252,   42.0],
-    [23.47,   30.4,   81.1,  241,   42.0],
-    [24.54,   35.6,   80.0,  226,   40.5],
-    [24.80,   36.3,   79.5,  224,   42.0],
-    [25.07,   36.9,   78.8,  220,   42.0],
-    [25.60,   38.0,   76.8,  203,   42.0],
-    [25.87,   38.8,   75.5,  191,   43.5],
-    [26.14,   40.3,   73.8,  178,   43.5],
-    [26.40,   42.6,   71.3,  170,   43.5],
-    [26.67,   46.5,   67.7,  162,   43.5],
-    [26.90,   49.9,   64.7,  155,   43.5],
-  ] },
-  // spark-5 — frame 10, 22.37..26.87 s
-  { id: 'spark-5', asset: 'spark', frame: 10, zFlip: 25.44, keys: [
-    [22.37,   25.4,  105.2,  180,  -42.0],
-    [22.73,   32.0,   95.7,  180,  -42.0],
-    [22.93,   33.4,   93.0,  179,  -40.5],
-    [23.13,   34.3,   91.0,  176,  -40.5],
-    [23.60,   36.0,   89.0,  163,  -40.5],
-    [24.40,   40.0,   88.0,  158,  -40.5],
-    [24.94,   41.3,   86.9,  154,  -40.5],
-    [25.74,   42.4,   83.3,  130,  -39.0],
-    [26.00,   43.1,   81.2,  121,  -37.5],
-    [26.27,   44.5,   78.4,  113,  -37.5],
-    [26.80,   49.9,   70.3,  101,  -37.5],
-    [26.87,   50.6,   69.3,   99,  -37.5],
+  // points-1 — frame 10, 22.10..26.90 s. THE BOTTOM CLUSTER, AS ONE OBJECT.
+  //
+  // ⚠️ THIS USED TO BE TWO SEPARATE FLIGHTS (`spark-4`, `spark-5`) AND THAT WAS
+  // THE BUG. Owner, 2026-09-13: "it all has to be as ONE object — in the mock it
+  // is one image". He is right twice over. The mock's frame 10 (21770:4749) does
+  // not hold five stars: it holds TWO `Points icon` nodes, one at the top and one
+  // at the bottom, and each of them is `points-a` — a single export carrying
+  // three stars (355 px, 249 px and 118 px across a 700 px canvas). And the clip
+  // moves them as one rigid body: the gap between the two stars the difference
+  // can see runs 151.4 -> 133.4 -> 127.5 -> 124.7 -> 124.0 -> 121.9 px, smooth
+  // and monotone, which is a group receding, not two objects drifting.
+  //
+  // Split into singles they drifted apart on screen, and the third star of the
+  // group — the largest, which the journal's bottom edge half-covers — was never
+  // in the table at all. That is what the owner saw: two stars where the mock
+  // has three.
+  //
+  // HOW THE ROWS WERE FITTED. `preview` minus `clean bg` isolates the objects
+  // (the largest connected region is the journal, the rest are objects). Two of
+  // the three stars are clear of the page and measurable; their centres give the
+  // group a position, their separation gives it a scale, and the angle between
+  // them gives it a rotation, all against the sprite's own geometry:
+  //
+  //   t      tiny x,y      medium x,y       -> centre x%,y%   size   rot
+  //   22.60  136,1844      287,1855            21.14, 91.81    471   +41.5
+  //   23.00  227,1734      360,1744            28.56, 86.60    415   +41.6
+  //   23.40  275,1686      402,1697            32.75, 84.31    396   +42.2
+  //   23.80  302,1655      426,1668            35.19, 82.84    388   +43.3
+  //   24.20  319,1641      442,1657            36.88, 82.23    386   +44.7
+  //   24.60  323,1645      444,1660            37.09, 82.47    379   +44.4
+  //   25.60  333,1650      447,1677            38.29, 83.30    364   +50.6
+  //
+  // The rotation coming out near-constant at +41..+45 deg across six independent
+  // samples is the check that the rigid-group model is the right one; a bad model
+  // would have it wandering.
+  //
+  // ⚠️ TWO ROWS ARE NOT MEASURED. 22.10 continues the 22.60->23.00 trend back to
+  // where the group enters from under the frame; 26.90 holds the settle, because
+  // from 25.6 on the journal covers all but a sliver and there is nothing left to
+  // read. Both are marked here rather than passed off as measurements.
+  { id: 'points-1', asset: 'points-a', frame: 10, zFlip: 22.57, keys: [
+    [22.10,   11.9,   98.3,  541,   41.5],
+    [22.60,   21.1,   91.8,  471,   41.5],
+    [23.00,   28.6,   86.6,  415,   41.6],
+    [23.40,   32.8,   84.3,  396,   42.2],
+    [23.80,   35.2,   82.8,  388,   43.3],
+    [24.20,   36.9,   82.2,  386,   44.7],
+    [24.60,   37.1,   82.5,  379,   44.4],
+    [25.60,   38.3,   83.3,  364,   50.6],
+    [26.90,   39.0,   83.8,  356,   52.0],
   ] },
   // chip-1 — frame 11, 25.74..31.63 s
   { id: 'chip-1', asset: 'points-b', frame: 11, zFlip: 30.03, keys: [
