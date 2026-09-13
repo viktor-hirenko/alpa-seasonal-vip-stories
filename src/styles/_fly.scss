@@ -153,7 +153,7 @@
   // every object with a rim is off, and off in the same direction.
   //
   // MEASURED 2026-09-07 ON THE SHIPPED RENDER, not on the sprite file. Eight
-  // flights, four moments each, off `filmstrip.mjs --panel 520` so both panels
+  // flights, four moments each, off the retired `filmstrip.mjs --panel 520` so both panels
   // are 1:1 crops of the same window of the same frame: our build over
   // `ref-clean.mp4` on the left, `preview.mp4` on the right. The metal is
   // "bright enough not to be the room" (luma > 140), the same rule on both

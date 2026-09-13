@@ -24,7 +24,7 @@
  *
  * Two edge fields are then registered by cosine similarity over a similarity
  * transform (scale, translation, rotation), which is the same idea as the FIT
- * stage of scripts/fly-measure.mjs — that stage already matches a sprite to the
+ * stage of the retired fly-measure.mjs — that stage already matched a sprite to the
  * clip this way and has been trusted for 27 flights.
  *
  * WHAT IT ANSWERS. "By what per cent and by how many pixels does our journal
@@ -58,7 +58,6 @@ import {
 
 const ROOT = new URL('..', import.meta.url).pathname
 const CLIP = `${ROOT}_refs/DP-15152 - preview.mp4`
-const CLEAN = `${ROOT}_refs/DP-15152 - clean bg.mp4`
 const OUT = process.env.FIT_OUT || `${ROOT}_refs/fit`
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const PORT = Number(process.env.FIT_PORT || 9377)
@@ -156,8 +155,9 @@ class CDP {
 }
 
 /**
- * Park the player at `t` and leave the scene measurable. Copied in spirit from
- * scripts/audit-slides.mjs, and for the same three reasons:
+ * Park the player at `t` and leave the scene measurable. Three reasons for the
+ * shape, all learned the hard way (it was shared with the slide audit, which was
+ * retired on 2026-09-13 — see the README):
  *
  *   - seek through the PRODUCT (`__story.seek`), because that is what runs
  *     applySegment and therefore what makes the right page visible;

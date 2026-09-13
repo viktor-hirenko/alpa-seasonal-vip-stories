@@ -346,8 +346,17 @@ export const FLY_LAYER = {
 }
 
 /** @type {Omit<FlyRecord,'base'|'t0'|'t1'>[]} */
-// The rows are a measurement, not hand-authored numbers: regenerate with
-// `node scripts/fly-measure.mjs` rather than nudging one and hoping.
+// The rows are a measurement, not hand-authored numbers.
+// ⚠️ AND THEY CANNOT BE RE-MEASURED. They were taken by correlating the sprite
+// against `preview minus clean bg`, which isolated the objects while the clean
+// clip still had them baked in. The final background delivered on 2026-09-12
+// carries none, so that difference is no longer the objects and the method has
+// no oracle left — permanently, because the shipping clip will never carry them
+// again (owner, 09-13). `scripts/fly-measure.mjs` and `fly-fit.mjs` were
+// retired the same day; they are in git history if the provenance is ever
+// needed. `npm run fly:check` still works: it compares us with the frozen
+// `scripts/fly-reference.json`, not with the clip. Nudge a row only against a
+// picture, and say so in the registry.
 // prettier-ignore
 const RAW = [
   // pen-1 — frame 8, 10.80..18.17 s

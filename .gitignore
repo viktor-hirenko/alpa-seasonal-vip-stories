@@ -3,6 +3,7 @@ dist
 dist-ssr
 *.local
 .DS_Store
+**/.DS_Store
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -19,8 +20,11 @@ _context/
 # Raw motion-designer deliverables (187 MB each) and extracted reference frames.
 _refs/
 
-# Dev-only video proxies of the reference clips (derived from _refs/).
-public/video/ref-*.mp4
+# Everything in public/video/ is a build output of scripts/encode-video.sh —
+# the dev proxies of the reference clips AND the shipping encodes. None of it
+# belongs in git; regenerate with `npm run video:dev` / `npm run video:prod`.
+public/video/*.mp4
+public/video/*.webm
 
 # fly:measure intermediates (2 MB of blob tracks); regenerate with npm run fly:measure
 .fly-cache/

@@ -177,6 +177,58 @@ top: one per page.
 
 ---
 
+## Partial links — worked examples
+
+Every parameter is optional. Send what you have; the pages you cannot fill are
+not shown and the story is shorter by them.
+
+**Everything (17 pages, 94 seconds):**
+
+```
+https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
+  &days=257&points=1200000&level=GOLD&total_wins=2222577
+  &biggest_win=222257&biggest_win_game=Dragon+Coins
+  &top_multiplier=2257&top_multiplier_game=Tiger+Jackpots
+  &favorite_game_name=Tiger+Jackpots
+  &bonuses=2572257&sports_wins=2572257&sports_multiplier=257
+  &final_link=https://example.com/x
+```
+
+**A player who does not bet on sport (15 pages, 87 seconds)** — Sports Desk and
+Top Sport Signal are dropped:
+
+```
+https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
+  &days=257&points=1200000&level=GOLD&total_wins=2222577
+  &biggest_win=222257&biggest_win_game=Dragon+Coins
+  &top_multiplier=2257&top_multiplier_game=Tiger+Jackpots
+  &favorite_game_name=Tiger+Jackpots&bonuses=2572257
+  &final_link=https://example.com/x
+```
+
+**A player with no wins to show (13 pages, 76 seconds)** — Money Talks,
+Headline Win, Multiplier Moment and Player's Pick are dropped:
+
+```
+https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
+  &days=257&points=1200000&level=GOLD
+  &bonuses=2572257&sports_wins=2572257&sports_multiplier=257
+  &final_link=https://example.com/x
+```
+
+**A brand-new player, name only (7 pages, 51 seconds)** — all ten data pages are
+dropped; the cover, the editor's note and the closing run remain:
+
+```
+https://<host>/vip-stories/?user_language=en&name=Marianna
+  &final_link=https://example.com/x
+```
+
+A story this short is still a story: it greets the player by name, shows the
+sponsor, the joke, the gift and the final page with both buttons.
+
+---
+
 ## Checking a link before sending it
 
 Open the link with the browser console visible. The story logs a warning for:

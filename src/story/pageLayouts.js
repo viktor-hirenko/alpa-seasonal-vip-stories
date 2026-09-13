@@ -48,9 +48,6 @@
 /** Data-page body, design px (Money Talks 21770:3185 `Frame 2087327137`). */
 export const BODY = { w: 1443, h: 1868 }
 
-/** The cover is its own face and its own body (21770:2746). */
-export const COVER_BODY = { w: 1441, h: 1868 }
-
 /**
  * @typedef {Object} SlotLayout
  * @property {number} [maxWidth] design-px fit budget; omitted means "the slot's

@@ -17,9 +17,6 @@ export const snap = t => Math.round(t * FPS) / FPS
 /** Only correct timeline drift beyond one frame. */
 export const SYNC_EPSILON = 1 / FPS
 
-/** Music, not lip-sync: a looser epsilon avoids audible re-pin clicks. */
-export const AUDIO_EPSILON = 0.08
-
 export const TIMING = {
   /**
    * THE ENTRANCE, measured off the clip frame by frame (2026-09-04).

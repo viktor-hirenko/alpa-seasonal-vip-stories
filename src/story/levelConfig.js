@@ -41,9 +41,6 @@ export const LEVEL_KEY = {
   DIAMOND: 'levels.diamond',
 }
 
-/** On-page badge size, design px — Figma 21770:3120 inside frame 21770:3115. */
-export const BADGE_SIZE = 919
-
 /**
  * @param {string|undefined} raw value of the `level` query param
  * @returns {{ ok: boolean, badge?: string, key?: string, level?: string }}

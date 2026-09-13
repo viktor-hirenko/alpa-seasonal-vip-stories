@@ -680,4 +680,3 @@ edgeOnPose.PARAM_SCHEMA = {
   scale: { min: 0.2, max: 2, step: 0.01 },
 }
 
-export const DEFAULT_DEPTH = DEPTH

@@ -104,28 +104,6 @@
   line-height: 1.5;
 }
 
-/* Placeholder page so the volume is judged against something page-shaped. */
-.lab-page {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background:
-    radial-gradient(120% 80% at 50% 25%, #2a0f3d 0%, #000a12 62%, #000a12 100%);
-  color: #fff;
-  text-align: center;
-}
-.lab-page__label {
-  font: 800 calc(96 * var(--u)) / 1.08 'Rubik', sans-serif;
-  text-transform: uppercase;
-  text-shadow: 0 calc(8.359 * var(--u)) calc(27.865 * var(--u)) rgba(0, 0, 0, 0.37);
-}
-.lab-page__sub {
-  margin-top: calc(30 * var(--u));
-  font: 400 calc(56.479 * var(--u)) / 1.1 'Rubik', sans-serif;
-  color: #ff9edb;
-}
-
 /* Grid backdrop for judging perspective without a video. */
 .lab__grid {
   position: absolute;

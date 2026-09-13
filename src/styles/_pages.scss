@@ -769,7 +769,8 @@
 /// THE PINK BLOB BEHIND THE ASTRONAUT (21770:2753) IS NOT DRAWN, and the
 /// element stays only so the markup keeps matching the mock's layer list.
 ///
-/// `cover-mask.webp` is the astronaut's own SILHOUETTE with a hard edge — 96 %
+/// `cover-mask.webp` (deleted 2026-09-13 with the layer; in git history) was
+/// the astronaut's own SILHOUETTE with a hard edge — 96 %
 /// of its alpha is either 0 or 255 — and it is cut slightly wider than the
 /// photo it sits behind. A solid #ff7eda clipped by it therefore does not read
 /// as a glow at all: it reads as a bright pink OUTLINE around the helmet and a
