@@ -1,9 +1,24 @@
 <template>
   <div class="story-root">
     <div ref="stageRef" class="stage">
-      <!-- Background: the master clock. Permanently muted so autoplay can never
-           be refused for audio reasons; the soundtrack will be a separate
-           <audio> element (phase 4). -->
+      <!-- Background: the master clock.
+           ⚠️ THE SOUND BUTTON IN THE HEADER IS NOT WIRED, AND THREE THINGS HAVE
+           TO CHANGE TOGETHER BEFORE IT CAN BE. The motion designer is adding a
+           soundtrack later; when it lands:
+             1. scripts/encode-video.sh strips audio with `-an` on all four
+                encode paths, so the shipped file has no track to unmute;
+             2. `muted` below is a fixed attribute, not a binding;
+             3. nothing anywhere assigns `video.muted` — `soundOn` only picks
+                which glyph the header draws.
+           The start-muted-then-unmute-on-tap shape is RIGHT and must stay: a
+           browser refuses to autoplay a video with sound, so the button is the
+           user gesture that earns it. See _context/95-code-audit.md.
+
+           TWO SOURCES, mp4 first. Thor ships webm + mp4 (your_story.vue:21-22)
+           and that second format is the real insurance against a codec a device
+           will not decode; we were building `story.webm` in encode-video.sh and
+           shipping it without ever referencing it. mp4 leads because every
+           target device plays it and the webm is the larger file. -->
       <video
         ref="videoPlayer"
         class="stage__bg"
@@ -11,10 +26,11 @@
         muted
         playsinline
         webkit-playsinline
-        :src="videoSrc"
         @timeupdate="updateTime"
         @ended="handleVideoEnded"
-      />
+      >
+        <source v-for="s in videoSources" :key="s.src" :src="s.src" :type="s.type" />
+      </video>
 
       <div class="stage-3d">
         <JournalStage :stage-el="stageRef">
@@ -103,15 +119,17 @@ import { useStoryPlayback } from '@/composables/useStoryPlayback.js'
 import { useStoryBridge } from '@/composables/useStoryBridge.js'
 import { useJournalFit } from '@/composables/useJournalFit.js'
 import { provideStoryData } from '@/composables/useStoryData.js'
-import { STORY_SEGMENTS } from '@/story/slides.js'
-import { TIMING } from '@/story/timing.js'
+import { buildStoryPlan } from '@/story/storyPlan.js'
+import { FLIGHTS } from '@/story/flyAssets.js'
 
-const segments = STORY_SEGMENTS
-
-// Dev serves the low-res proxy of the reference clip; the shipping encode
-// (story.mp4/webm) replaces it once the motion designer delivers the final
-// background. See scripts/encode-video.sh.
-const videoSrc = import.meta.env.DEV ? './video/ref-clean.mp4' : './video/story.mp4'
+// Dev serves the low-res proxy of the reference clip, which is only ever built
+// as mp4; production ships both encodes. See scripts/encode-video.sh.
+const videoSources = import.meta.env.DEV
+  ? [{ src: './video/ref-clean.mp4', type: 'video/mp4' }]
+  : [
+      { src: './video/story.mp4', type: 'video/mp4' },
+      { src: './video/story.webm', type: 'video/webm' },
+    ]
 
 const stageRef = ref(null)
 const videoPlayer = ref(null)
@@ -135,6 +153,23 @@ const endLink = ref('')
 const story = provideStoryData()
 // `final_link` is where the story sends the player on close / "reach end".
 endLink.value = story.data.finalLink
+
+// THE STORY THIS PLAYER ACTUALLY GETS. A page whose parameter the link does not
+// carry has nothing to say, so it is dropped and the hole closed — the rule
+// Thor has always had (its `skip` map, scenes.js). Built here, before anything
+// renders, because the page stack, the steps bar and the timeline all have to
+// agree on which pages exist. With a complete link this is the identity and
+// every table below is the one the project has always used.
+const plan = buildStoryPlan(story.skip, { flights: FLIGHTS })
+const segments = plan.segments
+const TIMING = plan.timing
+if (import.meta.env.DEV && plan.droppedPages.length) {
+  // eslint-disable-next-line no-console
+  console.info(
+    `[story] no data for ${plan.droppedPages.join(', ')} — ` +
+      `${plan.droppedPages.length} page(s) dropped, story is ${plan.timing.duration.toFixed(2)} s`,
+  )
+}
 
 const tlRef = shallowRef(null)
 const hoverTlRef = shallowRef(null)
@@ -198,6 +233,7 @@ onMounted(async () => {
   targets = resolveTargets(stageRef.value)
 
   const { tl, hoverTl, setFace } = buildStoryTimeline(targets, {
+    plan,
     onUpdate: () => {
       if (!reachedEnd && tl.duration() > 0 && tl.progress() > 0.995) {
         reachedEnd = true
@@ -222,6 +258,7 @@ onMounted(async () => {
     showPlayButton,
     isBuffering,
     setFace,
+    plan,
   })
 
   // Show the first page immediately so nothing flashes empty before the video's

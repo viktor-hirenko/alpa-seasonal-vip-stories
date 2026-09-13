@@ -150,17 +150,30 @@ same misspelling so that all three read alike:
 A page whose gating parameter is missing (or zero) has nothing to say: "your
 biggest win: 0" is not a page worth showing anyone.
 
-**What happens today:** the page still appears, with an empty value slot. The
-story does not yet drop pages, because the background film currently carries its
-own baked-in choreography — removing a page would leave empty footage playing
-underneath it. Dropping the page and shortening the story is prepared for in the
-code and is switched on once the final background is delivered without that
-choreography.
+**What happens:** the page is not shown at all. The journal turns straight from
+the page before it to the page after, and the story gets shorter by the seconds
+that page would have taken — about four and a half each. Nothing is left blank
+and no sentence is left half-finished.
 
-**What this means for you now:** send every parameter you have a value for. If a
-player genuinely has no sports wins, that page will be blank until the switch is
-made, so consider a separate link variant for those players if the campaign
-needs one before then.
+Ten pages work this way: Days in the Spotlight, Seasonal Power, VIP Status,
+Money Talks, Headline Win, Multiplier Moment, Player's Pick, Bonus Report,
+Sports Desk and Top Sport Signal. The cover, the editor's note and the whole
+closing run (sponsor, Space Milk, the joke, the gift, the final page) are always
+shown — they say nothing about a player's numbers, so there is nothing to drop.
+
+A player with none of the ten gets a story of about 51 seconds instead of 94:
+cover, editor's note, and the closing run.
+
+**What this means for you:** you do not need a separate link variant for players
+who are missing something. Send the parameters you have; leave out the ones you
+do not. Sending `sports_wins=0` and leaving `sports_wins` out mean the same
+thing — the page is dropped either way.
+
+⚠️ **One thing to be careful about.** A typo in a parameter name now costs a
+page rather than showing a blank one. `bigest_win=5000` does not fill Headline
+Win — it drops it, silently, and the story is a page shorter. Check a link by
+opening it before a campaign goes out, and count the steps in the bar at the
+top: one per page.
 
 ---
 

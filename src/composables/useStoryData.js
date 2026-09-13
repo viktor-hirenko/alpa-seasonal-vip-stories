@@ -3,7 +3,7 @@ import en from '@/i18n/en.json'
 import fr from '@/i18n/fr.json'
 import de from '@/i18n/de.json'
 import it from '@/i18n/it.json'
-import { readParams, computeSkips, DEFAULT_LOCALE } from '@/story/params.js'
+import { readParams, computeSkips, DEFAULT_LOCALE, SKIP_KEYS } from '@/story/params.js'
 import { pageLayout } from '@/story/pageLayouts.js'
 import { resolveLevel, LEVEL_KEY, LEVEL_BADGES } from '@/story/levelConfig.js'
 import { useFormat } from './useFormat.js'
@@ -81,10 +81,22 @@ export function createStoryData(opts = {}) {
   const raw = { ...v, levelOk: level.ok }
   // Skips read the LINK, not the dev sample — otherwise no skip flag could ever
   // be true while developing, which is precisely when you want to see them.
-  const skip = computeSkips({
-    ...parsed.linkValues,
-    levelOk: resolveLevel(parsed.linkValues.level).ok,
-  })
+  //
+  // ⚠️ EXCEPT ON A BARE DEV URL, WHICH CARRIES NO LINK AT ALL. Since these flags
+  // started dropping pages for real (storyPlan.js), reading an empty link would
+  // mean `npm run dev` opens on seven pages out of seventeen and the other ten
+  // are simply unreachable — which is not "seeing the skips", it is losing the
+  // story you came to look at. So a dev URL with NOTHING on it gets the sample's
+  // full deck; a dev URL with even one data parameter is taken at its word and
+  // skips the rest, which is how you exercise this deliberately.
+  const carriesData = SKIP_KEYS.length > 0 && Object.values(parsed.present).some(Boolean)
+  const skip =
+    sample && !carriesData
+      ? computeSkips({ ...v, levelOk: level.ok })
+      : computeSkips({
+          ...parsed.linkValues,
+          levelOk: resolveLevel(parsed.linkValues.level).ok,
+        })
 
   /**
    * Render-ready fields. Numbers are already strings here so a page never has

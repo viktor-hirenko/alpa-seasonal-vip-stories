@@ -87,7 +87,6 @@ import { useStory } from '@/composables/useStoryData.js'
 import bg from '@/assets/pages/bg-headline-win.webp'
 import rocket from '@/assets/pages/rocket.webp'
 import coins from '@/assets/pages/coins-3.webp'
-import placeholder from '@/assets/pages/game-thumb-placeholder.webp'
 
 const story = useStory()
 const L = story.layout('headline_win')
@@ -95,7 +94,12 @@ const copy = story.t('pages.headline_win')
 const amount = story.data.biggestWin
 const currency = story.data.currency
 const gameName = story.data.biggestWinGame
-// The URL comes off the link and its domain may be blocked for a given player,
-// so JGameThumb also degrades to a name card on a load error.
-const gameImage = story.data.biggestWinGameImage || placeholder
+// NO PLACEHOLDER. The URL comes off the link; if it is not there, or its domain
+// is blocked for this player, JGameThumb shows a name-only card. It used to fall
+// back to `game-thumb-placeholder.webp` instead, which is not a placeholder at
+// all but the finished cover art of one real game (Tiger Jackpots) — so a player
+// whose link named a different game saw that game's name over another game's
+// picture. Thor renders no frame at all without the parameter
+// (your_story.vue:182); a name card is the same answer with the mock's box kept.
+const gameImage = story.data.biggestWinGameImage
 </script>

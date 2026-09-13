@@ -63,12 +63,11 @@ import { artBox, artImg } from '@/components/shared/artBox.js'
 import { useStory } from '@/composables/useStoryData.js'
 import bg from '@/assets/pages/bg-multiplier-moment.webp'
 import rocket from '@/assets/pages/rocket.webp'
-import placeholder from '@/assets/pages/game-thumb-placeholder.webp'
 
 const story = useStory()
 const L = story.layout('multiplier_moment')
 const copy = story.t('pages.multiplier_moment')
 const multiplier = story.data.topMultiplier
 const gameName = story.data.topMultiplierGame
-const gameImage = story.data.topMultiplierGameImage || placeholder
+const gameImage = story.data.topMultiplierGameImage
 </script>

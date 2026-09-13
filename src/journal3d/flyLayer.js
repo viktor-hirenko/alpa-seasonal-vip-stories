@@ -54,12 +54,22 @@ import { flyingObject } from './flyingObject.js'
  * the pen at t = 17.67 was 0 % covered for us and 96 % covered there, so this
  * also moves us TOWARDS the clip rather than away from it.
  */
-const slideEnd = frame => {
-  const later = SLIDES.filter(s => s.frame > frame).map(s => s.at)
+const slideEnd = (frame, slides) => {
+  const later = slides.filter(s => s.frame > frame).map(s => s.at)
   return later.length ? Math.min(...later) : Infinity
 }
 
-export function buildFlyLayer(layerEl, records) {
+/**
+ * @param {HTMLElement} layerEl
+ * @param {any[]} records flights, already in the clock the caller will drive.
+ * @param {any[]} [slides] the slide table in that SAME clock. It has to be
+ *   passed rather than imported because a link with missing data drops pages
+ *   and re-times the rest (storyPlan.js): a flight's ceiling is the next
+ *   page's turn, and reading the unskipped table here would put that ceiling
+ *   seconds away from where the page actually arrives. Defaults to the full
+ *   table, which is what the lab and a complete link both want.
+ */
+export function buildFlyLayer(layerEl, records, slides = SLIDES) {
   const tl = gsap.timeline({ paused: true })
   const entries = []
 
@@ -82,12 +92,12 @@ export function buildFlyLayer(layerEl, records) {
       // screen. For the other three it is the fix: the object was still out in
       // the open beside the turned page, shrinking, which is what the owner
       // called ugly.
-      end: Math.min(rec.t1, slideEnd(rec.frame)),
+      end: Math.min(rec.t1, slideEnd(rec.frame, slides)),
       // ONE depth for the whole flight, from the storyboard (FLY_LAYER), and
       // it ends at the page turn. There is no mid-slide crossing any more: that
       // crossing was a visible pop, because the object was already overlapping
       // the journal when it changed sides (V-96).
-      frontUntil: FLY_LAYER[rec.id] === 'behind' ? -Infinity : slideEnd(rec.frame),
+      frontUntil: FLY_LAYER[rec.id] === 'behind' ? -Infinity : slideEnd(rec.frame, slides),
     })
     tl.add(flyingObject({ pos, box }, rec).paused(false), at)
   }

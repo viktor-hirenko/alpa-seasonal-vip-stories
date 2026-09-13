@@ -42,11 +42,10 @@ import { artBox, artImg } from '@/components/shared/artBox.js'
 import { useStory } from '@/composables/useStoryData.js'
 import galaxy from '@/assets/pages/galaxy-3.webp'
 import planets from '@/assets/pages/planets-4.webp'
-import placeholder from '@/assets/pages/game-thumb-placeholder.webp'
 
 const story = useStory()
 const L = story.layout('players_pick')
 const copy = story.t('pages.players_pick')
 const gameName = story.data.favoriteGame
-const gameImage = story.data.favoriteGameImage || placeholder
+const gameImage = story.data.favoriteGameImage
 </script>

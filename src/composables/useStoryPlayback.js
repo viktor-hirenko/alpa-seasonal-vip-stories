@@ -1,4 +1,4 @@
-import { STORY_SEGMENTS, segmentAt } from '@/story/slides.js'
+import { STORY_SEGMENTS } from '@/story/slides.js'
 import { SYNC_EPSILON, TIMING } from '@/story/timing.js'
 
 /**
@@ -38,7 +38,28 @@ export function useStoryPlayback(ctx) {
     isBuffering,
     onSegmentChange,
     setFace,
+    plan,
   } = ctx
+
+  // TWO CLOCKS, AND ONLY WHEN A PAGE WAS DROPPED. `video.currentTime` is the
+  // tape; `tl.time()` is the story the player is watching. With a complete link
+  // the plan's maps are the identity and the two are the same number, which is
+  // the contract every comment in this file was written against. With a page
+  // dropped they differ by the stretches storyPlan.js cut out, and the video is
+  // jumped over each of them at the hairline instant of a page turn.
+  const SEGMENTS = plan?.segments ?? STORY_SEGMENTS
+  const toStory = plan?.toStory ?? (t => t)
+  const toVideo = plan?.toVideo ?? (t => t)
+  const gapAt = plan?.gapAt ?? (() => null)
+
+  /** Which segment is on screen at STORY time `t`; same rule as slides.js. */
+  const segmentAt = t => {
+    let idx = -1
+    for (let i = 0; i < SEGMENTS.length; i++) {
+      if (t >= SEGMENTS[i].cut - 1e-3) idx = i
+    }
+    return idx
+  }
 
   let frameHandle = null
   let syncStarted = false
@@ -65,14 +86,25 @@ export function useStoryPlayback(ctx) {
     if (!v || v.seeking || v.paused) return
     if (isPaused.value || longPress.value) return
 
-    applySegment(v.currentTime)
+    // OVER THE HOLE FIRST, before anything reads the clock. The jump lands on
+    // the far side of a stretch that carries no page of this player's story;
+    // it happens at a turn's edge-on instant, where the journal is a hairline,
+    // and the delivered background is a near-still room (0.4-3.2 of 255 between
+    // cut points), so there is nothing in either picture to see it by.
+    const hole = gapAt(v.currentTime)
+    if (hole) {
+      v.currentTime = hole.to
+      return
+    }
+
+    const t = toStory(v.currentTime)
+    applySegment(t)
 
     if (performance.now() < suppressSyncUntil) return
     if (isFinalHolding) {
       if (tl.time() < tl.duration()) tl.time(tl.duration())
       return
     }
-    const t = v.currentTime
     if (Math.abs(tl.time() - t) > SYNC_EPSILON) tl.time(t)
   }
 
@@ -103,7 +135,7 @@ export function useStoryPlayback(ctx) {
       // Before the first cut no page is on screen yet, but the face still has
       // to be the one the cover flies in on — hence the clamp rather than a
       // guard: seeking to 0 must put 1465x1868 back, not leave the last page's.
-      setFace?.(STORY_SEGMENTS[Math.max(idx, 0)].face)
+      setFace?.(SEGMENTS[Math.max(idx, 0)].face)
       onSegmentChange?.(idx)
     }
   }
@@ -113,7 +145,7 @@ export function useStoryPlayback(ctx) {
     syncStarted = true
     const loop = () => {
       syncToVideo()
-      currentTime.value = videoPlayer.value?.currentTime ?? tl.time()
+      currentTime.value = videoPlayer.value ? toStory(videoPlayer.value.currentTime) : tl.time()
       frameHandle = requestAnimationFrame(loop)
     }
     frameHandle = requestAnimationFrame(loop)
@@ -382,9 +414,16 @@ export function useStoryPlayback(ctx) {
     setTimeout(run, FRAME_WAIT_MS)
   }
 
-  /** Seek both clocks. See the comment block above — this order matters. */
+  /**
+   * Seek both clocks. See the comment block above — this order matters.
+   *
+   * `time` is STORY time, the clock the timeline and the segments live on. The
+   * tape is asked for the second that story time sits on, which is the same
+   * number whenever the link was complete.
+   */
   const seekBoth = (time, shouldPlay) => {
     const v = videoPlayer.value
+    const videoTime = toVideo(time)
     isFinalHolding = false
     tl.pause()
     pauseHover()
@@ -398,7 +437,7 @@ export function useStoryPlayback(ctx) {
       }
       return
     }
-    if (Math.abs(v.currentTime - time) < 0.02) {
+    if (Math.abs(v.currentTime - videoTime) < 0.02) {
       if (shouldPlay) {
         suppressSyncUntil = performance.now() + SETTLE_GUARD_MS
         tl.play()
@@ -409,7 +448,7 @@ export function useStoryPlayback(ctx) {
     }
     let done = false
     const finishResume = () => {
-      tl.time(v.currentTime)
+      tl.time(toStory(v.currentTime))
       if (shouldPlay) {
         suppressSyncUntil = performance.now() + SETTLE_GUARD_MS
         tl.play()
@@ -426,7 +465,7 @@ export function useStoryPlayback(ctx) {
     }
     v.addEventListener('seeked', resume, { once: true })
     const fallback = setTimeout(resume, SEEK_FALLBACK_MS)
-    v.currentTime = time
+    v.currentTime = videoTime
   }
 
   /**
@@ -445,13 +484,13 @@ export function useStoryPlayback(ctx) {
 
   const jumpToSegment = direction => {
     const v = videoPlayer.value
-    const t = v ? v.currentTime : tl.time()
+    const t = v ? toStory(v.currentTime) : tl.time()
     // Same definition of "where we are" as the page cut uses, so an arrow
     // pressed mid-turn goes where the eye expects rather than skipping a page.
     const idx = Math.max(0, segmentAt(t))
     let targetIdx
     if (direction === 'forward') {
-      if (idx >= STORY_SEGMENTS.length - 1) return // already on the last page
+      if (idx >= SEGMENTS.length - 1) return // already on the last page
       targetIdx = idx + 1
       notify('click_forward')
     } else {
@@ -461,7 +500,7 @@ export function useStoryPlayback(ctx) {
     // Resume based on the user's INTENT (isPaused), not the transient v.paused
     // flag, which can momentarily read "paused" mid-seek and would otherwise
     // leave the timeline frozen after a forward arrow.
-    seekBoth(landingTime(STORY_SEGMENTS[targetIdx]), !isPaused.value)
+    seekBoth(landingTime(SEGMENTS[targetIdx]), !isPaused.value)
   }
 
   const seek = time => seekBoth(time, !isPaused.value)
