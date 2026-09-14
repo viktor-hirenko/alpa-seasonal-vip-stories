@@ -20,11 +20,17 @@ _context/
 # Raw motion-designer deliverables (187 MB each) and extracted reference frames.
 _refs/
 
-# Everything in public/video/ is a build output of scripts/encode-video.sh —
-# the dev proxies of the reference clips AND the shipping encodes. None of it
-# belongs in git; regenerate with `npm run video:dev` / `npm run video:prod`.
-public/video/*.mp4
-public/video/*.webm
+# Dev proxies of the reference clips (34 MB): the lab and the dev server use
+# them, the story never does. Rebuilt by `npm run video:dev` from _refs/.
+public/video/ref-*.mp4
+
+# ⚠️ THE SHIPPING ENCODES ARE TRACKED ON PURPOSE — story.mp4 and story.webm stay
+# in git, all 16 MB of them. A CI build clones the repository and runs
+# `npm run build`; it cannot produce them, because `encode-video.sh` needs the
+# 187 MB masters in `_refs/`, which are not in git and should not be. Ignore them
+# here and every deploy ships a story with no clock: the video 404s, playback
+# never starts, and the journal sits on frame zero. Measured on Vercel,
+# 2026-09-14.
 
 # fly:measure intermediates (2 MB of blob tracks); regenerate with npm run fly:measure
 .fly-cache/
