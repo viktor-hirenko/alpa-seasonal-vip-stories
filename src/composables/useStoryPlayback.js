@@ -94,7 +94,22 @@ export function useStoryPlayback(ctx) {
     const hole = gapAt(v.currentTime)
     if (hole) {
       v.currentTime = hole.to
+      if (duckedForSeam) {
+        duckedForSeam = false
+        unduck()
+      }
       return
+    }
+    // The holes are known before a frame of this story is drawn (plan.gaps), so
+    // unlike a tap this seam can be seen coming and faded into properly.
+    //
+    // ⚠️ THE LOOK-AHEAD IS TWICE THE FADE, and it has to be. The tape reaches
+    // the seam DUCK_LEAD seconds of real time after this line first sees it,
+    // and the fade needs DUCK_MS of that; with the two equal the ramp is caught
+    // four fifths done and the jump lands at a volume of 0.34 — measured.
+    if (!duckedForSeam && audible() && gapAt(v.currentTime + DUCK_LEAD)) {
+      duckedForSeam = true
+      rampVolume(0, DUCK_MS)
     }
 
     const t = toStory(v.currentTime)
@@ -154,6 +169,8 @@ export function useStoryPlayback(ctx) {
   const stopSync = () => {
     if (frameHandle != null) cancelAnimationFrame(frameHandle)
     frameHandle = null
+    if (volumeRamp != null) cancelAnimationFrame(volumeRamp)
+    volumeRamp = null
     syncStarted = false
     detachStallHandlers()
   }
@@ -392,6 +409,87 @@ export function useStoryPlayback(ctx) {
     }
   }
 
+  // --- The soundtrack's seams ----------------------------------------------
+  /**
+   * EVERY SEEK SPLICES THE MUSIC, AND A SPLICE CLICKS. Measured 2026-09-16 on
+   * the delivered track: at a skipped page's seam the waveform steps by
+   * 0.29..0.57, while the steepest step the music itself takes anywhere near it
+   * is 0.11..0.19. Three times bigger than anything in the material is not a
+   * "jump in the music" — it is a click, and it is audible on tap navigation,
+   * on the desktop arrows, on "watch again" and on every hole left by a page
+   * this player has no data for.
+   *
+   * The fix is the oldest one in editing: take the level to silence before the
+   * cut and bring it back after. There is nothing to hear at zero, so there is
+   * no step to hear.
+   *
+   * ⚠️ THE FADE-OUT HAS TO FINISH BEFORE THE SEEK, not with it. Slamming the
+   * volume to 0 is itself a step — from wherever the waveform happened to be
+   * straight down to nothing — and clicks for the same reason the splice does.
+   * Hence DUCK_MS of tape at the start and the deferred assignment below.
+   *
+   * ⚠️ AND IT ALL SKIPS ITSELF WHEN THE SOUND IS OFF. `audible()` guards every
+   * branch, so with the default muted video the seek path is exactly the code
+   * that shipped before the soundtrack — same order, same timers, no added
+   * delay. The protocol below was paid for over several sessions; it should not
+   * be re-litigated by a feature that only matters when the player has pressed
+   * the speaker.
+   */
+  const DUCK_MS = 70 // fade to silence before a jump
+  const DUCK_RECOVER_MS = 180 // and back up after it
+  const DUCK_LEAD = (2 * DUCK_MS) / 1000 // seconds of tape to see a hole coming
+  let volumeRamp = null
+  /**
+   * ⚠️ ONE FADE PER SEAM. The look-ahead below is true on EVERY animation frame
+   * of the approach, and `rampVolume` restarts from the current level each time
+   * it is called — so without this latch the ramp is re-armed sixty times a
+   * second, decays geometrically and never actually arrives. Measured: the jump
+   * landed at a volume of 0.116 instead of 0.
+   */
+  let duckedForSeam = false
+
+  /** Is anything actually coming out of the speakers right now? */
+  const audible = () => {
+    const v = videoPlayer.value
+    return !!v && !v.muted && v.volume > 0
+  }
+
+  /**
+   * ⚠️ `onDone` IS HOW THE SEEK LEARNS THE FADE IS OVER, and it is not
+   * decoration. Running the seek off its own `setTimeout(DUCK_MS)` in parallel
+   * looks equivalent and is not: the ramp advances on animation frames, so its
+   * last step lands up to a frame BEFORE the timer, and the jump then happens
+   * at a volume of 0.07..0.13 instead of 0 — measured, 2026-09-16. Audible
+   * residue is exactly what this whole mechanism exists to remove.
+   */
+  const rampVolume = (to, ms, onDone) => {
+    const v = videoPlayer.value
+    if (!v) return
+    if (volumeRamp != null) cancelAnimationFrame(volumeRamp)
+    volumeRamp = null
+    const from = v.volume
+    if (ms <= 0 || from === to) {
+      v.volume = to
+      onDone?.()
+      return
+    }
+    const t0 = performance.now()
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / ms)
+      v.volume = from + (to - from) * k
+      if (k < 1) {
+        volumeRamp = requestAnimationFrame(step)
+      } else {
+        volumeRamp = null
+        onDone?.()
+      }
+    }
+    volumeRamp = requestAnimationFrame(step)
+  }
+
+  /** Bring the level back after a jump. Safe to call when nothing was ducked. */
+  const unduck = () => rampVolume(1, DUCK_RECOVER_MS)
+
   // --- Seeking ------------------------------------------------------------
   const SETTLE_GUARD_MS = 220 // suppress sync after a seek-resume
   const SEEK_FALLBACK_MS = 600 // cap if `seeked` never fires (iOS edge case)
@@ -425,6 +523,10 @@ export function useStoryPlayback(ctx) {
     const v = videoPlayer.value
     const videoTime = toVideo(time)
     isFinalHolding = false
+    // A tap can land while the loop is already fading into a hole it will now
+    // never reach. Clearing the latch here is what keeps the level from being
+    // stranded at zero for the rest of the story.
+    duckedForSeam = false
     tl.pause()
     pauseHover()
     tl.time(time)
@@ -446,6 +548,8 @@ export function useStoryPlayback(ctx) {
       }
       return
     }
+    // Already silent, or the sound is off: nothing to protect, seek at once.
+    const wasAudible = audible()
     let done = false
     const finishResume = () => {
       tl.time(toStory(v.currentTime))
@@ -455,6 +559,7 @@ export function useStoryPlayback(ctx) {
         resumeHover()
         v.play().catch(() => {})
       }
+      if (wasAudible) unduck()
     }
     const resume = () => {
       if (done) return
@@ -465,7 +570,16 @@ export function useStoryPlayback(ctx) {
     }
     v.addEventListener('seeked', resume, { once: true })
     const fallback = setTimeout(resume, SEEK_FALLBACK_MS)
-    v.currentTime = videoTime
+    // The `seeked` listener and its fallback are already armed, so the
+    // DUCK_MS the fade needs comes out of the fallback's 600, not out of the
+    // protocol. With the sound off this is the plain assignment it always was.
+    if (wasAudible) {
+      rampVolume(0, DUCK_MS, () => {
+        v.currentTime = videoTime
+      })
+    } else {
+      v.currentTime = videoTime
+    }
   }
 
   /**
