@@ -28,8 +28,24 @@
         webkit-playsinline
         @timeupdate="updateTime"
         @ended="handleVideoEnded"
+        @error="handleVideoError"
       >
-        <source v-for="s in videoSources" :key="s.src" :src="s.src" :type="s.type" />
+        <!-- ⚠️ THE FAILURE ARRIVES HERE, NOT ON THE <video>. With `<source>`
+             children a media element that runs out of candidates sets
+             networkState to NETWORK_NO_SOURCE and fires `error` at each SOURCE;
+             it never fires one at itself. `@error` on the <video> above is
+             still right — it catches a decode failure after a source was
+             chosen — but on its own it is silent exactly when the file cannot
+             be fetched at all, which is the case worth reporting. Proved by
+             blocking story.mp4/webm at the network layer: with the handler only
+             on the <video>, nothing happened for 8 seconds. -->
+        <source
+          v-for="s in videoSources"
+          :key="s.src"
+          :src="s.src"
+          :type="s.type"
+          @error="handleSourceError"
+        />
       </video>
 
       <div class="stage-3d">
@@ -57,6 +73,30 @@
       <div class="stage__speed" />
 
       <div class="stage__ui">
+        <!-- THE VIDEO IS THE CLOCK, so if it never arrives there is no story to
+             show and no amount of waiting will produce one. Before this existed
+             the player got the buffer timeout's "Tap to start", tapped, and
+             nothing happened — a dead screen with no word about why. A-2 in
+             _context/95-code-audit.md.
+
+             ⚠️ IT LIVES INSIDE `.stage__ui` AND BEFORE THE HEADER ON PURPOSE.
+             Hung outside as a sibling of the UI layer it covered the header
+             too, and the close button with it — a player who cannot play the
+             story and cannot leave it either. Here the header (z-index 2, and
+             later in the DOM) paints over it while the tap zones (z-index 1)
+             stay underneath, so "tap to try again" works everywhere except on
+             the chrome, which keeps doing its own job.
+
+             ⚠️ The copy is hardcoded English, like "Tap to start" below. Both
+             are outside the four locale files on purpose: they are failure
+             states nobody has written product copy for yet. -->
+        <div v-if="videoFailed" class="story-error" @click="reloadStory">
+          <div class="story-error__inner">
+            <div class="story-error__title">Story unavailable</div>
+            <div class="story-error__hint">Tap to try again</div>
+          </div>
+        </div>
+
         <StoryHeader
           :time="currentTime"
           :segments="segments"
@@ -75,12 +115,12 @@
              journal on storyboard frames 22-25, 25 and 27 — and `.stage__ui` is
              the one layer with no perspective ancestor. -->
         <StoryOutro :visible="showOutro" :lines="copy.outro" />
-        <StoryCta :visible="showCta" :label="copy.continue_journey" @click="getGift" />
+        <StoryCta :progress="ctaProgress" :label="copy.continue_journey" @click="getGift" />
         <StoryReplay :visible="showReplay" :label="copy.watch_again" @click="watchAgain" />
       </div>
 
       <!-- Only shown when autoplay is refused, exactly as in Thor. -->
-      <div v-if="showPlayButton" class="story-start" @click="playVideo">
+      <div v-if="showPlayButton && !videoFailed" class="story-start" @click="playVideo">
         <div class="story-start__inner">
           <div class="story-start__label">Tap to start</div>
           <div class="story-start__play">
@@ -198,9 +238,19 @@ const { notify, closeStory, getGift } = useStoryBridge({ endLink })
 // derived from the storyboard frames they appear on), so nothing here decides
 // when they show — it only reads the clock.
 const copy = story.t('ui')
-const showCta = computed(
-  () => currentTime.value >= TIMING.cta.from && currentTime.value < TIMING.cta.to,
-)
+/**
+ * The CTA's window AND its entrance in one number: 0 outside the window, and
+ * inside it how far the clock has travelled through `TIMING.cta.rise`. The mock
+ * wants the button to ride in from below (21770:2043) and to stay put
+ * afterwards, which is exactly what a clamped ramp off `from` describes — and,
+ * being a function of the second rather than of the appearance, it survives
+ * every seek the story allows. See StoryCta.vue.
+ */
+const ctaProgress = computed(() => {
+  const t = currentTime.value
+  if (t < TIMING.cta.from || t >= TIMING.cta.to) return 0
+  return Math.min(1, (t - TIMING.cta.from) / TIMING.cta.rise)
+})
 const showReplay = computed(() => currentTime.value >= TIMING.replay.at)
 // The outro title. Its SCALE is the timeline's (the `outroText` preset); this
 // only says when the element is on screen at all, and it has to, because a
@@ -242,6 +292,37 @@ const hidePreloader = () => {
   const el = document.querySelector('.fe-preloader')
   if (el) el.classList.add('fe-preloader--hidden')
 }
+
+/**
+ * The background video failed to load or decode.
+ *
+ * ⚠️ THE PRELOADER HAS TO COME OFF HERE TOO. It is dismissed by the buffering
+ * watcher, and buffering never ends when the file never arrives — so without
+ * this line the message below would render underneath a spinner that spins for
+ * ever, and the player would see the spinner, not the message.
+ */
+const videoFailed = ref(false)
+const handleVideoError = () => {
+  if (videoFailed.value) return
+  videoFailed.value = true
+  isBuffering.value = false
+  hidePreloader()
+  notify('video_error')
+}
+
+/**
+ * One `<source>` gave up. That is not a failure on its own — the mp4 may be
+ * refused by a browser that then plays the webm — so the story is only declared
+ * lost once every candidate has fallen.
+ */
+let deadSources = 0
+const handleSourceError = () => {
+  deadSources += 1
+  if (deadSources >= videoSources.length) handleVideoError()
+}
+
+/** The only recovery there is: ask for the file again. */
+const reloadStory = () => window.location.reload()
 
 onMounted(async () => {
   // nextTick before resolving targets: the journal's faces and the page stack

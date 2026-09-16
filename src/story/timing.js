@@ -291,7 +291,13 @@ export const TIMING = {
    * `replay` — "Watch again" (21811:3980) on storyboard frame 27, i.e. once the
    * burst has finished (speed.at + speed.dur), and it stays for good.
    */
-  cta: { from: 78.07, to: 92.83 },
+  /**
+   * `rise` — the mock's own instruction for the Gift page (21770:2043):
+   * «Кнопка виїжджає знизу». It is the ONE entrance the button gets: the two
+   * frames after it say «кнопка лишається на місці», so this is measured from
+   * `from` and never replayed on a page change.
+   */
+  cta: { from: 78.07, to: 92.83, rise: 0.45 },
   replay: { at: 93.93 },
 
   /** Story length, from the reference video. */

@@ -231,6 +231,46 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
   cursor: pointer;
 }
 
+///
+/// Shown when the background video — the story's clock — never loads. Same
+/// shape as `.story-start` so a failure does not look like a different app,
+/// one step darker because there is nothing behind it worth seeing.
+///
+.story-error {
+  position: absolute;
+  inset: 0;
+
+  /// ⚠️ 2, THE HEADER'S OWN LEVEL, AND IT RENDERS BEFORE THE HEADER. Equal
+  /// z-index inside `.stage__ui` means DOM order decides, so the close button
+  /// stays on top and reachable — a player who cannot watch the story must
+  /// still be able to leave it. Above 2 and the chrome goes dark with
+  /// everything else; below 1 and the tap zones swallow "tap to try again".
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: rgba(5, 6, 12, 0.92);
+  text-align: center;
+  cursor: pointer;
+}
+
+.story-error__inner {
+  display: grid;
+  justify-items: center;
+  gap: du(24);
+  padding: 0 du(80);
+}
+
+.story-error__title {
+  font: 800 du(64) / 1.15 $font-stack;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.story-error__hint {
+  font: 500 du(40) / 1.3 $font-stack;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .story-start__inner {
   display: grid;
   justify-items: center;
@@ -368,7 +408,14 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
   position: absolute;
   left: 50%;
   top: 81.99%;
-  transform: translateX(-50%);
+
+  /// ⚠️ ONE `transform` HERE, AND THE ENTRANCE RIDES INSIDE IT AS A VARIABLE.
+  /// The button is centred by `translateX(-50%)`, so a second transform written
+  /// from the component would silently drop the centring and put it half a
+  /// button to the right — the CSS form of the trap ADR-0002 describes for GSAP.
+  /// StoryCta.vue sets `--cta-rise` and `--cta-fade` from the clock instead.
+  transform: translateX(-50%) translateY(var(--cta-rise, 0));
+  opacity: var(--cta-fade, 1);
 
   .j-cta {
     width: du(834.672);
