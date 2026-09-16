@@ -9,9 +9,13 @@ dist-ssr
 .idea
 *.log
 
-# claude-flow session droppings
+# claude-flow session droppings. `ruvector.db` is its vector store: 1.5 MB of
+# binary that reappears on its own every session and belongs to the tool, not to
+# the project.
 .claude-flow/
 .swarm/
+ruvector.db
+*.db
 
 # Internal documentation: tickets, Figma links, translation source, decision log.
 # Canonical copy lives with the project in DevHubVault.
