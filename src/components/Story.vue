@@ -1,18 +1,18 @@
 <template>
   <div class="story-root">
     <div ref="stageRef" class="stage">
-      <!-- Background: the master clock.
-           ⚠️ THE SOUND BUTTON IN THE HEADER IS NOT WIRED, AND THREE THINGS HAVE
-           TO CHANGE TOGETHER BEFORE IT CAN BE. The motion designer is adding a
-           soundtrack later; when it lands:
-             1. scripts/encode-video.sh strips audio with `-an` on all four
-                encode paths, so the shipped file has no track to unmute;
-             2. `muted` below is a fixed attribute, not a binding;
-             3. nothing anywhere assigns `video.muted` — `soundOn` only picks
-                which glyph the header draws.
-           The start-muted-then-unmute-on-tap shape is RIGHT and must stay: a
-           browser refuses to autoplay a video with sound, so the button is the
-           user gesture that earns it. See _context/95-code-audit.md.
+      <!-- Background: the master clock, and since 2026-09-16 the soundtrack too.
+           THE VIDEO CARRIES ITS OWN SOUND. The motion designer's master came
+           with the track baked in, so `encode-video.sh prod` keeps it (aac in
+           the mp4, opus in the webm) instead of stripping it. One file, one
+           clock, one thing to keep in sync — nothing to line up by hand.
+
+           ⚠️ `muted` BELOW IS NOT DEAD WEIGHT AND MUST STAY. A browser refuses
+           to autoplay a video that makes noise; muted is what lets the story
+           start on its own. The header's sound button is the user gesture that
+           earns the sound, and `toggleSound` flips `video.muted` directly and
+           synchronously inside the click — see it below. Take this attribute
+           off and the story stops starting at all.
 
            TWO SOURCES, mp4 first. Thor ships webm + mp4 (your_story.vue:21-22)
            and that second format is the real insurance against a codec a device
@@ -63,7 +63,7 @@
           :sound-on="soundOn"
           :is-playing="isPlaying"
           show-pause
-          @toggle-sound="soundOn = !soundOn"
+          @toggle-sound="toggleSound"
           @toggle-play="togglePlayState"
           @close="closeStory"
         />
@@ -144,6 +144,23 @@ const soundOn = ref(false)
 const longPress = ref(false)
 const pressTimer = ref(null)
 const endLink = ref('')
+
+/**
+ * THE SOUND BUTTON. The video ships with its soundtrack inside it, so there is
+ * nothing to start and nothing to line up — only a mute to lift.
+ *
+ * ⚠️ IT FLIPS THE PROPERTY HERE, NOT THROUGH A BINDING. `muted` on the element
+ * stays a plain attribute so the very first render is unambiguously muted and
+ * autoplay is granted; the property is then flipped straight from this click,
+ * synchronously, because permission to make noise is tied to the gesture and a
+ * watcher would run after it. Same reason the reload starts silent every time:
+ * a page cannot remember it was allowed.
+ */
+const toggleSound = () => {
+  soundOn.value = !soundOn.value
+  const v = videoPlayer.value
+  if (v) v.muted = !soundOn.value
+}
 
 // Parse the link and publish the data layer BEFORE anything renders: the 17
 // pages read it through `useStory()` rather than through props, because they

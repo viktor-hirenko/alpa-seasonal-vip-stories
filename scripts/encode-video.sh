@@ -17,10 +17,15 @@
 #                      over. A 1-second GOP makes that protocol's job easy.
 #   -movflags +faststart   moov atom to the front, so playback starts before the
 #                      file is fully fetched.
-#   -an                strip audio. The soundtrack ships as a separate <audio>
-#                      so the video can stay permanently `muted` (kills a whole
-#                      class of autoplay failures) and swapping the track is a
-#                      1.5 MB asset change rather than a 30 MB re-encode.
+#   AUDIO IS KEPT on the prod encodes since 2026-09-16, because the soundtrack
+#                      arrived inside the video master and the owner asked for
+#                      one file, not two. The proxies keep `-an`: the lab and the
+#                      dev server play the reference clip under the DOM scene and
+#                      have no business making noise.
+#                      ⚠️ A video WITH sound cannot autoplay. The <video> still
+#                      starts muted and the header's sound button unmutes it —
+#                      that button IS the user gesture the browser waits for.
+#                      Take `muted` off the element and the story stops starting.
 set -euo pipefail
 
 MODE="${1:-dev}"
@@ -31,6 +36,10 @@ mkdir -p "$OUT"
 
 CLEAN="$REFS/DP-15152 - clean bg.mp4"
 PREVIEW="$REFS/DP-15152 - preview.mp4"
+# THE PROD SOURCE since 2026-09-16: the same picture as CLEAN (per-frame PSNR
+# above 30 dB on all 2831 frames, measured) plus the soundtrack. CLEAN is silent
+# and stays the reference for the proxies only.
+SFX="$REFS/DP-15152 - clean bg sfx.mp4"
 
 need() { [ -f "$1" ] || { echo "missing: $1" >&2; exit 1; }; }
 
@@ -38,15 +47,21 @@ case "$MODE" in
   dev)
     # Proxies for the lab underlay. Quality is irrelevant here, alignment isn't:
     # keep the exact frame rate and duration so timecodes still match.
-    need "$CLEAN"; need "$PREVIEW"
-    for pair in "clean:$CLEAN" "preview:$PREVIEW"; do
-      name="${pair%%:*}"; src="${pair#*:}"
-      echo "-> ref-$name.mp4 (540x960 proxy)"
+    # `clean` comes off the SFX master and KEEPS ITS SOUND: the dev server plays
+    # this proxy in place of story.mp4, and a sound button that is silent on
+    # `npm run dev` is a trap — you cannot tell it apart from a broken one. The
+    # lab plays the same file muted (Lab.vue), so nothing starts making noise
+    # there. `preview` stays silent; it is only ever an underlay.
+    need "$SFX"; need "$PREVIEW"
+    for pair in "clean:$SFX:keep" "preview:$PREVIEW:drop"; do
+      name="${pair%%:*}"; rest="${pair#*:}"; src="${rest%:*}"; snd="${rest##*:}"
+      echo "-> ref-$name.mp4 (540x960 proxy, sound: $snd)"
+      [ "$snd" = keep ] && AFLAGS=(-c:a aac -b:a 96k -ac 2) || AFLAGS=(-an)
       ffmpeg -nostdin -v error -y -i "$src" \
         -c:v libx264 -preset ultrafast -crf 30 \
         -vf scale=540:960 -pix_fmt yuv420p \
         -g 30 -keyint_min 30 -sc_threshold 0 \
-        -movflags +faststart -an \
+        -movflags +faststart "${AFLAGS[@]}" \
         "$OUT/ref-$name.mp4"
     done
     ;;
@@ -57,14 +72,15 @@ case "$MODE" in
     # starfield, lower the CRF first (24 -> 21, ~+8 MB); only then consider
     # 810x1440. Do NOT reach for 1080x1920 — 4x the bytes for detail no phone
     # displays.
-    SRC="${2:-$CLEAN}"
+    SRC="${2:-$SFX}"
     need "$SRC"
     echo "-> story.mp4 (720x1280 h264)"
     ffmpeg -nostdin -v error -y -i "$SRC" \
       -c:v libx264 -preset slow -crf 24 -profile:v high -level 4.0 \
       -vf scale=720:1280 -pix_fmt yuv420p \
       -g 30 -keyint_min 30 -sc_threshold 0 \
-      -movflags +faststart -an \
+      -c:a aac -b:a 128k -ar 48000 -ac 2 \
+      -movflags +faststart \
       "$OUT/story.mp4"
 
     echo "-> story.webm (720x1280 vp9, two-pass)"
@@ -76,7 +92,7 @@ case "$MODE" in
     ffmpeg -nostdin -v error -y -i "$SRC" \
       -c:v libvpx-vp9 -b:v 0 -crf 32 -row-mt 1 -g 30 \
       -vf scale=720:1280 -pix_fmt yuv420p \
-      -pass 2 -passlogfile "$PASSLOG" -an \
+      -pass 2 -passlogfile "$PASSLOG" -c:a libopus -b:a 96k -ar 48000 -ac 2 \
       "$OUT/story.webm"
     ;;
 
