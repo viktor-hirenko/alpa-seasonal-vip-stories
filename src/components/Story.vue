@@ -58,17 +58,12 @@
             :data-page="seg.page"
             :data-face="seg.face"
           >
-            <!-- The page's own clock. Only the page on screen is given a live
-                 one; see PageReveal for why the other seventeen are handed
-                 Infinity rather than being left to animate unseen. -->
-            <PageReveal :cut="seg.cut" :now="revealNow(seg)">
-              <component
-                :is="resolvePage(seg.page)"
-                :page="seg.page"
-                :frame="seg.firstFrame"
-                :start="seg.start"
-              />
-            </PageReveal>
+            <component
+              :is="resolvePage(seg.page)"
+              :page="seg.page"
+              :frame="seg.firstFrame"
+              :start="seg.start"
+            />
           </div>
         </JournalStage>
 
@@ -120,7 +115,7 @@
              journal on storyboard frames 22-25, 25 and 27 — and `.stage__ui` is
              the one layer with no perspective ancestor. -->
         <StoryOutro :visible="showOutro" :lines="copy.outro" />
-        <StoryCta :progress="ctaProgress" :label="copy.continue_journey" @click="getGift" />
+        <StoryCta :visible="showCta" :label="copy.continue_journey" @click="getGift" />
         <StoryReplay :visible="showReplay" :label="copy.watch_again" @click="watchAgain" />
       </div>
 
@@ -156,7 +151,6 @@ import TapZones from '@/components/UI/TapZones.vue'
 import StoryCta from '@/components/UI/StoryCta.vue'
 import StoryOutro from '@/components/UI/StoryOutro.vue'
 import StoryReplay from '@/components/UI/StoryReplay.vue'
-import PageReveal from '@/components/shared/PageReveal.vue'
 import { resolvePage } from '@/components/pages/index.js'
 import { resolveTargets } from '@/journal3d'
 import { buildStoryTimeline } from '@/animations/buildStoryTimeline.js'
@@ -205,7 +199,16 @@ const endLink = ref('')
 const toggleSound = () => {
   soundOn.value = !soundOn.value
   const v = videoPlayer.value
-  if (v) v.muted = !soundOn.value
+  if (!v) return
+  v.muted = !soundOn.value
+  // ⚠️ THE LEVEL IS RESTORED HERE, AND IT IS NOT BELT AND BRACES. Seeks duck
+  // `video.volume` to silence and bring it back (useStoryPlayback), and a duck
+  // that is interrupted — a tap arriving while the loop is already fading into
+  // a hole it will now never reach — can leave the level at zero. The icon then
+  // says the sound is on, `muted` is false, and the player hears nothing until
+  // the page is reloaded. The owner hit exactly that on 2026-09-16. Pressing
+  // the button is the one moment we KNOW what the level should be.
+  if (soundOn.value) v.volume = 1
 }
 
 // Parse the link and publish the data layer BEFORE anything renders: the 17
@@ -244,19 +247,9 @@ const { notify, closeStory, getGift } = useStoryBridge({ endLink })
 // derived from the storyboard frames they appear on), so nothing here decides
 // when they show — it only reads the clock.
 const copy = story.t('ui')
-/**
- * The CTA's window AND its entrance in one number: 0 outside the window, and
- * inside it how far the clock has travelled through `TIMING.cta.rise`. The mock
- * wants the button to ride in from below (21770:2043) and to stay put
- * afterwards, which is exactly what a clamped ramp off `from` describes — and,
- * being a function of the second rather than of the appearance, it survives
- * every seek the story allows. See StoryCta.vue.
- */
-const ctaProgress = computed(() => {
-  const t = currentTime.value
-  if (t < TIMING.cta.from || t >= TIMING.cta.to) return 0
-  return Math.min(1, (t - TIMING.cta.from) / TIMING.cta.rise)
-})
+const showCta = computed(
+  () => currentTime.value >= TIMING.cta.from && currentTime.value < TIMING.cta.to,
+)
 const showReplay = computed(() => currentTime.value >= TIMING.replay.at)
 // The outro title. Its SCALE is the timeline's (the `outroText` preset); this
 // only says when the element is on screen at all, and it has to, because a
@@ -329,15 +322,6 @@ const handleSourceError = () => {
 
 /** The only recovery there is: ask for the file again. */
 const reloadStory = () => window.location.reload()
-
-/**
- * The reveal clock, per page. The page on screen gets the story's second; the
- * rest get Infinity, which `revealProgress` reads as "finished" — so seventeen
- * hidden pages neither animate nor cost a frame, and `useJournalFit` can still
- * measure them with their real text in it (ADR-0004).
- */
-const revealNow = seg =>
-  seg.index === activeSegment.value ? currentTime.value : Number.POSITIVE_INFINITY
 
 onMounted(async () => {
   // nextTick before resolving targets: the journal's faces and the page stack

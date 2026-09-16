@@ -291,46 +291,8 @@ export const TIMING = {
    * `replay` — "Watch again" (21811:3980) on storyboard frame 27, i.e. once the
    * burst has finished (speed.at + speed.dur), and it stays for good.
    */
-  /**
-   * `rise` — the mock's own instruction for the Gift page (21770:2043):
-   * «Кнопка виїжджає знизу». It is the ONE entrance the button gets: the two
-   * frames after it say «кнопка лишається на місці», so this is measured from
-   * `from` and never replayed on a page change.
-   */
-  cta: { from: 78.07, to: 92.83, rise: 0.45 },
+  cta: { from: 78.07, to: 92.83 },
   replay: { at: 93.93 },
-
-  /**
-   * THE CONTENT'S OWN ENTRANCE — the mock's blue plaques, transcribed in
-   * _context/37-content-animation.md and missed by every session until 16.09.
-   *
-   * «Текст: після завершення перегортання проявляється інформація на сторінці —
-   * ефектом декодування, зліва направо» (21770:2049), and on the template
-   * plaque for the whole block (21770:2048): рубрика, підпис, значення, then
-   * «підсвітка ключового елемента».
-   *
-   * `after` is measured from the page's CUT, not from its start: the cut is the
-   * edge-on instant where the content swaps, and `TIMING.flip.back` later the
-   * journal is standing still again. Starting any earlier decodes a page the
-   * player is watching side-on.
-   *
-   * ⚠️ THE WHOLE THING HAS TO FIT INSIDE THE SHORTEST SLIDE. The tightest pair
-   * of cuts in the table is 3.80 s apart (53.27 -> 57.07), and the budget here
-   * is after + 2*stagger + dur = 1.16 s, so the decode is finished long before
-   * the next turn begins even on that one.
-   *
-   * `tick` is how often a still-scrambling character is re-rolled. It is a
-   * DURATION rather than a frame count because the roll is derived from the
-   * clock (see decode.js): at any given second the same glyph comes out, which
-   * is what lets an arbitrary seek redraw the same picture.
-   */
-  reveal: {
-    after: 0.6,
-    stagger: 0.09,
-    dur: 0.38,
-    tick: 0.05,
-    glow: { after: 0.3, dur: 0.5 },
-  },
 
   /** Story length, from the reference video. */
   duration: 94.3667,

@@ -1,12 +1,7 @@
 <template>
   <div class="j-slot j-slot--tiles" :style="slotStyle">
-    <div class="j-tiles" data-fit-role="digit" :style="[tileStyle, revealStyle]">
-      <span
-        v-for="(ch, i) in shownChars"
-        :key="i"
-        class="j-tile"
-        :class="{ 'j-tile--sep': isSep(chars[i]) }"
-      >
+    <div class="j-tiles" data-fit-role="digit" :style="tileStyle">
+      <span v-for="(ch, i) in chars" :key="i" class="j-tile" :class="{ 'j-tile--sep': isSep(ch) }">
         <span class="j-tile__digit">{{ ch }}</span>
       </span>
     </div>
@@ -90,7 +85,6 @@
  * element the fitter writes to, or the scaling silently does nothing.
  */
 import { computed } from 'vue'
-import { decode, usePageReveal } from './decode.js'
 import { BODY } from '@/story/pageLayouts.js'
 
 const props = defineProps({
@@ -165,24 +159,6 @@ const R = {
 const SEP = /[\s  .,]/
 
 const chars = computed(() => String(props.value).split(''))
-
-/**
- * The value is the last of «рубрика, підпис, значення» (21770:2048), so it
- * resolves after the rubric and the heading — `usePageReveal` hands out that
- * order as the components mount.
- *
- * The tiles are the one place the decode costs nothing in layout: every glyph
- * sits in its own fixed box, so a rolling digit cannot change the row's width
- * the way a rolling letter changes a line's. Separators are punctuation and
- * `decode` leaves them alone, which keeps the grouping standing while the
- * digits spin.
- */
-const { progress, clock, style: revealStyle } = usePageReveal()
-const shownChars = computed(() =>
-  progress.value >= 1
-    ? chars.value
-    : decode(chars.value.join(''), progress.value, clock.value).split(''),
-)
 const isSep = ch => SEP.test(ch)
 
 const d = n => `calc(${+Number(n).toFixed(3)} * var(--u))`

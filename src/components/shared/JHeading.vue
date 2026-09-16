@@ -1,7 +1,7 @@
 <template>
   <div class="j-slot" :style="slotStyle" :data-fit-lines="lines || null">
-    <h2 class="j-heading" data-fit-role="display" :style="revealStyle">
-      <span v-for="(line, i) in shownLines" :key="i" class="j-heading__line">{{ line }}</span>
+    <h2 class="j-heading" data-fit-role="display">
+      <span v-for="(line, i) in textLines" :key="i" class="j-heading__line">{{ line }}</span>
     </h2>
   </div>
 </template>
@@ -17,7 +17,6 @@
  */
 import { computed } from 'vue'
 import { alignStyle } from './slotAlign.js'
-import { decode, usePageReveal } from './decode.js'
 import { BODY } from '@/story/pageLayouts.js'
 
 const props = defineProps({
@@ -66,22 +65,6 @@ const props = defineProps({
 })
 
 const textLines = computed(() => (Array.isArray(props.text) ? props.text : [props.text]))
-
-/**
- * The decode (21770:2048). Every line of the heading resolves on the same
- * clock, so a two-line headline locks as one block rather than racing itself —
- * the stagger in the mock is between the rubric, the caption and the value, not
- * between the lines of one of them.
- *
- * Outside the story — the lab, or any page mounted without a player — this is
- * the finished text, see usePageReveal.
- */
-const { progress, clock, style: revealStyle } = usePageReveal()
-const shownLines = computed(() =>
-  progress.value >= 1
-    ? textLines.value
-    : textLines.value.map(line => decode(String(line ?? ''), progress.value, clock.value)),
-)
 
 const slotStyle = computed(() => ({
   ...(props.grow === 'up' && props.bottom

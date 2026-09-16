@@ -448,10 +448,20 @@ export function useStoryPlayback(ctx) {
    */
   let duckedForSeam = false
 
-  /** Is anything actually coming out of the speakers right now? */
+  /**
+   * Is the player asking to hear this?
+   *
+   * ⚠️ IT ASKS ABOUT `muted`, NOT ABOUT THE LEVEL, and that distinction is a
+   * bug fix. It used to require `volume > 0` as well, which reads as "can be
+   * heard" and is true right up until a duck has finished — at which point an
+   * interrupted duck could never be undone, because the very check that would
+   * have restored the level now answered false. Sound on, level stuck at zero,
+   * for the rest of the story. `muted` is the player's intent, and intent is
+   * what this has to test.
+   */
   const audible = () => {
     const v = videoPlayer.value
-    return !!v && !v.muted && v.volume > 0
+    return !!v && !v.muted
   }
 
   /**
