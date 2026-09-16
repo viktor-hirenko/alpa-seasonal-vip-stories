@@ -58,12 +58,17 @@
             :data-page="seg.page"
             :data-face="seg.face"
           >
-            <component
-              :is="resolvePage(seg.page)"
-              :page="seg.page"
-              :frame="seg.firstFrame"
-              :start="seg.start"
-            />
+            <!-- The page's own clock. Only the page on screen is given a live
+                 one; see PageReveal for why the other seventeen are handed
+                 Infinity rather than being left to animate unseen. -->
+            <PageReveal :cut="seg.cut" :now="revealNow(seg)">
+              <component
+                :is="resolvePage(seg.page)"
+                :page="seg.page"
+                :frame="seg.firstFrame"
+                :start="seg.start"
+              />
+            </PageReveal>
           </div>
         </JournalStage>
 
@@ -151,6 +156,7 @@ import TapZones from '@/components/UI/TapZones.vue'
 import StoryCta from '@/components/UI/StoryCta.vue'
 import StoryOutro from '@/components/UI/StoryOutro.vue'
 import StoryReplay from '@/components/UI/StoryReplay.vue'
+import PageReveal from '@/components/shared/PageReveal.vue'
 import { resolvePage } from '@/components/pages/index.js'
 import { resolveTargets } from '@/journal3d'
 import { buildStoryTimeline } from '@/animations/buildStoryTimeline.js'
@@ -323,6 +329,15 @@ const handleSourceError = () => {
 
 /** The only recovery there is: ask for the file again. */
 const reloadStory = () => window.location.reload()
+
+/**
+ * The reveal clock, per page. The page on screen gets the story's second; the
+ * rest get Infinity, which `revealProgress` reads as "finished" — so seventeen
+ * hidden pages neither animate nor cost a frame, and `useJournalFit` can still
+ * measure them with their real text in it (ADR-0004).
+ */
+const revealNow = seg =>
+  seg.index === activeSegment.value ? currentTime.value : Number.POSITIVE_INFINITY
 
 onMounted(async () => {
   // nextTick before resolving targets: the journal's faces and the page stack

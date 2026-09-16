@@ -63,7 +63,13 @@ const CLIP_QUERY =
   '?days=257&points=120&level=SILVER&total_wins=257' +
   '&biggest_win=257&biggest_win_game=Dragon%20Coins%20Jackpot&top_multiplier=257' +
   '&top_multiplier_game=Tiger%20Jackpots&favorite_game_name=Tiger%20Jackpots' +
-  '&bonuses=257&sports_wins=257&sports_multiplier=257'
+  '&bonuses=257&sports_wins=257&sports_multiplier=257' +
+  // ⚠️ FREEZES THE CONTENT REVEAL (16.09). This tool parks the player on a
+  // second and photographs it, and since the decode landed that second can fall
+  // inside a page's own entrance — Days' digit row starts resolving at 18.02 and
+  // this file samples 18.05. Without the flag the comparison is against a
+  // scrambled glyph. See _context/37-content-animation.md, section 6.
+  '&reveal=off'
 
 /** The seven pages that render JDigitTiles (grep JDigitTiles src/components/pages). */
 const TILE_FRAMES = [9, 12, 13, 14, 16, 17, 18]

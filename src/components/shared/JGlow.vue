@@ -16,6 +16,7 @@
  * into an opaque rectangle.
  */
 import { computed } from 'vue'
+import { usePageGlow } from './decode.js'
 
 const props = defineProps({
   left: { type: Number, required: true },
@@ -57,12 +58,24 @@ const props = defineProps({
 
 const d = n => `calc(${+n.toFixed(3)} * var(--u))`
 
+/**
+ * «Підсвітка ключового елемента — цифри або центральної ілюстрації розвороту»
+ * (21770:2048): the bloom the mock already draws GROWS IN once the text has
+ * resolved, rather than being there from the first frame of the page.
+ *
+ * ⚠️ IT ONLY RAMPS INSIDE THE STORY. With no player above it — the lab, a page
+ * mounted on its own — `usePageGlow` answers 1, so every still comparison
+ * (36-visual-diff.md) and every fit sweep sees the finished glow it always saw.
+ */
+const glow = usePageGlow()
+
 const boxStyle = computed(() => {
   const box = {
     left: d(props.left),
     top: d(props.top),
     width: d(props.width),
     height: d(props.height),
+    ...(glow.value >= 1 ? {} : { opacity: glow.value }),
   }
   if (!props.maskWidth || !props.maskHeight) return box
   const size = `${d(props.maskWidth)} ${d(props.maskHeight)}`
