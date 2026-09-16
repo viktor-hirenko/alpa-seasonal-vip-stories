@@ -61,16 +61,21 @@
       </div>
     </template>
 
-    <p class="sm__count" data-fit-role="value" data-fit-lines="1">{{ packs }}</p>
+    <p class="sm__count" data-fit-role="value" data-fit-lines="1">
+      <JReveal :text="String(packs)" />
+    </p>
     <!-- 399 / 401 / 508 / 605 wide across the four variants — and every one of
          them ends on x=658. The right edge is the anchor; the box grows left. -->
-    <p class="sm__packs-of" data-fit-role="display" data-fit-lines="1">{{ copy.packs_of }}</p>
+    <p class="sm__packs-of" data-fit-role="display" data-fit-lines="1">
+      <JReveal :text="copy.packs_of" />
+    </p>
 
     <JHeading :text="copy.footer" :top="1573" :size="92" v-bind="L.footer" />
   </PageChrome>
 </template>
 
 <script setup>
+import JReveal from '@/components/shared/JReveal.vue'
 /**
  * Space Milk. Figma set 21770:4216, EN body 21770:4217 (internally named
  * "Joke2" — another stale component label; trust 31-pages.md's node-id map).

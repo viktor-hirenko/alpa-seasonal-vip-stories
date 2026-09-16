@@ -302,34 +302,67 @@ export const TIMING = {
 
   /**
    * THE CONTENT'S OWN ENTRANCE — the mock's blue plaques, transcribed in
-   * _context/37-content-animation.md and missed by every session until 16.09.
+   * _context/37-content-animation.md.
    *
-   * «Текст: після завершення перегортання проявляється інформація на сторінці —
-   * ефектом декодування, зліва направо» (21770:2049), and on the template
-   * plaque for the whole block (21770:2048): рубрика, підпис, значення, then
-   * «підсвітка ключового елемента».
+   * «Текст: написи проявляються ПО ЧЕРЗІ, після того як журнал зафіксувався.
+   * Поява тексту: ефект декодування — символи швидко перемішуються на місці й
+   * ПО ЧЕРЗІ ФІКСУЮТЬСЯ ЗЛІВА НАПРАВО, поки рядок не «розшифрується» у
+   * читабельний» (21770:2032), and the template plaque for the whole block
+   * (21770:2048): «рубрика, підпис, значення», then «підсвітка ключового
+   * елемента — цифри або центральної ілюстрації розвороту».
    *
-   * `after` is measured from the page's CUT, not from its start: the cut is the
-   * edge-on instant where the content swaps, and `TIMING.flip.back` later the
-   * journal is standing still again. Starting any earlier decodes a page the
-   * player is watching side-on.
+   * ⚠️ THESE NUMBERS ARE THE SECOND ATTEMPT. The first shipped on 16.09 and the
+   * owner rejected it, rightly: 0.38 s per line with 0.09 s between them is too
+   * fast to read as anything but a flicker, and the whole line stood there
+   * scrambled from the first frame, which reads as "every letter spinning at
+   * once" rather than as text arriving. What is here now is slower, and the
+   * line BUILDS from the left — see decode.js.
    *
-   * ⚠️ THE WHOLE THING HAS TO FIT INSIDE THE SHORTEST SLIDE. The tightest pair
-   * of cuts in the table is 3.80 s apart (53.27 -> 57.07), and the budget here
-   * is after + 2*stagger + dur = 1.16 s, so the decode is finished long before
-   * the next turn begins even on that one.
+   * Everything is measured from the segment's `cut`, the edge-on instant where
+   * the content swaps.
    *
-   * `tick` is how often a still-scrambling character is re-rolled. It is a
-   * DURATION rather than a frame count because the roll is derived from the
-   * clock (see decode.js): at any given second the same glyph comes out, which
-   * is what lets an arbitrary seek redraw the same picture.
+   * ⚠️ IT ALL HAS TO FIT THE SHORTEST SLIDE. The tightest pair of cuts is
+   * 3.80 s apart (53.27 -> 57.07). The longest page here — rubric, heading,
+   * value and footer, four text slots — finishes its last line at
+   * 0.46 + 3*0.16 + 0.60 = 1.54 s and its glow at 1.89 s. Two seconds of room
+   * left on the tightest slide; do not spend it without re-checking this sum.
    */
   reveal: {
-    after: 0.6,
-    stagger: 0.09,
-    dur: 0.38,
-    tick: 0.05,
-    glow: { after: 0.3, dur: 0.5 },
+    /**
+     * The central illustration and its bloom arrive FIRST, a beat before the
+     * words. The mock calls the spread's picture and its digits «ключовий
+     * елемент», and a page whose art fades up under its own glow reads as one
+     * object arriving rather than as several things switching on. `at` is early
+     * enough that nothing is ever on a blank page: the turn is visually over
+     * around cut + 0.4 (TIMING.flip.back is 0.6 but the last degrees are under
+     * the idle drift).
+     */
+    art: { at: 0.34, dur: 0.42 },
+
+    /**
+     * The words, TOP TO BOTTOM — ordered by where they actually sit on the
+     * page, not by the order a page file happens to declare them in. The owner
+     * asked for exactly that: «сначала сверху, потом нижний».
+     */
+    text: { at: 0.46, stagger: 0.16, dur: 0.6 },
+
+    /**
+     * The key element's highlight, LAST, counted from the moment the final
+     * line starts: «підсвітка ключового елемента» is the finishing touch, not
+     * the opening one.
+     */
+    glow: { after: 0.2, dur: 0.75 },
+
+    /** How many characters are mid-roll at the head of the line. */
+    head: 3,
+
+    /**
+     * How often a rolling character is re-drawn. A DURATION rather than a
+     * frame count because the roll is derived from the clock (decode.js): the
+     * same second always produces the same glyph, which is what lets an
+     * arbitrary seek redraw the same picture.
+     */
+    tick: 0.055,
   },
 
   /** Story length, from the reference video. */

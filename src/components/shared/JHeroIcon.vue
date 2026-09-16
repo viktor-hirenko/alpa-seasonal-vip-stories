@@ -1,5 +1,5 @@
 <template>
-  <div class="j-hero__slot" :style="slotStyle">
+  <div class="j-hero__slot" :style="[slotStyle, artStyle]">
     <img :src="src" alt="" :style="imgStyle" />
   </div>
 </template>
@@ -15,6 +15,7 @@
  * metadata put the icon at x=548 inside a 919-wide frame (off the edge); the
  * real value from get_design_context is left=-276 with a 48.92deg rotation.
  */
+import { usePageArt } from './decode.js'
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -64,4 +65,14 @@ const imgStyle = computed(() => {
     ...(parts.length ? { transform: parts.join(' ') } : {}),
   }
 })
+
+/**
+ * ⚠️ OPACITY ONLY — NEVER A TRANSFORM. The mock rotates and offsets this art
+ * through `artImg`/`artBox` inline styles, and a second transform written here
+ * would replace theirs outright, not compose with it. That is ADR-0002's trap
+ * in its CSS form. A fade under a rising glow is enough to read as the central
+ * element arriving; see TIMING.reveal.art.
+ */
+const artIn = usePageArt()
+const artStyle = computed(() => (artIn.value >= 1 ? null : { opacity: artIn.value }))
 </script>

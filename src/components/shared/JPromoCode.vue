@@ -1,11 +1,12 @@
 <template>
   <div class="j-promo">
-    <span class="j-promo__label">{{ label }}</span>
-    <span class="j-promo__code">{{ code }}</span>
+    <span class="j-promo__label"><JReveal :text="label" /></span>
+    <span class="j-promo__code"><JReveal :text="code" /></span>
   </div>
 </template>
 
 <script setup>
+import JReveal from './JReveal.vue'
 /**
  * Promo code display. NO Figma reference exists for this: the Gift page's
  * "Icon_Promocode" node (21945:3038) is an empty 1216x1216 placeholder with

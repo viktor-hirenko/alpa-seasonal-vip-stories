@@ -1,6 +1,6 @@
 <template>
   <div class="j-slot" :style="slotStyle" :data-fit-lines="lines || null">
-    <span class="j-value" data-fit-role="value">{{ value }}</span>
+    <span class="j-value" data-fit-role="value"><JReveal :text="String(value)" /></span>
   </div>
 </template>
 
@@ -27,6 +27,7 @@
  * line. Text slots (game names, the player name) keep `top`.
  */
 import { computed } from 'vue'
+import JReveal from './JReveal.vue'
 import { alignStyle } from './slotAlign.js'
 
 const props = defineProps({

@@ -1,5 +1,5 @@
 <template>
-  <div class="page__art j-hero" :style="frameStyle">
+  <div class="page__art j-hero" :style="[frameStyle, artStyle]">
     <JGlow
       :left="glowBox.left"
       :top="glowBox.top"
@@ -34,6 +34,7 @@
  * Never use the frame's own Figma export as art — it composites the page
  * background and the glow into an opaque rectangle.
  */
+import { usePageArt } from './decode.js'
 import { computed } from 'vue'
 import JGlow from './JGlow.vue'
 
@@ -71,4 +72,14 @@ const glowBox = computed(() => ({
   left: props.width / 2 + props.glowX - props.glowWidth / 2,
   top: props.glowTop,
 }))
+
+/**
+ * ⚠️ OPACITY ONLY — NEVER A TRANSFORM. The mock rotates and offsets this art
+ * through `artImg`/`artBox` inline styles, and a second transform written here
+ * would replace theirs outright, not compose with it. That is ADR-0002's trap
+ * in its CSS form. A fade under a rising glow is enough to read as the central
+ * element arriving; see TIMING.reveal.art.
+ */
+const artIn = usePageArt()
+const artStyle = computed(() => (artIn.value >= 1 ? null : { opacity: artIn.value }))
 </script>

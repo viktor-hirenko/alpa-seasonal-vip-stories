@@ -15,7 +15,7 @@
 
     <div class="en__chip">
       <img class="en__chip-dot" :src="dot" alt="" />
-      <span>{{ copy.chip }}</span>
+      <span><JReveal :text="copy.chip" /></span>
     </div>
 
     <!-- The one display slot in the deck that really wraps: 1344 wide, no
@@ -56,7 +56,7 @@
           </div>
           <div class="en__mini-fade1" />
           <p class="en__mini-vip-club">{{ cover.vip_club }}</p>
-          <div class="en__mini-glow-blob" />
+          <div class="en__mini-glow-blob" :style="miniGlowStyle" />
           <div class="en__mini-astronaut" />
           <div class="page__art art-box" :style="artBox(135.97, 107.99, 294.695, 409.049)">
             <img
@@ -82,6 +82,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import JReveal from '@/components/shared/JReveal.vue'
+import { usePageGlow } from '@/components/shared/decode.js'
 /**
  * Editor's Note. Figma set 21770:2820, EN body 21770:2821.
  * Slide frame 8, cut at 11.07 s. Dynamic: `name` (via the mini cover).
@@ -108,4 +111,15 @@ const cover = story.t('pages.cover')
 const playerName = story.data.name
 
 const du = n => `calc(${+n.toFixed(3)} * var(--u))`
+
+/**
+ * «Мініатюра обкладинки в кутку розвороту підсвічується — мʼяке світіння
+ * наростає й лишається, ніби позначка «ось твій випуск»» (21770:2049).
+ *
+ * The blob is already in the markup and already in the mock; all that was
+ * missing was that it should ARRIVE. It rises with the page's highlight and
+ * then stays, which is what the plaque asks for in as many words.
+ */
+const miniGlow = usePageGlow()
+const miniGlowStyle = computed(() => (miniGlow.value >= 1 ? null : { opacity: miniGlow.value }))
 </script>

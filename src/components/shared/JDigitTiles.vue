@@ -1,13 +1,15 @@
 <template>
   <div class="j-slot j-slot--tiles" :style="slotStyle">
-    <div class="j-tiles" data-fit-role="digit" :style="[tileStyle, revealStyle]">
+    <div ref="row" class="j-tiles" data-fit-role="digit" :style="tileStyle">
       <span
-        v-for="(ch, i) in shownChars"
+        v-for="(ch, i) in chars"
         :key="i"
         class="j-tile"
-        :class="{ 'j-tile--sep': isSep(chars[i]) }"
+        :class="{ 'j-tile--sep': isSep(ch), 'j-tile--wait': state(i) === CHAR_WAIT }"
       >
-        <span class="j-tile__digit">{{ ch }}</span>
+        <span class="j-tile__digit">{{
+          state(i) === CHAR_ROLL ? rollGlyph(ch, i, clock, null, ROLL_ANY) : ch
+        }}</span>
       </span>
     </div>
   </div>
@@ -89,8 +91,8 @@
  * the element that DECLARES it, so `--tile-h` has to be declared on the same
  * element the fitter writes to, or the scaling silently does nothing.
  */
-import { computed } from 'vue'
-import { decode, usePageReveal } from './decode.js'
+import { computed, onMounted, ref } from 'vue'
+import { CHAR_ROLL, CHAR_WAIT, charState, rollGlyph, ROLL_ANY, usePageReveal } from './decode.js'
 import { BODY } from '@/story/pageLayouts.js'
 
 const props = defineProps({
@@ -167,22 +169,20 @@ const SEP = /[\s  .,]/
 const chars = computed(() => String(props.value).split(''))
 
 /**
- * The value is the last of «рубрика, підпис, значення» (21770:2048), so it
- * resolves after the rubric and the heading — `usePageReveal` hands out that
- * order as the components mount.
+ * THE VALUE — «значення» of «рубрика, підпис, значення» (21770:2048), and on
+ * most of these pages also «ключовий елемент» itself. It takes its place in the
+ * page's top-to-bottom order like any other text slot and rolls in from the
+ * left, one tile at a time.
  *
- * The tiles are the one place the decode costs nothing in layout: every glyph
- * sits in its own fixed box, so a rolling digit cannot change the row's width
- * the way a rolling letter changes a line's. Separators are punctuation and
- * `decode` leaves them alone, which keeps the grouping standing while the
- * digits spin.
+ * ⚠️ THE TILES NEED NO `<i>`-AND-PSEUDO TRICK, unlike JReveal. Every glyph here
+ * already sits in a box of its own fixed width, so a rolling digit cannot move
+ * the row — which is why this is the one place a plain text swap is safe.
  */
-const { progress, clock, style: revealStyle } = usePageReveal()
-const shownChars = computed(() =>
-  progress.value >= 1
-    ? chars.value
-    : decode(chars.value.join(''), progress.value, clock.value).split(''),
-)
+const row = ref(null)
+const { progress, clock, register } = usePageReveal()
+onMounted(() => register(row.value))
+const state = i => charState(i, chars.value.length, progress.value)
+
 const isSep = ch => SEP.test(ch)
 
 const d = n => `calc(${+Number(n).toFixed(3)} * var(--u))`

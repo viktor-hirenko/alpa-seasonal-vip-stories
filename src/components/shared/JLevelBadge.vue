@@ -1,5 +1,5 @@
 <template>
-  <div class="j-level" :style="boxStyle">
+  <div class="j-level" :style="[boxStyle, artStyle]">
     <div class="j-level__clip">
       <img :src="src" alt="" />
     </div>
@@ -17,6 +17,7 @@
  * The artwork itself comes from src/story/levelConfig.js, keyed by the `level`
  * query param, so this primitive never hardcodes a level.
  */
+import { usePageArt } from './decode.js'
 import { computed } from 'vue'
 
 const props = defineProps({
@@ -31,4 +32,14 @@ const boxStyle = computed(() => ({
   left: `calc(${-props.size / 2} * var(--u) + 50%)`,
   top: `calc(${-props.size / 2} * var(--u) + 50%)`,
 }))
+
+/**
+ * ⚠️ OPACITY ONLY — NEVER A TRANSFORM. The mock rotates and offsets this art
+ * through `artImg`/`artBox` inline styles, and a second transform written here
+ * would replace theirs outright, not compose with it. That is ADR-0002's trap
+ * in its CSS form. A fade under a rising glow is enough to read as the central
+ * element arriving; see TIMING.reveal.art.
+ */
+const artIn = usePageArt()
+const artStyle = computed(() => (artIn.value >= 1 ? null : { opacity: artIn.value }))
 </script>

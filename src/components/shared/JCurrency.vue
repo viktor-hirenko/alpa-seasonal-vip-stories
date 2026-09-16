@@ -1,6 +1,9 @@
 <template>
   <div class="j-slot" :style="slotStyle">
-    <span class="j-currency" data-fit-role="currency"><slot /></span>
+    <span class="j-currency" data-fit-role="currency">
+      <JReveal v-if="slotText !== null" :text="slotText" />
+      <slot v-else />
+    </span>
   </div>
 </template>
 
@@ -10,7 +13,8 @@
  * 21770:3716, 21811:3479) — never inside the digit tiles, and its size
  * differs per page, so it takes an explicit font size in design px.
  */
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
+import JReveal from './JReveal.vue'
 import { alignStyle } from './slotAlign.js'
 
 const props = defineProps({
@@ -35,4 +39,20 @@ const slotStyle = computed(() => ({
   '--currency-font': `calc(${props.size} * var(--u))`,
   ...alignStyle(props),
 }))
+
+/**
+ * The currency mark decodes with everything else. It used to be the one thing
+ * left standing while the rest of the page was still arriving — the owner saw
+ * «пустой журнал, на котором написано ЕВРО» and he was looking at exactly this.
+ *
+ * Reads the slot's text for the same reason JChip does: every page writes it
+ * as a plain interpolation, and markup falls back to being rendered untouched.
+ */
+const slots = useSlots()
+const slotText = computed(() => {
+  const nodes = slots.default?.()
+  if (!nodes || nodes.length !== 1) return null
+  const c = nodes[0].children
+  return typeof c === 'string' ? c : null
+})
 </script>

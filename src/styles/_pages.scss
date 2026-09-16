@@ -1577,3 +1577,59 @@
   height: du(9);
   background: linear-gradient(90deg, rgba(255, 255, 123, 0) 0%, #{$accent} 100%);
 }
+
+///
+/// THE DECODING TEXT (JReveal.vue). «Символи швидко перемішуються на місці й по
+/// черзі фіксуються зліва направо» — 21770:2032.
+///
+/// ⚠️ THE LAYOUT NEVER MOVES, AND THIS IS THE MECHANISM THAT GUARANTEES IT.
+/// `<i>` always holds the REAL character, so the line's width and its wrapping
+/// are the finished line's from the first frame. A rolling glyph is painted by
+/// `::after`, which is absolutely positioned and out of flow. The first version
+/// swapped characters in the string instead and re-wrapped the line as it went:
+/// measured at up to 183 px of vertical swing mid-decode. Do not reintroduce a
+/// text swap.
+///
+/// The `<i>` is hidden with `visibility` rather than `color: transparent`
+/// because the pseudo-element inherits colour from this span — several pages
+/// paint their headings with a clipped gradient, and a transparent colour would
+/// take the rolling glyph with it.
+///
+.j-reveal {
+  /// ⚠️ `contents`, SO THE WRAPPER IS NOT IN THE LAYOUT AT ALL. Several pages
+  /// style their lines through a descendant rule — `.cover__issue span { display:
+  /// block }` and four more like it — and those were written when the lines were
+  /// direct children. Give this wrapper a box and it becomes the thing they
+  /// match, and the lines stop being blocks.
+  display: contents;
+}
+
+/// ⚠️ TWO CLASSES ON PURPOSE: it has to outrank `.cover__issue span`, which is
+/// one class plus one type. Without that every character span inherits
+/// `display: block` from those page rules and the headline comes apart into a
+/// column of single letters. Same reason the resets are here rather than on the
+/// bare class.
+///
+/// ⚠️ AND IT STAYS `inline`. `inline-block` makes every character a line-break
+/// opportunity, and the line then re-wraps even with the effect finished —
+/// measured, a footer at 150 px where it should be 100.
+.j-reveal .j-reveal__c {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+/// Not yet reached by the head. It holds its space and paints nothing: the real
+/// character is still in the flow, so the line's width and its wrapping are the
+/// finished line's from the first frame.
+.j-reveal .j-reveal__c--wait {
+  visibility: hidden;
+}
+
+/// A tile the head has not reached yet: the box holds its place in the row,
+/// so the number never re-centres as it builds. See JDigitTiles.
+.j-tile--wait {
+  opacity: 0;
+}

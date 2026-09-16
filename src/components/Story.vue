@@ -61,7 +61,7 @@
             <!-- The page's own clock. Only the page on screen is given a live
                  one; see PageReveal for why the other seventeen are handed
                  Infinity rather than being left to animate unseen. -->
-            <PageReveal :cut="seg.cut" :now="revealNow(seg)">
+            <PageReveal :cut="seg.cut" :now="revealNow(seg)" :frozen="isPaused || longPress">
               <component
                 :is="resolvePage(seg.page)"
                 :page="seg.page"
@@ -205,7 +205,17 @@ const endLink = ref('')
 const toggleSound = () => {
   soundOn.value = !soundOn.value
   const v = videoPlayer.value
-  if (v) v.muted = !soundOn.value
+  if (!v) return
+  v.muted = !soundOn.value
+  // ⚠️ THE LEVEL IS RESTORED HERE, AND IT IS NOT BELT AND BRACES. Seeks duck
+  // `video.volume` to silence and bring it back (useStoryPlayback), and a duck
+  // that is interrupted — a tap that arrives while the loop is already fading
+  // into a hole it will now never reach — can leave the level at zero. From
+  // there `audible()` reads false, so no later seek unducks it either: the icon
+  // says the sound is on, `muted` is false, and the player hears nothing until
+  // the page is reloaded. The owner hit exactly that on 16.09. Pressing the
+  // button is the one moment we KNOW what the level should be.
+  if (soundOn.value) v.volume = 1
 }
 
 // Parse the link and publish the data layer BEFORE anything renders: the 17

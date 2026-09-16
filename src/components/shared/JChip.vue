@@ -1,8 +1,8 @@
 <template>
   <!-- Figma 21770:2962 ("Tabs"). Auto-width, centred on the page axis. -->
   <div class="j-slot" :style="{ top: slotTop }">
-    <span class="j-chip" data-fit-role="chip" :style="revealStyle">
-      <template v-if="decoded !== null">{{ decoded }}</template>
+    <span class="j-chip" data-fit-role="chip">
+      <JReveal v-if="slotText !== null" :text="slotText" />
       <slot v-else />
     </span>
   </div>
@@ -10,7 +10,7 @@
 
 <script setup>
 import { computed, useSlots } from 'vue'
-import { decode, usePageReveal } from './decode.js'
+import JReveal from './JReveal.vue'
 
 const props = defineProps({
   /** Design-px offset from the page body's top edge. */
@@ -31,18 +31,11 @@ const slotTop = computed(() => `calc(${props.top} * var(--u))`)
  * template has both branches.
  */
 const slots = useSlots()
-const { progress, clock, style: revealStyle } = usePageReveal()
 
 const slotText = computed(() => {
   const nodes = slots.default?.()
   if (!nodes || nodes.length !== 1) return null
   const c = nodes[0].children
   return typeof c === 'string' ? c : null
-})
-
-const decoded = computed(() => {
-  const text = slotText.value
-  if (text === null || progress.value >= 1) return null
-  return decode(text, progress.value, clock.value)
 })
 </script>

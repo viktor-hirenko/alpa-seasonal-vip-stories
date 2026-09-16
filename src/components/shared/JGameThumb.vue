@@ -1,5 +1,5 @@
 <template>
-  <div class="j-thumb" :style="boxStyle">
+  <div class="j-thumb" :style="[boxStyle, artStyle]">
     <img v-if="src && !failed" :src="src" alt="" :style="imgStyle" @error="failed = true" />
     <div v-else class="j-thumb__fallback">
       <span>{{ name }}</span>
@@ -22,6 +22,7 @@
  * marketing doc warns the domain may be blocked for a given player. So a load
  * failure MUST degrade to a name-only card rather than showing a broken image.
  */
+import { usePageArt } from './decode.js'
 import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
@@ -67,4 +68,14 @@ const imgStyle = computed(() => ({
   width: d(props.imgWidth),
   height: d(props.imgHeight),
 }))
+
+/**
+ * ⚠️ OPACITY ONLY — NEVER A TRANSFORM. The mock rotates and offsets this art
+ * through `artImg`/`artBox` inline styles, and a second transform written here
+ * would replace theirs outright, not compose with it. That is ADR-0002's trap
+ * in its CSS form. A fade under a rising glow is enough to read as the central
+ * element arriving; see TIMING.reveal.art.
+ */
+const artIn = usePageArt()
+const artStyle = computed(() => (artIn.value >= 1 ? null : { opacity: artIn.value }))
 </script>

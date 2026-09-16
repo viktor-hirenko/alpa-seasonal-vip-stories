@@ -8,7 +8,7 @@
 
       <div class="cover__fade-mid" />
 
-      <p class="cover__vip-club">{{ copy.vip_club }}</p>
+      <p class="cover__vip-club"><JReveal :text="copy.vip_club" /></p>
 
       <div class="cover__glow-blob" />
       <div class="cover__astronaut" />
@@ -22,29 +22,32 @@
       <div class="cover__fade-bottom" />
 
       <div class="cover__journal-label">
-        <span>{{ copy.journal }}</span>
+        <span><JReveal :text="copy.journal" /></span>
       </div>
 
       <p class="cover__issue" data-fit-role="display" :data-fit-lines="L.issue.lines">
-        <span v-for="(line, i) in copy.issue" :key="i">{{ line }}</span>
+        <JReveal :text="copy.issue" line-class="" />
       </p>
 
       <!-- French and Italian take a third line here (the mock's box grows from
            168 to 252 at a 84 px line) while "Featuring:" at 1517 stays put —
            ADR-0007's grow rule, measured. -->
       <p class="cover__intro" data-fit-role="display" :data-fit-lines="L.intro.lines">
-        <span v-for="(line, i) in copy.intro" :key="i">{{ line }}</span>
+        <JReveal :text="copy.intro" line-class="" />
       </p>
 
-      <p class="cover__featuring">{{ copy.featuring }}</p>
+      <p class="cover__featuring"><JReveal :text="copy.featuring" /></p>
       <!-- The one text on this page that takes arbitrary player input, so it
            is the one that carries a fit role (see useJournalFit). -->
-      <p class="cover__name" data-fit-role="value" data-fit-lines="1">{{ playerName }}</p>
+      <p class="cover__name" data-fit-role="value" data-fit-lines="1">
+        <JReveal :text="playerName" />
+      </p>
     </div>
   </div>
 </template>
 
 <script setup>
+import JReveal from '@/components/shared/JReveal.vue'
 /**
  * Cover. Figma set 21770:2743, EN variant 21770:2744.
  * Slide frames 4-7 (the fly-in entrance), cut at 2.50 s. Dynamic: `name`.
