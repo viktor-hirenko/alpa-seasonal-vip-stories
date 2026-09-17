@@ -101,7 +101,47 @@ export function useStoryPlayback(ctx) {
   // --- Continuous video -> timeline sync ----------------------------------
   // The master timeline is positioned in ABSOLUTE video time, so syncing is an
   // identity map: tl.time() === video.currentTime. The <video> stays the master
-  // clock; we only nudge the timeline when it drifts past one frame.
+  // clock; we only nudge the timeline towards it.
+  //
+  // ⚠️ TOWARDS, NOT ONTO. This used to be `tl.time(t)` — the scene teleported
+  // onto the tape's clock the instant they disagreed by a frame. That is
+  // exactly the shake the owner reported on an iPhone on 2026-09-17: after a
+  // manual seek iOS keeps decoding from the previous keyframe for a few frames,
+  // `currentTime` advances NON-MONOTONICALLY, and every wobble in it was
+  // scrubbed straight into the journal. Measured even on desktop Chrome at a
+  // quarter speed: one press sent the scene 19 ms BACKWARDS and produced four
+  // reversals of the turn's direction in a second and a half.
+  //
+  // Three things replace it, and they are three because the shake has three
+  // causes:
+  //
+  //  1. THE TAPE IS FILTERED. A step backwards smaller than TAPE_WOBBLE is
+  //     decoder noise, not playback, and is ignored — the clock is held at its
+  //     last honest value instead. A real backwards move (an arrow, "watch
+  //     again") is seconds, not milliseconds, and passes straight through.
+  //  2. THE ERROR IS CLOSED BY SPEED, NOT BY POSITION. The timeline is run a
+  //     few per cent fast or slow until it catches up, so THE SCENE NEVER MOVES
+  //     BACKWARDS — which is the whole of what the eye reads as shaking. Nudging
+  //     the playhead instead was the first attempt and it still stepped back,
+  //     just less: measured against a simulated iOS stutter, 50 ms of reversal
+  //     became 28-33 ms. A rate correction cannot reverse at all.
+  //  3. A REAL JUMP STILL SNAPS. Past SYNC_SNAP the two clocks are not drifting
+  //     apart, something moved the playhead, and easing towards it over a
+  //     second would be the bug rather than the fix.
+  const SYNC_SNAP = 0.5 // s — beyond this it is a jump, not drift
+  const SYNC_GAIN = 2 // how hard the playback rate leans on the error
+  const SYNC_RATE_MAX = 0.12 // and never more than 12 % off real time
+  const TAPE_WOBBLE = 0.3 // s — a step back shorter than this is decoder noise
+  let lastTape = -1
+
+  /** The tape's clock with iOS's post-seek stutter filtered out. */
+  const tapeTime = v => {
+    const raw = v.currentTime
+    if (lastTape >= 0 && raw < lastTape && lastTape - raw < TAPE_WOBBLE) return lastTape
+    lastTape = raw
+    return raw
+  }
+
   const syncToVideo = () => {
     const v = videoPlayer.value
     if (!v || v.seeking || v.paused) return
@@ -133,15 +173,37 @@ export function useStoryPlayback(ctx) {
       rampVolume(0, DUCK_MS)
     }
 
-    const t = toStory(v.currentTime)
-    applySegment(t)
+    const t = toStory(tapeTime(v))
+
+    // ⚠️ THE CUT FOLLOWS THE SCENE'S CLOCK, NOT THE TAPE'S, and the difference
+    // is visible. The turn is rendered from `tl.time()`, so reading the swap
+    // off the tape means the two can disagree by the few milliseconds the rate
+    // correction is busy closing — and a few milliseconds of a turn that covers
+    // 90 degrees in 0.14 s is a lot of angle. Measured the moment this loop
+    // started correcting by rate: the natural swap slid from -88 degrees, a
+    // hairline, to 75, where a quarter of the page is still facing the camera.
+    // Both are clocks and both are pure functions of time (ADR-0008); this one
+    // is the one the player is actually looking at.
+    applySegment(tl.time())
 
     if (performance.now() < suppressSyncUntil) return
     if (isFinalHolding) {
       if (tl.time() < tl.duration()) tl.time(tl.duration())
       return
     }
-    if (Math.abs(tl.time() - t) > SYNC_EPSILON) tl.time(t)
+    const error = t - tl.time()
+    const size = Math.abs(error)
+    if (size > SYNC_SNAP) {
+      // A real jump: something moved the playhead, and easing towards it over a
+      // second would be the bug rather than the fix.
+      tl.timeScale(1)
+      tl.time(t)
+    } else if (size > SYNC_EPSILON) {
+      const lean = Math.max(-SYNC_RATE_MAX, Math.min(SYNC_RATE_MAX, error * SYNC_GAIN))
+      tl.timeScale(1 + lean)
+    } else if (tl.timeScale() !== 1) {
+      tl.timeScale(1)
+    }
   }
 
   /**
@@ -218,7 +280,19 @@ export function useStoryPlayback(ctx) {
     const v = videoPlayer.value
     if (!v) return
     if (isPaused.value || longPress.value) return // respect a user-intended pause
-    tl.time(v.currentTime)
+    // ⚠️ THE FILTERED STORY CLOCK, NOT THE RAW TAPE. Two bugs lived in
+    // `tl.time(v.currentTime)`, and a seek walks straight into both of them
+    // because seeking makes the element buffer and fire `waiting`/`playing`:
+    //
+    //  - RAW: on iOS the reading is unreliable for a few frames after a seek,
+    //    so this was the last hard set still throwing the scene backwards.
+    //    Traced frame by frame: the journal reached edge-on at 89.5 degrees,
+    //    fell back to 79.4 and came round again before the flip;
+    //  - TAPE, NOT STORY: with a page dropped the two are different scales
+    //    entirely (`toStory`), so on an incomplete link this pinned the
+    //    timeline to a second that belongs to a different part of the story.
+    tl.timeScale(1)
+    tl.time(toStory(tapeTime(v)))
     tl.play()
     resumeHover()
   }
@@ -523,7 +597,15 @@ export function useStoryPlayback(ctx) {
   const unduck = () => rampVolume(1, DUCK_RECOVER_MS)
 
   // --- Seeking ------------------------------------------------------------
-  const SETTLE_GUARD_MS = 220 // suppress sync after a seek-resume
+  /**
+   * ⚠️ 400, NOT 220. The window exists because iOS keeps decoding from the
+   * previous keyframe for a while after a seek, and 220 ms turned out to be
+   * shorter than that on a real device: the guard lifted while the clock was
+   * still unreliable and the correction that followed was the visible shake.
+   * With the gradual catch-up above, a window that is slightly too long costs
+   * nothing — the scene simply eases onto the tape a few frames later.
+   */
+  const SETTLE_GUARD_MS = 400 // suppress sync after a seek-resume
   const SEEK_FALLBACK_MS = 600 // cap if `seeked` never fires (iOS edge case)
   const FRAME_WAIT_MS = 200 // cap if rVFC never fires (throttled tab)
 
@@ -589,6 +671,9 @@ export function useStoryPlayback(ctx) {
   const seekNow = (time, shouldPlay, wasAudible) => {
     const v = videoPlayer.value
     const videoTime = toVideo(time)
+    // The monotonic filter guards against decoder noise, not against a seek:
+    // forget the old reading so a deliberate jump backwards is taken at once.
+    lastTape = -1
     isFinalHolding = false
     // A tap can land while the loop is already fading into a hole it will now
     // never reach. Clearing the latch here is what keeps the level from being
@@ -617,7 +702,16 @@ export function useStoryPlayback(ctx) {
     }
     let done = false
     const finishResume = () => {
-      tl.time(toStory(v.currentTime))
+      tl.timeScale(1)
+      // ⚠️ PINNED TO WHAT WAS ASKED FOR, NOT TO WHAT THE TAPE REPORTS. This used
+      // to read `toStory(v.currentTime)`, and on iOS that reading is unreliable
+      // for a few frames after a seek — so the one hard set left in the whole
+      // routine could still throw the scene backwards by the width of the
+      // decoder's stutter. Measured against a simulated one: 26 ms, and it was
+      // the last reversal left. The tape lands within a frame of the request
+      // anyway, and the rate correction in the sync loop closes whatever is
+      // left without ever reversing.
+      tl.time(time)
       if (shouldPlay) {
         suppressSyncUntil = performance.now() + SETTLE_GUARD_MS
         tl.play()
