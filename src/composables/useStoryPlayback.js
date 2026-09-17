@@ -1,5 +1,5 @@
 import { STORY_SEGMENTS } from '@/story/slides.js'
-import { SYNC_EPSILON, TIMING } from '@/story/timing.js'
+import { FPS, TIMING } from '@/story/timing.js'
 
 /**
  * Playback + navigation. Ported from Thor's useStoryPlayback.js, which is ~490
@@ -11,7 +11,8 @@ import { SYNC_EPSILON, TIMING } from '@/story/timing.js'
  *    the video over the resulting holes. Here the background is ONE continuous
  *    94 s clip with the choreography baked in, so there are no holes to skip;
  *    a page with no data gets fallback copy instead (see _context/40-open-questions.md #1).
- *  - SYNC_EPSILON is 1/30 rather than a hardcoded 0.04.
+ *  - The sync tolerance is a frame and a half of the clip rather than a
+ *    hardcoded 0.04, and it closes by rate rather than by position.
  *  - The idle-drift timeline is separate from the master (it is `repeat: -1`,
  *    which would make the master's duration infinite), so it has to be paused
  *    and resumed alongside the story on every path.
@@ -132,6 +133,30 @@ export function useStoryPlayback(ctx) {
   const SYNC_GAIN = 2 // how hard the playback rate leans on the error
   const SYNC_RATE_MAX = 0.12 // and never more than 12 % off real time
   const TAPE_WOBBLE = 0.3 // s — a step back shorter than this is decoder noise
+
+  /**
+   * ⚠️ THE DEAD BAND IS A FRAME AND A HALF, NOT A FRAME, AND THE RATE RAMPS.
+   *
+   * Safari does not interpolate `currentTime`: it reports the time of the frame
+   * that is actually on screen, so the tape's clock climbs in 1/30 steps while
+   * the timeline's runs continuously. The gap between them therefore sweeps a
+   * whole frame every frame, and averages half a frame low, PERMANENTLY — it is
+   * the shape of the grid, not drift, and there is nothing to correct.
+   *
+   * With the band at exactly one frame that sweep crossed the threshold on its
+   * own and the correction switched on and off against a clock that was never
+   * wrong. Measured against a simulated frame-grid clock: `timeScale` stepped
+   * between 1 and 0.933 — the scene ran 7 % slow in bursts. Nobody sees 7 % on
+   * a page turn; on a slide where the journal is levitating it is the only
+   * motion there is, and the owner reported exactly that on `space_milk`.
+   *
+   * So: nothing under a frame and a half is treated as an error at all, and
+   * what is left is approached by RAMPING the rate rather than stepping it, at
+   * RATE_SLEW per frame. A real divergence still closes in about a fifth of a
+   * second; the grid's own sawtooth never gets a rate change out of it.
+   */
+  const SYNC_DEADBAND = 1.5 / FPS // s — under this it is the frame grid, not drift
+  const RATE_SLEW = 0.02 // per frame — how fast `timeScale` may be changed
   let lastTape = -1
 
   /** The tape's clock with iOS's post-seek stutter filtered out. */
@@ -198,12 +223,15 @@ export function useStoryPlayback(ctx) {
       // second would be the bug rather than the fix.
       tl.timeScale(1)
       tl.time(t)
-    } else if (size > SYNC_EPSILON) {
-      const lean = Math.max(-SYNC_RATE_MAX, Math.min(SYNC_RATE_MAX, error * SYNC_GAIN))
-      tl.timeScale(1 + lean)
-    } else if (tl.timeScale() !== 1) {
-      tl.timeScale(1)
+      return
     }
+    const wanted =
+      size > SYNC_DEADBAND
+        ? 1 + Math.max(-SYNC_RATE_MAX, Math.min(SYNC_RATE_MAX, error * SYNC_GAIN))
+        : 1
+    const now = tl.timeScale()
+    const next = now + Math.max(-RATE_SLEW, Math.min(RATE_SLEW, wanted - now))
+    if (Math.abs(next - now) > 1e-4) tl.timeScale(next)
   }
 
   /**
@@ -269,12 +297,35 @@ export function useStoryPlayback(ctx) {
   let stallHandlersAttached = false
   let wasWaiting = false
 
+  /**
+   * ⚠️ A SEEK IS NOT A STALL, AND THE DIFFERENCE HAD TO BE MADE EXPLICIT.
+   *
+   * The note above used to claim `wasWaiting` kept these handlers out of a
+   * normal seek. It does not: a seek makes the element buffer BY DEFINITION, so
+   * `waiting` fires, `wasWaiting` goes true, and `playing` then resumes the
+   * timeline while the seek routine is still waiting for a presented frame.
+   * Two owners, one timeline. Traced on a single tap, 2026-09-17:
+   *
+   *     356  pause() + time(73.200)   seekNow parks the scene
+   *     359  video:waiting            the seek buffers
+   *     360  time(73.200) + play()    onPlaying resumes it -- too early
+   *     405  time(73.200)             finishResume re-pins: 31 ms BACKWARDS
+   *
+   * The journal had already swung 31 ms out of the turn and was yanked back
+   * through about 20 degrees. The seek routine owns the resume from the moment
+   * it touches the tape until `finishResume`; in that window these handlers
+   * must not exist.
+   */
+  let seekInFlight = false
+
   const onWaiting = () => {
+    if (seekInFlight) return
     wasWaiting = true
     tl.pause()
     pauseHover()
   }
   const onPlaying = () => {
+    if (seekInFlight) return
     if (!wasWaiting) return
     wasWaiting = false
     const v = videoPlayer.value
@@ -668,7 +719,16 @@ export function useStoryPlayback(ctx) {
     setTimeout(go, DUCK_MS + 80)
   }
 
+  let seekToken = 0
+
   const seekNow = (time, shouldPlay, wasAudible) => {
+    // Only the newest seek may lower the flag: a superseded one can still reach
+    // its `seeked` and would otherwise hand the stall handlers a seek that is
+    // very much still in flight.
+    const token = ++seekToken
+    const release = () => {
+      if (token === seekToken) seekInFlight = false
+    }
     const v = videoPlayer.value
     const videoTime = toVideo(time)
     // The monotonic filter guards against decoder noise, not against a seek:
@@ -685,6 +745,7 @@ export function useStoryPlayback(ctx) {
     applySegment(time)
 
     if (!v) {
+      release()
       if (shouldPlay) {
         tl.play()
         resumeHover()
@@ -692,6 +753,7 @@ export function useStoryPlayback(ctx) {
       return
     }
     if (Math.abs(v.currentTime - videoTime) < 0.02) {
+      release()
       if (shouldPlay) {
         suppressSyncUntil = performance.now() + SETTLE_GUARD_MS
         tl.play()
@@ -702,6 +764,7 @@ export function useStoryPlayback(ctx) {
     }
     let done = false
     const finishResume = () => {
+      release()
       tl.timeScale(1)
       // ⚠️ PINNED TO WHAT WAS ASKED FOR, NOT TO WHAT THE TAPE REPORTS. This used
       // to read `toStory(v.currentTime)`, and on iOS that reading is unreliable
@@ -729,38 +792,49 @@ export function useStoryPlayback(ctx) {
     }
     v.addEventListener('seeked', resume, { once: true })
     const fallback = setTimeout(resume, SEEK_FALLBACK_MS)
+    seekInFlight = true
     v.currentTime = videoTime
   }
 
   /**
    * Landing rule for the ARROWS AND TAPS. Ordinary playback never comes here.
    *
-   * ⚠️ IT LANDS ON `cut`, THE EDGE-ON INSTANT, NOT ON `start`. A page's window
-   * opens with the journal flat and the OUTGOING page still facing the camera —
-   * by design, because the turn has to carry the old page away before the
-   * content may swap (ADR-0008, 34-page-flip.md). That is right when the story
-   * plays: the page you have been reading takes its leave. It is wrong when the
-   * player ASKS for the next page, because then the first thing they get is
-   * another look at the one they just left: measured, after a forward arrow the
-   * journal rotated 11 -> 89 degrees still showing `space_milk`, and only swapped
-   * to `joke` at -74. The owner photographed exactly that and called it what it
-   * is — «мы на перевернутом наполовину слайде ещё видим предыдущее
-   * изображение».
+   * ⚠️ IT LANDS ON `start`, WHERE THE TURN BEGINS — NOT ON `cut`, THE EDGE-ON
+   * INSTANT. Landing on `cut` was tried on 2026-09-17 and reverted the same
+   * day, because it puts the landing at the fastest-moving frame of the whole
+   * story and everything that goes near it becomes visible:
    *
-   * Landing on `cut` puts the swap at the landing instant, where the front face
-   * is a hairline and nothing can be read off it, and the back leg of the turn
-   * then swings the NEW page in. Manual navigation reads as "the page flips and
-   * here is the next one", which is what pressing an arrow means.
+   *  - THE TURN IS NEVER DRAWN. Traced frame by frame on a tap: the journal
+   *    went from 11 degrees to 90 in ONE frame and the out-leg — the page
+   *    taking its leave — was skipped entirely. The owner described exactly
+   *    that: «нам не показывается, как журнал переворачивается, сразу
+   *    показывается ребро».
+   *  - EVERY MILLISECOND OF CLOCK DISAGREEMENT BECOMES ANGLE. The turn covers
+   *    90 degrees in TIMING.flip.out, about 640 degrees a second, so a 31 ms
+   *    correction that is invisible anywhere else is 20 degrees here. And a
+   *    seek on iOS takes hundreds of milliseconds, all of them spent frozen on
+   *    the one pose in the story that cannot hide a freeze.
    *
-   * ⚠️ AND PAUSED IS STILL DIFFERENT. Frozen at `cut` the journal would sit
-   * edge-on, a hairline with nothing on it, so a paused jump keeps landing past
-   * the whole turn where the page reads as fully formed.
+   * At `start` the journal is flat and nearly still, so the seek settles where
+   * nothing is moving and the whole turn then plays live, exactly as it does in
+   * ordinary playback.
+   *
+   * ⚠️ THE PRICE, STATED PLAINLY: for TIMING.flip.out the page facing the
+   * camera is the one being left. That is the design (ADR-0008, 34-page-flip.md)
+   * and it is what the clip does. The owner photographed it on 2026-09-17 and
+   * called it a bug — but the bug in that screenshot was navigation counting
+   * from the page on screen (see `requestedIdx`), which sent a press to the
+   * wrong page entirely; that is fixed, and this is not the same thing.
+   *
+   * ⚠️ AND PAUSED IS STILL DIFFERENT. Frozen at `start` the journal would sit
+   * showing the page being left with no turn to follow, so a paused jump keeps
+   * landing past the whole turn where the page reads as fully formed.
    */
   const SETTLE_LEAD = TIMING.flip.out + TIMING.flip.back
 
   const landingTime = seg => {
     const v = videoPlayer.value
-    if (!v || !v.paused) return seg.cut
+    if (!v || !v.paused) return seg.start
     return seg.start + Math.min(SETTLE_LEAD, Math.max(0, seg.dur - 0.3))
   }
 
