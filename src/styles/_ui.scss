@@ -409,6 +409,15 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
   left: 50%;
   top: 81.99%;
 
+  /// ⚠️ ABOVE THE TAP ZONES, AND WITHOUT THIS THE BUTTON DOES NOT EXIST.
+  /// `.tap-zone` carries `z-index: 1` and this box carried none, so inside
+  /// `.stage__ui` the zone won every hit test that mattered: measured with
+  /// `elementFromPoint` at the exact centre of the button, the element returned
+  /// was `tap-zone--forward`, and the button's own handlers never fired once.
+  /// The header sits at 2 for the same reason and has always worked; these two
+  /// were simply left out.
+  z-index: 2;
+
   transform: translateX(-50%);
 
   .j-cta {
@@ -515,6 +524,15 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
   position: absolute;
   left: 50%;
   top: du(1785.54);
+
+  /// ⚠️ ABOVE THE TAP ZONES, AND WITHOUT THIS THE BUTTON DOES NOT EXIST.
+  /// `.tap-zone` carries `z-index: 1` and this box carried none, so inside
+  /// `.stage__ui` the zone won every hit test that mattered: measured with
+  /// `elementFromPoint` at the exact centre of the button, the element returned
+  /// was `tap-zone--forward`, and the button's own handlers never fired once.
+  /// The header sits at 2 for the same reason and has always worked; these two
+  /// were simply left out.
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: du(11.5);
