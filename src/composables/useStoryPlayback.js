@@ -474,6 +474,72 @@ export function useStoryPlayback(ctx) {
     resumeHover()
   }
 
+  // --- The system stopping the tape ---------------------------------------
+  /**
+   * ⚠️ THE SCENE STOPS WITH THE TAPE, WHOEVER STOPPED IT.
+   *
+   * Until now a pause was only ever handled when the PLAYER asked for one. The
+   * system asks too, and nothing answered: switching apps, the phone locking,
+   * an audio session interrupted by AirPods connecting. The sync loop returns
+   * early on `v.paused`, so it does not correct — but nothing paused the
+   * timeline either, and GSAP's ticker does not care that the tape has stopped.
+   * The scene simply carried on alone.
+   *
+   * Measured, with the tape paused for six seconds and the page not ticking,
+   * exactly as a backgrounded tab behaves:
+   *
+   *     before   scene  8.60   tape 8.62      together
+   *     after    scene 14.62   tape 8.62      six seconds apart
+   *     resumed  scene  9.08   tape 9.04      yanked back five and a half
+   *
+   * That yank is the owner's «дергается». And when the system does NOT resume
+   * the tape by itself, the scene runs on to the end of the timeline, which
+   * then completes and cannot advance — nothing moves again until a manual seek,
+   * because a seek is the only path in this file that calls `play()`. That is
+   * his «завис… только если я нажму перемотку».
+   *
+   * ⚠️ IT DOES NOT TOUCH `isPaused`. That ref is the PLAYER'S intention, which
+   * the UI reads and which decides whether a jump resumes playback. A phone
+   * call is not the player deciding to pause the story.
+   */
+  const onSystemPause = () => {
+    if (isPaused.value || longPress.value) return
+    tl.pause()
+    pauseHover()
+  }
+
+  const onSystemPlay = () => {
+    if (isPaused.value || longPress.value) return
+    tl.timeScale(1)
+    tl.play()
+    resumeHover()
+  }
+
+  /**
+   * Coming back from another app. The tape is asked to carry on, because iOS
+   * does not always do it by itself, and a story frozen with no way back is
+   * what this whole handler exists to prevent. A refused `play()` is not an
+   * error here — the story is simply left paused, which is honest.
+   */
+  const onVisibility = () => {
+    const v = videoPlayer.value
+    if (!v) return
+    // ⚠️ GOING AWAY IS HANDLED TOO, AND IT IS THE HALF THAT MATTERS. This event
+    // arrives while the page can still run, ahead of the freeze — whereas the
+    // tape's own `pause` may not be delivered until the page wakes, by which
+    // time the ticker has already applied the absence.
+    if (document.hidden) {
+      onSystemPause()
+      return
+    }
+    if (isPaused.value || longPress.value || showPlayButton.value) return
+    if (v.paused) v.play().catch(() => {})
+    // Already running — then the tape never stopped and only the timeline has
+    // to be let go. Belt and braces: if `play()` is refused the `play` event
+    // never comes, and a story that cannot restart itself is the bug.
+    else onSystemPlay()
+  }
+
   const attachStallHandlers = () => {
     const v = videoPlayer.value
     if (!v || stallHandlersAttached) return
@@ -481,6 +547,9 @@ export function useStoryPlayback(ctx) {
     v.addEventListener('waiting', onWaiting)
     v.addEventListener('stalled', onWaiting)
     v.addEventListener('playing', onPlaying)
+    v.addEventListener('pause', onSystemPause)
+    v.addEventListener('play', onSystemPlay)
+    document.addEventListener('visibilitychange', onVisibility)
   }
   const detachStallHandlers = () => {
     const v = videoPlayer.value
@@ -490,6 +559,9 @@ export function useStoryPlayback(ctx) {
     v.removeEventListener('waiting', onWaiting)
     v.removeEventListener('stalled', onWaiting)
     v.removeEventListener('playing', onPlaying)
+    v.removeEventListener('pause', onSystemPause)
+    v.removeEventListener('play', onSystemPlay)
+    document.removeEventListener('visibilitychange', onVisibility)
   }
 
   // --- Buffer gate --------------------------------------------------------
@@ -549,7 +621,6 @@ export function useStoryPlayback(ctx) {
       return
     }
     const begin = () => {
-      attachStallHandlers()
       const go = () => {
         tl.play(0)
         hoverTl?.value?.play(0)
@@ -572,6 +643,12 @@ export function useStoryPlayback(ctx) {
         begin()
       }
     }
+    // ⚠️ ATTACHED BEFORE THE FIRST PLAY, NOT AFTER IT. These used to go on
+    // inside the first presented frame's callback, which never arrives if the
+    // player switches away during the load — and then nothing is listening for
+    // the system stopping the tape, which is the one moment it is most likely
+    // to happen.
+    attachStallHandlers()
     if (isBuffering) isBuffering.value = true
     try {
       v.load() // ensure buffered ranges actually grow on iOS

@@ -53,14 +53,32 @@ export function buildStoryTimeline(targets, ctx) {
   // flyLayer.js for why it cannot live on the timeline itself.
   const fly = buildFlyLayer(targets.flyLayer, plan.flights, slides)
 
-  // ⚠️ REAL TIME, JUMPS AND ALL. GSAP ships with `lagSmoothing(500, 33)`: when
-  // more than 500 ms passes between two ticks it pretends only 33 did, so a
-  // long frame does not fling every animation forward. That is right for
-  // ordinary motion and wrong for ours — the tape's clock does not pretend, so
-  // after one long frame on a phone the two disagree by most of that frame's
-  // length, out of nothing. GSAP's own documentation names this case: turn it
-  // off when the animation must stay locked to an external clock.
-  gsap.ticker.lagSmoothing(0)
+  // ⚠️ 800 ms, NOT GSAP'S 500 AND NOT ZERO. BOTH EXTREMES WERE TRIED TODAY.
+  //
+  // GSAP's ticker normally pretends that a gap longer than `lagSmoothing`'s
+  // threshold was only 33 ms, so one stalled frame does not fling every
+  // animation forward. Two things pull in opposite directions here:
+  //
+  //  - ZERO (real time, no clamp) is what an animation held against an external
+  //    clock wants: the tape does not pretend, so any clamp invents
+  //    disagreement out of nothing, and with the scene leading the correction
+  //    answers by dragging the TAPE backwards.
+  //  - ZERO IS ALSO HOW THE STORY BROKE WHEN THE PLAYER SWITCHED APPS. A
+  //    backgrounded page stops ticking; on return the whole absence is applied
+  //    in one tick. Measured at six seconds away with the tape paused by iOS:
+  //    the scene came back six seconds ahead of it and was then yanked back.
+  //
+  // `onSystemPause` in useStoryPlayback is the real fix — the scene now stops
+  // whenever the tape stops, whoever stopped it. ⚠️ But it cannot be the ONLY
+  // one: it runs on an EVENT, and an event is delivered after the tick that
+  // wakes the page. Measured, with the pause delivered late, the scene still
+  // jumped the full six seconds.
+  //
+  // So a threshold well above any frame this story has ever produced — the
+  // worst measured is 80 ms at quarter CPU speed, so 800 is ten times it — and
+  // well below any real absence. Inside normal play it never fires; a genuine
+  // app switch is caught by whichever of the two notices first.
+  gsap.ticker.lagSmoothing(800, 33)
 
   const tl = gsap.timeline({
     paused: true,
