@@ -1,3 +1,5 @@
+import { gsap } from 'gsap'
+import { EASE } from '@/story/easing.js'
 import { STORY_SEGMENTS } from '@/story/slides.js'
 import { FPS, TIMING } from '@/story/timing.js'
 
@@ -40,6 +42,7 @@ export function useStoryPlayback(ctx) {
     onSegmentChange,
     setFace,
     plan,
+    targets,
   } = ctx
 
   // TWO CLOCKS, AND ONLY WHEN A PAGE WAS DROPPED. `video.currentTime` is the
@@ -171,6 +174,8 @@ export function useStoryPlayback(ctx) {
     const v = videoPlayer.value
     if (!v || v.seeking || v.paused) return
     if (isPaused.value || longPress.value) return
+    // A manual turn owns the timeline until it lands. See `turnThenSeek`.
+    if (turnTween) return
 
     // OVER THE HOLE FIRST, before anything reads the clock. The jump lands on
     // the far side of a stretch that carries no page of this player's story;
@@ -281,6 +286,8 @@ export function useStoryPlayback(ctx) {
   const stopSync = () => {
     if (frameHandle != null) cancelAnimationFrame(frameHandle)
     frameHandle = null
+    // A manual turn outlives the rAF loop otherwise: it is a tween of its own.
+    killTurn()
     if (volumeRamp != null) cancelAnimationFrame(volumeRamp)
     volumeRamp = null
     syncStarted = false
@@ -722,6 +729,7 @@ export function useStoryPlayback(ctx) {
   let seekToken = 0
 
   const seekNow = (time, shouldPlay, wasAudible) => {
+    killTurn()
     // Only the newest seek may lower the flag: a superseded one can still reach
     // its `seeked` and would otherwise hand the stall handlers a seek that is
     // very much still in flight.
@@ -752,7 +760,16 @@ export function useStoryPlayback(ctx) {
       }
       return
     }
-    if (Math.abs(v.currentTime - videoTime) < 0.02) {
+    // ⚠️ A FRAME AND A HALF, NOT 20 ms — THE SAME BAND THE SYNC LOOP IGNORES.
+    // A manual turn sends the tape ahead and it arrives a few tens of
+    // milliseconds short, because an element does not play while it seeks:
+    // measured, 44 ms. At 20 ms that counted as "not there yet" and bought a
+    // second seek whose whole cost is paid standing edge-on — four frames here,
+    // and a phone's seek is an order slower. Inside the band the tape is left
+    // alone; the story's own clock still lands exactly on the number asked for,
+    // and the loop below tolerates the difference by design rather than
+    // chasing it.
+    if (Math.abs(v.currentTime - videoTime) < SYNC_DEADBAND) {
       release()
       if (shouldPlay) {
         suppressSyncUntil = performance.now() + SETTLE_GUARD_MS
@@ -760,6 +777,13 @@ export function useStoryPlayback(ctx) {
         resumeHover()
         v.play().catch(() => {})
       }
+      // ⚠️ THE LEVEL COMES BACK HERE TOO. This branch used to return without
+      // it, which was harmless only because nothing reached it: the tape was
+      // never already at the destination. A manual turn sends the tape ahead
+      // precisely so that it is, so every tap would now have ended with the
+      // sound ducked to zero and no way back — the same stuck-at-zero fault
+      // that cost a day on 16.09, by a different road.
+      if (wasAudible) unduck()
       return
     }
     let done = false
@@ -794,6 +818,178 @@ export function useStoryPlayback(ctx) {
     const fallback = setTimeout(resume, SEEK_FALLBACK_MS)
     seekInFlight = true
     v.currentTime = videoTime
+  }
+
+  // --- The manual page turn -----------------------------------------------
+  /**
+   * ⚠️ A TAP TURNS THE PAGE, AND THE JUMP RIDES INSIDE THE TURN.
+   *
+   * Both landings tried before this were wrong, and measuring them side by side
+   * says why. Tapping on `space_milk` at 68.90 for `joke`, the journal's pose in
+   * design px:
+   *
+   *     cy  45.7 -> 51.9     y  107 -> 269     rotZ  -20.9 -> -15.0
+   *
+   * The journal is 162 px lower, rolled six degrees and smaller — and that is
+   * the SAME jump whichever instant is landed on, because the pose is a
+   * function of the clock and the clock moved four seconds. In ordinary
+   * playback those four seconds carry it there gradually; a tap has to put it
+   * there at once.
+   *
+   *  - LANDING ON `start` shows the jump in full: the journal is flat and facing
+   *    the camera, so it visibly slides down and rolls, and only then turns.
+   *    The owner: «он перемещается на другое место, а потом только
+   *    перекручивается... это бред».
+   *  - LANDING ON `cut` hides the jump — at edge-on the journal is a hairline
+   *    and there is nothing to see it by, which is exactly why the story puts
+   *    its own content cut there (ADR-0008) and why storyPlan jumps the tape
+   *    over a dropped page there. But the turn ITSELF then goes missing: one
+   *    frame flat, the next edge-on. «Сразу показывается ребро».
+   *
+   * So the jump belongs at the edge and the turn belongs on screen, and the
+   * only way to have both is to TURN FIRST AND JUMP INSIDE IT: the journal
+   * swings from wherever it is to the yaw the target instant holds, playing on
+   * its own while the tape runs on, and the seek happens on arrival, under the
+   * hairline. The story's own out-leg ease and duration, so a manual turn and a
+   * natural one are the same motion.
+   *
+   * ⚠️ THE SYNC LOOP MUST NOT RUN DURING IT. The timeline is paused while the
+   * tape keeps playing, so the gap between the two clocks grows for the length
+   * of the turn; left alone the loop would first lean on the rate and then,
+   * past SYNC_SNAP, snap the timeline and destroy the turn mid-flight.
+   */
+  let turnTween = null
+  let turnToken = 0
+
+  const killTurn = () => {
+    if (!turnTween) return
+    turnTween.kill()
+    turnTween = null
+  }
+
+  /**
+   * ⚠️ THE WHOLE POSE, NOT JUST THE YAW, and the difference is a visible flick.
+   *
+   * Turning only the yaw leaves the journal wearing the pose of the slide being
+   * left, so at the landing frame its roll, size and place all changed at once.
+   * Hidden at the edge, yes — the page is a hairline there — but it is a hairline
+   * that jumped 73 px and rolled nine degrees in one frame, and the story's own
+   * cut changes none of those. Carrying the pose across the turn as well makes
+   * the landing frame change NOTHING, which is what the timeline taking over
+   * should look like, and on the way it is the same glide into place that
+   * ordinary playback spends the whole slide on.
+   *
+   * ⚠️ SAMPLED WITH `suppressEvents` FALSE, AND THE DEFAULT IS THE TRAP. GSAP's
+   * `.seek()` suppresses by default and `.time()` does not, and with them
+   * suppressed a seek moves the YAW and nothing else — measured here on a live
+   * story: seeking 70.26 -> 73.21 gave rotationY 11 -> -89.86 while the roll,
+   * the size and the place did not budge, and the same seek unsuppressed
+   * carried all five. That is why this reads nothing but the yaw when left on
+   * the default, and why the frame-by-frame scan in scripts/ passes `false`
+   * too. Both seeks happen inside one task, so the browser only ever sees the
+   * second.
+   *
+   * Landing on the timeline's own numbers rather than a rounded 90 matters — at
+   * edge-on half a degree is still ten pixels of width.
+   */
+  const POSE_BOX = ['rotationY', 'rotationZ', 'rotationX', 'scaleX', 'scaleY']
+  const POSE_POS = ['xPercent', 'yPercent']
+
+  const poseAt = time => {
+    const { box, pos } = targets ?? {}
+    if (!box) return null
+    const read = (el, keys) => {
+      const out = {}
+      for (const k of keys) {
+        const n = Number(gsap.getProperty(el, k))
+        if (Number.isFinite(n)) out[k] = n
+      }
+      return out
+    }
+    const home = tl.time()
+    tl.seek(time, false)
+    const shot = { box: read(box, POSE_BOX), pos: pos ? read(pos, POSE_POS) : null }
+    tl.seek(home, false)
+    return shot
+  }
+
+  const turnThenSeek = (time, shouldPlay) => {
+    const box = targets?.box
+    const v = videoPlayer.value
+    // Nothing to turn, or the story is parked: land the old way. A paused jump
+    // goes past the whole turn anyway (see `landingTime`), so there is no turn
+    // to play and no moving journal to hide the jump behind.
+    if (!box || !v || v.paused) {
+      seekBoth(time, shouldPlay)
+      return
+    }
+    const token = ++turnToken
+    killTurn()
+    // ⚠️ THE TURN OWNS BOTH CLOCKS FROM HERE, and this line is why. Sending the
+    // tape ahead makes it buffer, `waiting` fires, and the stall handler used
+    // to answer it — traced mid-turn: `time(73.080)` and `play()` on the master
+    // timeline while the turn was still swinging. The page stayed put only
+    // because the sync loop was already standing down; the journal's POSITION
+    // did not, and jumped 90 px inside the turn. Released by the `seekNow`
+    // every path out of here reaches.
+    seekInFlight = true
+    tl.pause()
+    pauseHover()
+    // Under the turn, so the level is already down when the tape jumps. The
+    // seek's own ramp then finds 0 and fires straight through.
+    if (audible()) rampVolume(0, DUCK_MS)
+
+    const from = Number(gsap.getProperty(box, 'rotationY'))
+    const shot = poseAt(time)
+    // ⚠️ ALWAYS OUT TO THE NEAR EDGE. `cut` sits on the seam between the turn's
+    // two legs — the out-leg ends at +peak and the back-leg begins at -peak, the
+    // same silhouette mirrored — so which sign the sample returns depends on
+    // which side of the seam the landing rounds to. Taken literally, a -90
+    // would send the journal sweeping the wrong way through flat and out the
+    // far side: a hundred degrees of turn nobody asked for. The frame after the
+    // landing is the timeline's own and may be either sign; that is one frame
+    // of a hairline, and ordinary playback does it too.
+    if (shot && Math.abs(shot.box.rotationY) > TIMING.flip.peak * 0.9) {
+      shot.box.rotationY = Math.abs(shot.box.rotationY)
+    }
+    const to = shot?.box.rotationY
+    const span = Math.abs(to - from)
+    // A second tap arriving mid-turn has nothing left to play.
+    if (!shot || !Number.isFinite(from) || !Number.isFinite(to) || span < 1) {
+      seekBoth(time, shouldPlay)
+      return
+    }
+    const dur = TIMING.flip.out * Math.min(1, span / TIMING.flip.peak)
+
+    // ⚠️ THE TAPE IS SENT AHEAD SO ITS DECODE HAPPENS UNDER THE TURN. Left to
+    // the end, the wait for a decoded frame is spent standing edge-on — four
+    // frames of it even on this machine, and on a phone a seek is hundreds of
+    // milliseconds. That stop is what the owner reported first: «на ребре
+    // как бы зависает». Aimed `dur` short of the landing, the tape plays the
+    // rest in real time and arrives as the turn does, so the seek that follows
+    // finds it already there and resumes without waiting at all. The frames it
+    // plays meanwhile are the target turn's own, which is what the background
+    // does under a natural turn anyway.
+    //
+    // Not across a hole, though: inside one the tape is showing seconds that
+    // belong to a page this player was never given, and only `syncToVideo`
+    // knows how to cross it — and it is standing down for the length of the
+    // turn.
+    const aim = toVideo(time)
+    const lead = Math.max(0, aim - dur)
+    if (!gapAt(lead)) v.currentTime = lead
+
+    turnTween = gsap.timeline({
+      onComplete: () => {
+        turnTween = null
+        if (token !== turnToken) return
+        seekBoth(time, shouldPlay)
+      },
+    })
+    turnTween.to(box, { ...shot.box, duration: dur, ease: EASE.flipOut }, 0)
+    if (shot.pos && targets.pos) {
+      turnTween.to(targets.pos, { ...shot.pos, duration: dur, ease: EASE.flipOut }, 0)
+    }
   }
 
   /**
@@ -834,7 +1030,7 @@ export function useStoryPlayback(ctx) {
 
   const landingTime = seg => {
     const v = videoPlayer.value
-    if (!v || !v.paused) return seg.start
+    if (!v || !v.paused) return seg.cut
     return seg.start + Math.min(SETTLE_LEAD, Math.max(0, seg.dur - 0.3))
   }
 
@@ -859,7 +1055,7 @@ export function useStoryPlayback(ctx) {
     // flag, which can momentarily read "paused" mid-seek and would otherwise
     // leave the timeline frozen after a forward arrow.
     requestedIdx = targetIdx
-    seekBoth(landingTime(SEGMENTS[targetIdx]), !isPaused.value)
+    turnThenSeek(landingTime(SEGMENTS[targetIdx]), !isPaused.value)
   }
 
   /** Any seek that is not an arrow — "watch again", the debug hook — forgets

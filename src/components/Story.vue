@@ -356,6 +356,9 @@ onMounted(async () => {
     isBuffering,
     setFace,
     plan,
+    // A manual jump turns the journal itself before it seeks, so playback needs
+    // the box the yaw lives on. See `turnThenSeek`.
+    targets,
   })
 
   // Show the first page immediately so nothing flashes empty before the video's
