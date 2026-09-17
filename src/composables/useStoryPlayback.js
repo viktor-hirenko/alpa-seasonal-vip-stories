@@ -65,6 +65,27 @@ export function useStoryPlayback(ctx) {
   let syncStarted = false
   let isFinalHolding = false
 
+  /**
+   * ⚠️ WHICH PAGE THE ARROWS ARE COUNTING FROM, and it is NOT the one on screen.
+   *
+   * A forward jump lands on the target segment's `start`, which is
+   * TIMING.flip.out BEFORE its `cut` — so for those 0.14 s `segmentAt()` still
+   * answers with the PREVIOUS page, by design: the turn has to play before the
+   * content swaps. Navigation used to count from that answer, which means a
+   * second press arriving inside the window computed the same target again and
+   * seeked back to where it already was. Press faster than the window and the
+   * story never advances at all: it sits there re-seeking one page, the journal
+   * twitching, the content flicking forward and back. Measured 2026-09-17,
+   * eight presses 60 ms apart moved the story exactly one page — and it does
+   * the same on the build from before any of this month's work, so it is old,
+   * not new.
+   *
+   * Counting from the last REQUESTED page instead makes a burst of presses walk
+   * forward one page each. It is cleared on arrival, so ordinary playback and
+   * any other kind of seek go back to reading the clock.
+   */
+  let requestedIdx = null
+
   // After a manual seek iOS keeps decoding from the previous keyframe for a few
   // frames past `seeked`, so currentTime briefly advances non-monotonically. If
   // sync re-pinned tl.time() to those jittery values it would scrub the
@@ -145,6 +166,7 @@ export function useStoryPlayback(ctx) {
    */
   const applySegment = t => {
     const idx = segmentAt(t)
+    if (requestedIdx !== null && idx === requestedIdx) requestedIdx = null
     if (idx !== activeSegment.value) {
       activeSegment.value = idx
       // Before the first cut no page is on screen yet, but the face still has
@@ -529,7 +551,42 @@ export function useStoryPlayback(ctx) {
    * tape is asked for the second that story time sits on, which is the same
    * number whenever the link was complete.
    */
+  let seekGen = 0
+
+  /**
+   * ⚠️ THE FADE HAPPENS BEFORE ANYTHING IN THE SCENE MOVES, and this wrapper is
+   * the whole reason it does.
+   *
+   * The first version faded and seeked at the end of `seekNow`, after the
+   * timeline had already been paused and re-timed. Measured on a single arrow
+   * press: the journal stood dead for 75 ms while the tape carried on playing,
+   * and then everything jumped at once. The owner saw it immediately and could
+   * not name it — «виден какой-то рывок». Nothing about the scene may move
+   * until the tape is ready to move with it.
+   *
+   * ⚠️ AND THE JUMP IS GUARANTEED TO HAPPEN. A second press during the fade
+   * restarts the ramp and drops the first one's callback, so the timer below is
+   * not belt and braces: without it a superseded seek is simply lost. The
+   * generation check is what keeps the older of two presses from firing after
+   * the newer one has already landed.
+   */
   const seekBoth = (time, shouldPlay) => {
+    const gen = ++seekGen
+    if (!audible()) {
+      seekNow(time, shouldPlay, false)
+      return
+    }
+    let fired = false
+    const go = () => {
+      if (fired || gen !== seekGen) return
+      fired = true
+      seekNow(time, shouldPlay, true)
+    }
+    rampVolume(0, DUCK_MS, go)
+    setTimeout(go, DUCK_MS + 80)
+  }
+
+  const seekNow = (time, shouldPlay, wasAudible) => {
     const v = videoPlayer.value
     const videoTime = toVideo(time)
     isFinalHolding = false
@@ -558,8 +615,6 @@ export function useStoryPlayback(ctx) {
       }
       return
     }
-    // Already silent, or the sound is off: nothing to protect, seek at once.
-    const wasAudible = audible()
     let done = false
     const finishResume = () => {
       tl.time(toStory(v.currentTime))
@@ -580,16 +635,7 @@ export function useStoryPlayback(ctx) {
     }
     v.addEventListener('seeked', resume, { once: true })
     const fallback = setTimeout(resume, SEEK_FALLBACK_MS)
-    // The `seeked` listener and its fallback are already armed, so the
-    // DUCK_MS the fade needs comes out of the fallback's 600, not out of the
-    // protocol. With the sound off this is the plain assignment it always was.
-    if (wasAudible) {
-      rampVolume(0, DUCK_MS, () => {
-        v.currentTime = videoTime
-      })
-    } else {
-      v.currentTime = videoTime
-    }
+    v.currentTime = videoTime
   }
 
   /**
@@ -611,7 +657,9 @@ export function useStoryPlayback(ctx) {
     const t = v ? toStory(v.currentTime) : tl.time()
     // Same definition of "where we are" as the page cut uses, so an arrow
     // pressed mid-turn goes where the eye expects rather than skipping a page.
-    const idx = Math.max(0, segmentAt(t))
+    // Where the player last ASKED to be, falling back to where the clock says
+    // we are. See `requestedIdx`.
+    const idx = requestedIdx ?? Math.max(0, segmentAt(t))
     let targetIdx
     if (direction === 'forward') {
       if (idx >= SEGMENTS.length - 1) return // already on the last page
@@ -624,10 +672,16 @@ export function useStoryPlayback(ctx) {
     // Resume based on the user's INTENT (isPaused), not the transient v.paused
     // flag, which can momentarily read "paused" mid-seek and would otherwise
     // leave the timeline frozen after a forward arrow.
+    requestedIdx = targetIdx
     seekBoth(landingTime(SEGMENTS[targetIdx]), !isPaused.value)
   }
 
-  const seek = time => seekBoth(time, !isPaused.value)
+  /** Any seek that is not an arrow — "watch again", the debug hook — forgets
+   *  where the arrows were counting from. */
+  const seek = time => {
+    requestedIdx = null
+    seekBoth(time, !isPaused.value)
+  }
 
   return {
     playVideo,
