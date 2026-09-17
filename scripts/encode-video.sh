@@ -43,6 +43,22 @@ SFX="$REFS/DP-15152 - clean bg sfx.mp4"
 
 need() { [ -f "$1" ] || { echo "missing: $1" >&2; exit 1; }; }
 
+# ⚠️ A KEYFRAME ON EVERY SECOND THE PLAYER CAN BE SENT TO — see
+# scripts/seek-targets.mjs, which reads them out of the story rather than
+# restating them.
+#
+# WHY. In WebKit, `video.currentTime = x` becomes an AVFoundation seek with zero
+# tolerance on both sides, and Apple's own documentation says that mode "may
+# incur additional decoding delay": the decoder must start from the sync sample
+# at or before the target and throw away every frame in between. Our targets
+# used to miss by 4 to 22 frames, every one of them. On this machine that is a
+# few milliseconds; on the owner's iPhone it was a visible stop, reported three
+# times. With a sync sample ON the target there is nothing to decode forward,
+# and `fastSeek()` — which Safari has and Chrome does not — can land exactly.
+#
+# WHAT IT COSTS: 63 extra I-frames in a 94 s clip, measured at about +1.6 MB.
+KEYFRAMES="$(node "$ROOT/scripts/seek-targets.mjs")"
+
 case "$MODE" in
   dev)
     # Proxies for the lab underlay. Quality is irrelevant here, alignment isn't:
@@ -78,11 +94,26 @@ case "$MODE" in
     ffmpeg -nostdin -v error -y -i "$SRC" \
       -c:v libx264 -preset slow -crf 24 -profile:v high -level 4.0 \
       -vf scale=720:1280 -pix_fmt yuv420p \
-      -g 30 -keyint_min 30 -sc_threshold 0 \
+      -g 30 -keyint_min 30 -sc_threshold 0 -flags +cgop \
+      -force_key_frames "$KEYFRAMES" \
+      -bf 0 \
       -c:a aac -b:a 128k -ar 48000 -ac 2 \
       -movflags +faststart \
       "$OUT/story.mp4"
 
+    # ⚠️ `-bf 0` AND `-flags +cgop`, AND THEY ARE NOT TIDINESS.
+    #
+    # B-frames make the decoder hold a reorder queue, which every seek has to
+    # drain — and WebKit had a seek bug caused specifically by them, fixed only
+    # in Safari 26.0: "Fixed MP4 seeking with b-frames to prevent out-of-order
+    # frame display by suppressing frames with earlier presentation timestamps
+    # following the seek point". Every iPhone below that release has it. A
+    # closed GOP makes each group decodable on its own, so a sync sample really
+    # is a place the decoder can start.
+    #
+    # WHAT IT COSTS: about +1.3 MB on top of the keyframes, +2.9 MB in total
+    # against the old file — 11.6 MB to 14.5 MB. It is the background of a story
+    # that is fetched once.
     echo "-> story.webm (720x1280 vp9, two-pass)"
     PASSLOG="$(mktemp -d)/vp9"
     ffmpeg -nostdin -v error -y -i "$SRC" \
