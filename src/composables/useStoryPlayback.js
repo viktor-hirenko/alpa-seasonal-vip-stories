@@ -43,6 +43,7 @@ export function useStoryPlayback(ctx) {
     setFace,
     plan,
     targets,
+    readyToShow,
   } = ctx
 
   // TWO CLOCKS, AND ONLY WHEN A PAGE WAS DROPPED. `video.currentTime` is the
@@ -271,7 +272,7 @@ export function useStoryPlayback(ctx) {
     if (!v || v.seeking || v.paused) return
     if (isPaused.value || longPress.value) return
     // A manual turn owns the timeline until it lands. See `turnThenSeek`.
-    if (turnTween) return
+    if (turnTween || turnHandoff) return
 
     // OVER THE HOLE FIRST, before anything reads the clock. The jump lands on
     // the far side of a stretch that carries no page of this player's story;
@@ -610,14 +611,25 @@ export function useStoryPlayback(ctx) {
    * Kick off the fetch (iOS often won't preload a paused <video> until
    * load()/play() is called), wait for a safe buffer, then play the video and
    * gate tl.play(0) on the FIRST PRESENTED FRAME so both clocks begin aligned.
+   *
+   * ⚠️ AND WAIT FOR THE CURTAIN, TOO. `readyToShow` is the preloader's other
+   * condition — the font, without which the text is laid out in the wrong face
+   * (Story.vue). Before this the two were independent: the tape started on the
+   * buffer alone, so a slow font meant the story played to a covered screen and
+   * the curtain lifted several seconds in. The fetch and the buffer still run
+   * while that promise is pending; what waits is the first frame.
    */
+  const ready = readyToShow ?? Promise.resolve()
+
   const startPlayback = () => {
     const v = videoPlayer.value
     if (!v) {
-      if (isBuffering) isBuffering.value = false
-      tl.play(0)
-      hoverTl?.value?.play(0)
-      startSync()
+      ready.then(() => {
+        if (isBuffering) isBuffering.value = false
+        tl.play(0)
+        hoverTl?.value?.play(0)
+        startSync()
+      })
       return
     }
     const begin = () => {
@@ -655,7 +667,7 @@ export function useStoryPlayback(ctx) {
     } catch {
       /* no-op */
     }
-    awaitStartBuffer(v).then(launch)
+    Promise.all([awaitStartBuffer(v), ready]).then(launch)
   }
 
   const playVideo = () => {
@@ -1100,7 +1112,29 @@ export function useStoryPlayback(ctx) {
   let turnTween = null
   let turnToken = 0
 
+  /**
+   * ⚠️ THE STANDDOWN OUTLIVES THE TURN, AND IT HAS TO, BECAUSE OF THE FADE.
+   *
+   * The tween's `onComplete` drops `turnTween` and then asks `seekBoth` to
+   * land — and with the sound on `seekBoth` does not land straight away: it
+   * fades the level first (DUCK_MS), so the seek happens up to 70 ms later.
+   * In that window the timeline is still paused where the tap found it while
+   * the tape plays on, which is exactly the disagreement the loop is built to
+   * close — so it closed it, and whatever it did there the seek then undid.
+   *
+   * Measured on a double tap 220 ms apart with the sound on, before this
+   * existed: the scene stepped BACKWARDS 104 ms — the "forward, back, forward"
+   * the owner reported. With the sound off the same taps never produced it,
+   * because a silent `seekBoth` lands in the same task and leaves no window.
+   *
+   * So the flag is raised with the turn and lowered by the seek, not by the
+   * tween. Every path out of `turnThenSeek` reaches a `seekNow`, and `seekNow`
+   * opens with `killTurn`, which is where it goes down.
+   */
+  let turnHandoff = false
+
   const killTurn = () => {
+    turnHandoff = false
     if (!turnTween) return
     turnTween.kill()
     turnTween = null
@@ -1172,6 +1206,7 @@ export function useStoryPlayback(ctx) {
     // did not, and jumped 90 px inside the turn. Released by the `seekNow`
     // every path out of here reaches.
     seekInFlight = true
+    turnHandoff = true
     tl.pause()
     pauseHover()
     // Under the turn, so the level is already down when the tape jumps. The
@@ -1216,7 +1251,17 @@ export function useStoryPlayback(ctx) {
     // turn.
     const aim = toVideo(time)
     const lead = Math.max(0, aim - dur)
-    if (!gapAt(lead)) v.currentTime = lead
+    // ⚠️ AND IT IS RECORDED AS OURS. `tapeTarget` is how the loop tells a tape
+    // we sent from a tape something else moved (see its own note): a tape it
+    // did not send is the authority and the scene must go to it. This line
+    // moves the tape, so without claiming it here the stale target from the
+    // previous jump is what the loop would compare against. The standdown above
+    // means it does not get to look during the turn — but the record has to be
+    // true whenever it does look again.
+    if (!gapAt(lead)) {
+      tapeTarget = toStory(lead)
+      v.currentTime = lead
+    }
 
     turnTween = gsap.timeline({
       onComplete: () => {
@@ -1274,10 +1319,23 @@ export function useStoryPlayback(ctx) {
   }
 
   const jumpToSegment = direction => {
-    const v = videoPlayer.value
-    const t = v ? toStory(v.currentTime) : tl.time()
-    // Same definition of "where we are" as the page cut uses, so an arrow
-    // pressed mid-turn goes where the eye expects rather than skipping a page.
+    // ⚠️ THE SCENE'S CLOCK, NOT THE TAPE'S — THE ONE THE PAGE CUT IS READ FROM.
+    //
+    // This said `toStory(v.currentTime)` and claimed to use "the same
+    // definition of where we are as the page cut", which stopped being true the
+    // day the scene became the master clock: `applySegment` is handed
+    // `tl.time()`. The two are a tenth of a second apart on purpose — a manual
+    // turn sends the tape ahead and it arrives a little short, inside
+    // SYNC_DEADBAND, and is deliberately left there.
+    //
+    // A tenth of a second is nothing anywhere except across a cut, and a tap
+    // lands the story ON a cut. Measured on a double tap: the scene had crossed
+    // 11.21 and the page had swapped, the tape read 11.07, so the second press
+    // counted from the page BEFORE the one on screen and asked for the page
+    // already showing — the story turned back and played the same turn again,
+    // the scene stepping back 104 ms. Read off the scene, both answers come
+    // from one clock and a press always advances.
+    const t = tl.time()
     // Where the player last ASKED to be, falling back to where the clock says
     // we are. See `requestedIdx`.
     const idx = requestedIdx ?? Math.max(0, segmentAt(t))

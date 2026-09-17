@@ -65,6 +65,8 @@
  */
 import { artBox, artImg } from '@/components/shared/artBox.js'
 import { useStory } from '@/composables/useStoryData.js'
+// ⚠️ OPAQUE, its transparency baked onto `$page-bg`. Only ever draw it on that
+// colour; see the note on `.cover__slots` in _pages.scss.
 import slots from '@/assets/pages/cover-slots.webp'
 import ellipse from '@/assets/pages/cover-ellipse.svg'
 

@@ -442,10 +442,19 @@
 /// (21770:3197 and 21770:3200). The double blend is what produces the hot core
 /// plus the coloured spill — one plain copy reads as a flat blob.
 ///
+///
+/// ⚠️ THE BITMAP ARRIVES THROUGH A VARIABLE, AND THAT VARIABLE IS THE ART GATE.
+/// Written here as a plain `url()` it was fetched the instant an element
+/// matched this rule — and all seventeen pages are mounted from the first frame
+/// (ADR-0004), so 116 KB went out ahead of the video on every load, past the
+/// gate `JArt` holds everything else behind (useArtGate.js). A stylesheet
+/// cannot be gated, so the URL comes from the component instead: `JGlow.vue`
+/// sets `--glow-src` once the gate opens. Same treatment as `--cow` and
+/// `--logo` on Space Milk and Sponsor, and for the same reason.
 .j-glow {
   position: absolute;
   pointer-events: none;
-  background-image: url('@/assets/pages/glow.webp');
+  background-image: var(--glow-src, none);
   background-size: 100% 100%;
   background-repeat: no-repeat;
   mask-image: url('@/assets/pages/glow-mask.svg');
@@ -739,6 +748,23 @@
 /// the solved box 4122.3x1835.5) — solved by hand from the container's own
 /// inset percentages since get_metadata's frame box is the CLIPPING frame,
 /// not the rotated image underneath it.
+///
+/// ⚠️ THE FILE IS OPAQUE, AND ITS TRANSPARENCY IS BAKED ONTO `$page-bg`. It
+/// carried a full alpha channel until 2026-09-17 and 79 % of its 346 KB was
+/// that channel alone — lossless, because a lossy alpha turns the nebula's soft
+/// falloff into contour rings: measured, `-alpha_q 70` reached 127 KB and
+/// banded the heart and every spiral arm. Both call sites lay this texture
+/// straight onto an opaque `$page-bg` body — `.cover__body` here, and
+/// `.en__mini-body` on Editor's Note — so compositing it onto that colour at
+/// build time changes not one delivered pixel and takes the file to 55 KB.
+/// That is worth having: the cover is the one page whose art is fetched at
+/// `priority`, so those bytes are spent while the video is still buffering.
+///
+/// ⚠️ IT MAY THEREFORE ONLY EVER BE DRAWN ON `$page-bg`. On any other backdrop
+/// it is a dark rectangle. Recipe, if it has to be rebuilt from the Figma
+/// export: composite over #000a12, then
+/// `cwebp -q 95 -m 6 -sharp_yuv` — 45.4 dB against the old file's own decode,
+/// no banding, pixel size untouched at 1296x576.
 .cover__slots {
   pointer-events: none;
 }

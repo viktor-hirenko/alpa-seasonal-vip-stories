@@ -16,6 +16,8 @@
  * into an opaque rectangle.
  */
 import { computed } from 'vue'
+import { artIsOpen } from '@/composables/useArtGate.js'
+import glow from '@/assets/pages/glow.webp'
 
 const props = defineProps({
   left: { type: Number, required: true },
@@ -57,12 +59,22 @@ const props = defineProps({
 
 const d = n => `calc(${+n.toFixed(3)} * var(--u))`
 
+/**
+ * ⚠️ THE BITMAP'S URL IS PART OF THIS STYLE, NOT OF THE STYLESHEET, AND THAT IS
+ * WHAT HOLDS IT BEHIND THE ART GATE. In `_pages.scss` it was a `url()` in the
+ * `.j-glow` rule, which a browser fetches as soon as an element matches — and
+ * every page is mounted from the first frame, so those 116 KB raced the video
+ * exactly as the page art used to before `JArt` (useArtGate.js). Declared here
+ * it waits with everything else, and the declared box means nothing shifts when
+ * it lands.
+ */
 const boxStyle = computed(() => {
   const box = {
     left: d(props.left),
     top: d(props.top),
     width: d(props.width),
     height: d(props.height),
+    '--glow-src': artIsOpen.value ? `url(${glow})` : 'none',
   }
   if (!props.maskWidth || !props.maskHeight) return box
   const size = `${d(props.maskWidth)} ${d(props.maskHeight)}`

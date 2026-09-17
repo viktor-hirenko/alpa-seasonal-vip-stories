@@ -318,6 +318,46 @@ const hidePreloader = (force = false) => {
 }
 
 /**
+ * ⚠️ NOTHING PLAYS BEHIND THE CURTAIN, AND IT USED TO.
+ *
+ * The preloader waits for the font (above). Playback did not wait for
+ * anything — it started as soon as the buffer allowed — so on any load where
+ * the font was the slower of the two the story ran, in full, to an audience of
+ * nobody, and the curtain came up part-way through it.
+ *
+ * Measured on the production build with the font held back deliberately
+ * (`Fetch.enable`, one file, nothing else touched):
+ *
+ *     font held 6 s    curtain at 6.10 s   tape 5.75 s   cover, 6 s in
+ *     font held 12 s   curtain at 12.06 s  tape 11.73 s  editors_note
+ *
+ * The second line is the owner's report, exactly: «история открывается
+ * примерно со второго слайда». Nobody lost a frame to a bug in the animation;
+ * the animation had simply already happened.
+ *
+ * So the same signal now releases both: the curtain and the first frame. The
+ * buffer still fills in parallel — `v.load()` runs at mount either way — so
+ * this does not add the font's time to the tape's, it stops the tape from
+ * spending the font's time.
+ *
+ * ⚠️ CAPPED, BECAUSE A FONT CAN HANG. `document.fonts.ready` settles on
+ * failures too, but a request that neither answers nor fails could sit there
+ * for the network's own timeout, and past this cap the player would be looking
+ * at a frozen first frame rather than a spinner (index.html gives up at 15 s).
+ * At the cap the story starts in the fallback face and `useJournalFit` re-fits
+ * when the real one lands — the "three lines then two" flicker of 17.09, which
+ * is worth having only in the case where the alternative is a dead screen.
+ */
+const TEXT_READY_CAP_MS = 8000
+const textReady = Promise.race([
+  document.fonts?.ready ?? Promise.resolve(),
+  new Promise(resolve => setTimeout(resolve, TEXT_READY_CAP_MS)),
+]).then(() => {
+  fontsSettled = true
+  hidePreloader()
+})
+
+/**
  * The background video failed to load or decode.
  *
  * ⚠️ THE PRELOADER HAS TO COME OFF HERE TOO. It is dismissed by the buffering
@@ -385,6 +425,8 @@ onMounted(async () => {
     // A manual jump turns the journal itself before it seeks, so playback needs
     // the box the yaw lives on. See `turnThenSeek`.
     targets,
+    // Nothing starts before the curtain can lift. See `textReady`.
+    readyToShow: textReady,
   })
 
   // Show the first page immediately so nothing flashes empty before the video's
@@ -408,13 +450,8 @@ onMounted(async () => {
     targets,
   })
 
-  // Hand off from the inline preloader once the fonts have settled AND the
-  // first frame is on screen — whichever is later.
-  const fonts = document.fonts?.ready ?? Promise.resolve()
-  fonts.then(() => {
-    fontsSettled = true
-    hidePreloader()
-  })
+  // The other half of the handoff — the fonts — is `textReady` above, declared
+  // before playback because playback waits for it as well.
 })
 
 let reachedEnd = false

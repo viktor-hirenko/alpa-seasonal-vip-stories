@@ -79,6 +79,42 @@
         }
       }
     </style>
+
+    <script>
+      // ⚠️ THE OPERATOR'S IMAGE HOST IS OPENED HERE, BEFORE THE BUNDLE EXISTS.
+      // The three game thumbnails are not our files: they arrive as absolute
+      // URLs on the link and are requested by an <img> the moment its page
+      // mounts, a few milliseconds after the bundle runs. Discovering the host
+      // only then costs a DNS lookup and a TLS handshake — measured at 300 ms
+      // on the deployed story, and spent in the window where the video needs
+      // the connection. From the document the socket is already open.
+      //
+      // ⚠️ IT READS VALUES, NOT NAMES. Any http(s) value on the link is a
+      // candidate, so this need not know the parameters are called
+      // `*_thunbnail` (nor repeat that typo), and it still works if a link
+      // gains another host.
+      //
+      // ⚠️ NO `crossorigin`. A thumbnail is a plain <img>, fetched without
+      // CORS, and a CORS-mode preconnect is not the connection it would reuse.
+      // Two origins at most: past that the handshakes compete with the video.
+      try {
+        var seen = {}
+        var opened = 0
+        new URLSearchParams(location.search).forEach(function (value) {
+          if (opened >= 2 || !/^https?:\/\//i.test(value)) return
+          var origin = new URL(value).origin
+          if (seen[origin] || origin === location.origin) return
+          seen[origin] = 1
+          opened += 1
+          var link = document.createElement('link')
+          link.rel = 'preconnect'
+          link.href = origin
+          document.head.appendChild(link)
+        })
+      } catch (e) {
+        /* a malformed link must not keep the story from starting */
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>

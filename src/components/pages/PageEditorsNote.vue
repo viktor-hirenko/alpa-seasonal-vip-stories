@@ -98,6 +98,8 @@ import galaxy from '@/assets/pages/galaxy-3.webp'
 import planets from '@/assets/pages/planets-4.webp'
 import dot from '@/assets/pages/editors-note-dot.svg'
 import ellipse from '@/assets/pages/cover-ellipse.svg'
+// ⚠️ OPAQUE, its transparency baked onto `$page-bg`. Only ever draw it on that
+// colour; see the note on `.cover__slots` in _pages.scss.
 import slots from '@/assets/pages/cover-slots.webp'
 
 const story = useStory()
