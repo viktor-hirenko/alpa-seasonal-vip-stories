@@ -39,7 +39,13 @@ const RAW = [
   { frame: 17, at: 53.27, page: 'sports_desk', face: 'page', skip: 'sportsWins' },
   { frame: 18, at: 57.07, page: 'top_sport_signal', face: 'page', skip: 'sportsMultiplier' },
   { frame: 19, at: 61.1, page: 'sponsor', face: 'page' },
-  { frame: 20, at: 67.07, page: 'space_milk', face: 'page' },
+  // ⚠️ IT SKIPS ON `days`, THE SAME VALUE days_in_spotlight SHOWS. The page is
+  // "PACKS OF [days]" and nothing else, so without the number it is a headline
+  // over a blank — which is exactly what the owner photographed on a link with
+  // no `days`. It was the only page in the deck with a dynamic value and no
+  // `skip`, and the omission was silent: the drop rule selects on the field's
+  // presence, so a page that forgets to declare one can never be dropped.
+  { frame: 20, at: 67.07, page: 'space_milk', face: 'page', skip: 'days' },
   { frame: 21, at: 73.07, page: 'joke', face: 'page' },
   { frame: 22, at: 78.07, page: 'gift', face: 'page' },
   { frame: 23, at: 83.03, page: 'final', face: 'page' },
