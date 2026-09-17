@@ -287,7 +287,31 @@ const handleEventEnd = (dir, e) => playback.handleEventEnd?.(dir, e)
 const jumpToSegment = dir => playback.jumpToSegment?.(dir)
 const playVideo = () => playback.playVideo?.()
 
-const hidePreloader = () => {
+/**
+ * ⚠️ IT COMES OFF WHEN BOTH ARE DONE, AND IT USED TO COME OFF WHEN EITHER WAS.
+ *
+ * Two conditions have to be met before a single page may be seen: the real face
+ * has to be in place, and `useJournalFit` has to have sized every slot against
+ * it (ADR-0004). The intent was written down — "once the fonts have settled AND
+ * the first frame is on screen, whichever is later" — but a second path, an
+ * interval watching `isBuffering`, dismissed the spinner on the buffer alone.
+ * Whichever finished first won, and on a phone that is often the video: it has
+ * a head start from `v.load()` while the font is still a separate request.
+ *
+ * What the player sees when the video wins: text laid out in the FALLBACK face,
+ * because `font-display: block` gives up after about three seconds and paints
+ * it. Different glyph advances, different wrapping — the owner reported a third
+ * line appearing on the third slide and then collapsing back to two. The
+ * collapse is the fit finally running.
+ *
+ * `force` is for the one case that must override both: the video failed
+ * entirely, and the error screen has to be reachable.
+ */
+let fontsSettled = false
+let bufferCleared = false
+
+const hidePreloader = (force = false) => {
+  if (!force && !(fontsSettled && bufferCleared)) return
   const el = document.querySelector('.fe-preloader')
   if (el) el.classList.add('fe-preloader--hidden')
 }
@@ -305,7 +329,7 @@ const handleVideoError = () => {
   if (videoFailed.value) return
   videoFailed.value = true
   isBuffering.value = false
-  hidePreloader()
+  hidePreloader(true)
   notify('video_error')
 }
 
@@ -381,16 +405,19 @@ onMounted(async () => {
   // first frame is on screen — whichever is later.
   const fonts = document.fonts?.ready ?? Promise.resolve()
   fonts.then(() => {
-    if (!isBuffering.value) hidePreloader()
+    fontsSettled = true
+    hidePreloader()
   })
 })
 
 let reachedEnd = false
 
-// Clear the preloader as soon as playback actually begins.
+// Half of the handoff: playback has actually begun. The other half is the
+// font, and `hidePreloader` waits for both.
 const stopWatchingBuffer = (() => {
   const iv = setInterval(() => {
     if (!isBuffering.value) {
+      bufferCleared = true
       hidePreloader()
       clearInterval(iv)
     }
