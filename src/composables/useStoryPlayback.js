@@ -153,12 +153,23 @@ export function useStoryPlayback(ctx) {
    * a page turn; on a slide where the journal is levitating it is the only
    * motion there is, and the owner reported exactly that on `space_milk`.
    *
-   * So: nothing under a frame and a half is treated as an error at all, and
-   * what is left is approached by RAMPING the rate rather than stepping it, at
+   * So: nothing under three frames is treated as an error at all, and what is
+   * left is approached by RAMPING the rate rather than stepping it, at
    * RATE_SLEW per frame. A real divergence still closes in about a fifth of a
    * second; the grid's own sawtooth never gets a rate change out of it.
+   *
+   * ⚠️ THREE FRAMES, NOT ONE AND A HALF. The grid alone is one frame, but the
+   * tape also arrives from a jump a little behind the scene — it does not
+   * advance while it seeks, and only the second jump onwards is pre-compensated
+   * for that (`seekLead`). Measured on this machine, a first jump leaves 46 ms;
+   * the grid's sawtooth then swings the READING between -80 and -15 ms, which
+   * at a band of 50 straddles the edge and made the correction chatter, 82
+   * changes of speed in 240 frames. What the band costs is that the scene may
+   * sit up to a tenth of a second from the tape uncorrected — and the tape is a
+   * near-still room, while the page cut is read off the scene's own clock, so
+   * there is nothing in the frame that can show it.
    */
-  const SYNC_DEADBAND = 1.5 / FPS // s — under this it is the frame grid, not drift
+  const SYNC_DEADBAND = 3 / FPS // s — under this it is the frame grid, not drift
   const RATE_SLEW = 0.02 // per frame — how fast `timeScale` may be changed
   let lastTape = -1
 
@@ -168,6 +179,91 @@ export function useStoryPlayback(ctx) {
     if (lastTape >= 0 && raw < lastTape && lastTape - raw < TAPE_WOBBLE) return lastTape
     lastTape = raw
     return raw
+  }
+
+  /**
+   * ⚠️ HALF A FRAME PAST THE GRID, ALWAYS. WebKit rounds a requested time into
+   * the media timescale, and a request landing exactly on a frame boundary can
+   * truncate into the frame BEFORE the one asked for (WebKit bug 52697). Every
+   * number this file hands the tape is already snapped to the 30 fps grid, so
+   * without this they are all boundary values.
+   */
+  const SEEK_MID_FRAME = 0.5 / FPS
+
+  /**
+   * ⚠️ `fastSeek` EXISTS ON EXACTLY THE BROWSER THAT IS SLOW. Assigning
+   * `currentTime` compiles, in WebKit, to an AVFoundation seek with zero
+   * tolerance on both sides — the most expensive mode there is, and Apple's own
+   * documentation says it "may incur additional decoding delay".
+   * `fastSeek` passes a tolerance instead, so the decoder may stop on a sync
+   * sample rather than decoding forward to the exact frame. Safari and Firefox
+   * have it since 2014; Chrome never shipped it and does not need to.
+   *
+   * ⚠️ IT MAY LAND SHORT, AND THAT IS FINE HERE. WebKit's forward path allows
+   * anywhere in [current, target] and its backward path allows anything at or
+   * before the target, so the tape can arrive on an earlier keyframe than the
+   * one asked for. Nothing in this file assumes it did not: the scene is the
+   * clock now, and a tape that lands short is corrected by `chaseTape` without
+   * the picture ever moving backwards. The forced keyframes in encode-video.sh
+   * put a sync sample on every one of these targets so that in practice it
+   * lands exactly.
+   */
+  /**
+   * ⚠️ WHERE WE LAST SENT THE TAPE, IN STORY TIME, AND WHY IT HAS TO BE KEPT.
+   *
+   * "The scene leads" is only true of a divergence WE caused. If something else
+   * moves the tape — the lab, the debug hook, a gate parking the player, one
+   * day a browser doing something clever — then the tape is the authority and
+   * the scene has to go to it. Without this the first such move wedged the
+   * story on the cover for good: the scene stayed at zero and dragged the tape
+   * back to it every frame. Caught by the measurement scripts, which park the
+   * player by assigning `currentTime` directly.
+   *
+   * So: if the tape is near the last place we sent it, it is our own seek
+   * arriving late and the scene keeps the lead. If it is somewhere else, the
+   * scene follows.
+   */
+  let tapeTarget = null
+
+  const moveTape = (v, storyTime) => {
+    tapeTarget = storyTime
+    seekTape(v, toVideo(storyTime) + SEEK_MID_FRAME)
+  }
+
+  const seekTape = (v, videoTime) => {
+    const t = Math.max(0, videoTime)
+    if (typeof v.fastSeek === 'function') {
+      try {
+        v.fastSeek(t)
+        return
+      } catch {
+        // fall through — some engines throw on a detached or unloaded element
+      }
+    }
+    v.currentTime = t
+  }
+
+  /**
+   * Put the TAPE where the scene is. Called only past SYNC_SNAP, which after a
+   * manual jump means the seek landed late and the scene has moved on.
+   *
+   * ⚠️ AT MOST ONE IN FLIGHT AND NOT MORE OFTEN THAN CHASE_COOLDOWN. Apple's
+   * own guidance for the native equivalent (QA1820) is that seeks issued in
+   * rapid succession cancel each other, "resulting in a lot of seeking and not
+   * a lot of displaying of the target frames" — and WebKit does exactly that,
+   * `seekWithTolerance` cancels any pending seek. A chase that re-fires every
+   * frame on a slow device would never land at all.
+   */
+  const CHASE_COOLDOWN = 900 // ms between corrective moves of the tape
+  let chaseAllowedAt = 0
+
+  const chaseTape = () => {
+    const v = videoPlayer.value
+    const now = performance.now()
+    if (!v || v.seeking || now < chaseAllowedAt) return
+    chaseAllowedAt = now + CHASE_COOLDOWN
+    tl.timeScale(1)
+    moveTape(v, tl.time())
   }
 
   const syncToVideo = () => {
@@ -184,6 +280,9 @@ export function useStoryPlayback(ctx) {
     // cut points), so there is nothing in either picture to see it by.
     const hole = gapAt(v.currentTime)
     if (hole) {
+      // Story time is continuous across a hole by construction, so the scene
+      // does not move; the tape does, and it is us moving it.
+      tapeTarget = toStory(hole.to)
       v.currentTime = hole.to
       if (duckedForSeam) {
         duckedForSeam = false
@@ -224,10 +323,31 @@ export function useStoryPlayback(ctx) {
     const error = t - tl.time()
     const size = Math.abs(error)
     if (size > SYNC_SNAP) {
-      // A real jump: something moved the playhead, and easing towards it over a
-      // second would be the bug rather than the fix.
-      tl.timeScale(1)
-      tl.time(t)
+      // ⚠️ THE TAPE IS CHASED TO THE SCENE, NOT THE SCENE TO THE TAPE.
+      //
+      // This used to be `tl.time(t)`, and on a phone that line is the second
+      // half of the defect the owner reported. The scene is the only thing in
+      // the frame anyone is looking at; the tape is a near-still room behind
+      // it. Whichever of the two has to move, it must be the room.
+      //
+      // Measured on a build that simply stopped waiting for the seek: with the
+      // tape 500 ms late the journal played its turn, settled — and then this
+      // line threw it back to the start of the turn and played it again.
+      //
+      // GSAP's own reference for syncing a timeline to media (`mediaTimeline`,
+      // codepen xxQrGBY) is built this way round: the timeline leads and the
+      // media is corrected, and only past half a second of drift. dash.js's
+      // liveCatchup is the same shape — rate inside the threshold, a hard move
+      // only past it, and the hard move is on the media.
+      //
+      // ⚠️ UNLESS THE TAPE IS SOMEWHERE WE DID NOT SEND IT — see `tapeTarget`.
+      if (tapeTarget !== null && Math.abs(t - tapeTarget) < SYNC_SNAP) {
+        chaseTape()
+      } else {
+        tapeTarget = null
+        tl.timeScale(1)
+        tl.time(t)
+      }
       return
     }
     const wanted =
@@ -338,19 +458,18 @@ export function useStoryPlayback(ctx) {
     const v = videoPlayer.value
     if (!v) return
     if (isPaused.value || longPress.value) return // respect a user-intended pause
-    // ⚠️ THE FILTERED STORY CLOCK, NOT THE RAW TAPE. Two bugs lived in
-    // `tl.time(v.currentTime)`, and a seek walks straight into both of them
-    // because seeking makes the element buffer and fire `waiting`/`playing`:
+    // ⚠️ IT RESUMES THE SCENE AND DOES NOT RE-TIME IT. This was the last line
+    // in the file that moved the scene to wherever the tape said it was, and
+    // with the seek no longer being waited for it fired constantly: a seek
+    // rebuffers, `playing` arrives after the scene has run on, and the journal
+    // was thrown back by exactly the seek's latency. Traced at a faked 300 and
+    // 500 ms, the turn replayed itself from the edge every time.
     //
-    //  - RAW: on iOS the reading is unreliable for a few frames after a seek,
-    //    so this was the last hard set still throwing the scene backwards.
-    //    Traced frame by frame: the journal reached edge-on at 89.5 degrees,
-    //    fell back to 79.4 and came round again before the flip;
-    //  - TAPE, NOT STORY: with a page dropped the two are different scales
-    //    entirely (`toStory`), so on an incomplete link this pinned the
-    //    timeline to a second that belongs to a different part of the story.
+    // Nothing is lost by dropping it. A real stall pauses this timeline and the
+    // tape together, so they resume together; anything that moved the tape
+    // underneath is closed afterwards by rate, or past SYNC_SNAP by moving the
+    // TAPE (`chaseTape`) — never the picture the player is watching.
     tl.timeScale(1)
-    tl.time(toStory(tapeTime(v)))
     tl.play()
     resumeHover()
   }
@@ -665,25 +784,40 @@ export function useStoryPlayback(ctx) {
    */
   const SETTLE_GUARD_MS = 400 // suppress sync after a seek-resume
   const SEEK_FALLBACK_MS = 600 // cap if `seeked` never fires (iOS edge case)
-  const FRAME_WAIT_MS = 200 // cap if rVFC never fires (throttled tab)
 
   /**
-   * Resolve on the next actually-presented frame. `seeked` only means the seek
-   * is LOGICALLY complete — on iOS the decoded frame may not be composited yet,
-   * so starting GSAP there races a still-settling picture.
+   * ⚠️ WHAT A SEEK COSTS ON *THIS* DEVICE, LEARNED WHILE IT RUNS.
+   *
+   * There is no way to ask, and the spread between machines is the whole
+   * problem: a few milliseconds here, hundreds on a phone, and the published
+   * numbers for a low-end Android are worse again. So it is measured — the time
+   * from asking the tape to move to its `seeked` — and the next jump aims that
+   * far ahead so the two clocks meet instead of having to be reconciled.
+   *
+   * Held as a decaying maximum rather than an average: one slow seek matters
+   * more than ten fast ones, but a single outlier must not aim every later jump
+   * half a second into the future. Capped, because past the cap the lead would
+   * skip more story than the seek saves.
    */
-  const onNextPresentedFrame = (v, cb) => {
-    if (typeof v.requestVideoFrameCallback !== 'function') return cb()
-    let fired = false
-    const run = () => {
-      if (fired) return
-      fired = true
-      cb()
-    }
-    v.requestVideoFrameCallback(run)
-    setTimeout(run, FRAME_WAIT_MS)
+  const SEEK_COST_CAP = 0.45 // s — the most we will ever aim ahead
+  const SEEK_COST_DECAY = 0.85
+  let seekCost = 0
+
+  const noteSeekCost = ms => {
+    const s = Math.min(SEEK_COST_CAP, Math.max(0, ms / 1000))
+    seekCost = s > seekCost ? s : seekCost * SEEK_COST_DECAY + s * (1 - SEEK_COST_DECAY)
   }
 
+  /**
+   * ⚠️ THE LEAD IS NOT GATED ON ANYTHING. It was, briefly, on the sync dead
+   * band — and this machine's seek costs 47 ms against a 50 ms band, so the
+   * lead never applied and every jump left the tape 47 ms behind the scene for
+   * good. Measured: the correction then sat on the edge of the band and
+   * chattered between full speed and 0.88 for the rest of the slide, 65 changes
+   * in 240 frames. The lead is not a tolerance, it is compensation for time the
+   * tape provably loses while it seeks, so it is always applied.
+   */
+  const seekLead = () => seekCost
   /**
    * Seek both clocks. See the comment block above — this order matters.
    *
@@ -786,38 +920,66 @@ export function useStoryPlayback(ctx) {
       if (wasAudible) unduck()
       return
     }
-    let done = false
-    const finishResume = () => {
-      release()
-      tl.timeScale(1)
-      // ⚠️ PINNED TO WHAT WAS ASKED FOR, NOT TO WHAT THE TAPE REPORTS. This used
-      // to read `toStory(v.currentTime)`, and on iOS that reading is unreliable
-      // for a few frames after a seek — so the one hard set left in the whole
-      // routine could still throw the scene backwards by the width of the
-      // decoder's stutter. Measured against a simulated one: 26 ms, and it was
-      // the last reversal left. The tape lands within a frame of the request
-      // anyway, and the rate correction in the sync loop closes whatever is
-      // left without ever reversing.
-      tl.time(time)
-      if (shouldPlay) {
-        suppressSyncUntil = performance.now() + SETTLE_GUARD_MS
-        tl.play()
-        resumeHover()
-        v.play().catch(() => {})
-      }
-      if (wasAudible) unduck()
-    }
-    const resume = () => {
-      if (done) return
-      done = true
-      clearTimeout(fallback)
-      v.removeEventListener('seeked', resume)
-      onNextPresentedFrame(v, finishResume)
-    }
-    v.addEventListener('seeked', resume, { once: true })
-    const fallback = setTimeout(resume, SEEK_FALLBACK_MS)
+    // ⚠️ THE SCENE DOES NOT WAIT FOR THE TAPE. THIS IS THE WHOLE FIX.
+    //
+    // What stood here paused the timeline, asked the tape to move, and resumed
+    // only on `seeked` plus a presented frame. On this machine that wait is a
+    // few milliseconds and invisible. On the owner's iPhone it is hundreds, and
+    // it is spent standing edge-on — the freeze he reported three times.
+    //
+    // Measured with the seek's latency faked in the browser, the journal's
+    // still time inside the turn against that latency:
+    //
+    //     latency   150    300    500    800 ms
+    //     waiting    84    251    451    668 ms
+    //     not         0      0      0      0
+    //
+    // It is not a trade: the HTML spec runs the seek in parallel with script
+    // (the seeking algorithm, step 5 onwards), so nothing was gained by
+    // standing still. The tape freezes on its last frame for the length of the
+    // seek and then arrives. That frame is a near-still neon room — sampled at
+    // all sixteen cut points, a jump across one differs by 2.4 to 13.4 of 255.
+    // Freezing THAT rather than the journal is the entire point.
     seekInFlight = true
-    v.currentTime = videoTime
+    const issued = performance.now()
+    let landed = false
+    const onLanded = () => {
+      if (landed) return
+      landed = true
+      clearTimeout(fallback)
+      v.removeEventListener('seeked', onLanded)
+      release()
+      noteSeekCost(performance.now() - issued)
+      // ⚠️ CHECK WHERE IT ACTUALLY LANDED. `fastSeek` is allowed to stop on an
+      // earlier sync sample than the one asked for — WebKit's backward path
+      // permits anything at or before the target — and the forced keyframes in
+      // encode-video.sh are what make it land exactly in practice. "In
+      // practice" is not a thing to rely on for a page the player is looking
+      // at, so if it came down somewhere else, put it right precisely, once.
+      const aim = toVideo(tapeTarget ?? time)
+      if (Math.abs(v.currentTime - aim) > 2 / FPS) v.currentTime = aim + SEEK_MID_FRAME
+    }
+    v.addEventListener('seeked', onLanded, { once: true })
+    const fallback = setTimeout(onLanded, SEEK_FALLBACK_MS)
+
+    // ⚠️ AIMED WHERE THE SCENE WILL BE, NOT WHERE IT IS. The tape arrives
+    // `seekCost` late, by which time the scene has run on by the same amount,
+    // and without the lead every jump would end with the two that far apart —
+    // which is what `chaseTape` would then have to spend a second seek fixing.
+    // The lead is this device's own measured cost, so it is right on a phone
+    // and near zero here.
+    tapeTarget = time + seekLead()
+    seekTape(v, videoTime + seekLead() + SEEK_MID_FRAME)
+
+    tl.timeScale(1)
+    tl.time(time)
+    if (shouldPlay) {
+      suppressSyncUntil = performance.now() + SETTLE_GUARD_MS
+      tl.play()
+      resumeHover()
+      v.play().catch(() => {})
+    }
+    if (wasAudible) unduck()
   }
 
   // --- The manual page turn -----------------------------------------------

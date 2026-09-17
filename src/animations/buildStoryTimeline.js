@@ -53,6 +53,15 @@ export function buildStoryTimeline(targets, ctx) {
   // flyLayer.js for why it cannot live on the timeline itself.
   const fly = buildFlyLayer(targets.flyLayer, plan.flights, slides)
 
+  // ⚠️ REAL TIME, JUMPS AND ALL. GSAP ships with `lagSmoothing(500, 33)`: when
+  // more than 500 ms passes between two ticks it pretends only 33 did, so a
+  // long frame does not fling every animation forward. That is right for
+  // ordinary motion and wrong for ours — the tape's clock does not pretend, so
+  // after one long frame on a phone the two disagree by most of that frame's
+  // length, out of nothing. GSAP's own documentation names this case: turn it
+  // off when the animation must stay locked to an external clock.
+  gsap.ticker.lagSmoothing(0)
+
   const tl = gsap.timeline({
     paused: true,
     onUpdate: () => {
