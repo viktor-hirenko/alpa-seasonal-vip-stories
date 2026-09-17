@@ -2,14 +2,14 @@
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
       <div class="page__art art-box" :style="artBox(-637, -136, 1501.563, 1258.608)">
-        <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
+        <JArt :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
       <JGlow :left="-435.2" :top="1070.59" :width="2272.4" :height="1136.2" />
     </template>
 
     <template #art>
-      <div class="sp__mascot" :style="{ '--cow': `url(${cow})` }">
-        <img :src="cow" alt="" />
+      <div class="sp__mascot" :style="{ '--cow': artIsOpen ? `url(${cow})` : 'none' }">
+        <JArt :src="cow" alt="" />
         <!-- 21770:4151's inner shadow — see the `inner-glow` mixin. -->
         <div class="sp__inner" />
       </div>
@@ -35,6 +35,7 @@
  * Slide frame 19, cut at 61.10 s. Static — no dynamic fields.
  */
 import PageChrome from '@/components/shared/PageChrome.vue'
+import { artIsOpen } from '@/composables/useArtGate.js'
 import JHeading from '@/components/shared/JHeading.vue'
 import JGlow from '@/components/shared/JGlow.vue'
 import { artBox, artImg } from '@/components/shared/artBox.js'

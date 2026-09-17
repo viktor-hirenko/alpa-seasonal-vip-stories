@@ -4,12 +4,12 @@
       <!-- galaxy 3: 2354.516 x 1763.832 at (-425.18, 398), image
            2130.188 x 1383.964 rotated 10.96deg -->
       <div class="page__art art-box" :style="artBox(-425.18, 398, 2354.516, 1763.832)">
-        <img :src="galaxy" alt="" :style="artImg(2130.188, 1383.964, 10.96)" />
+        <JArt :src="galaxy" alt="" :style="artImg(2130.188, 1383.964, 10.96)" />
       </div>
       <!-- planets 4: 1246.411 x 1044.739 at (769.1, -548), image
            1068.061 x 662.593, mirrored vertically then rotated 155.59deg -->
       <div class="page__art art-box" :style="artBox(769.1, -548, 1246.411, 1044.739)">
-        <img :src="planets" alt="" :style="artImg(1068.061, 662.593, 155.59, 'scaleY(-1)')" />
+        <JArt :src="planets" alt="" :style="artImg(1068.061, 662.593, 155.59, 'scaleY(-1)')" />
       </div>
 
       <!-- Hero is page-centred (left: 50%), 919 x 815 at y=878. -->
@@ -25,7 +25,7 @@
         <!-- `Lvl 2` ray burst — byte-identical to Sports Desk's `Lvl 1`.
              1076 sq, centred at y + 51.5, plus-lighter, rotated 90deg. -->
         <div class="j-hero__rays" :style="artBox(-78.5, -27, 1076, 1076)">
-          <img :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
+          <JArt :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
         </div>
 
         <!-- Percentage insets of the 919 x 815 hero frame, resolved to design px. -->

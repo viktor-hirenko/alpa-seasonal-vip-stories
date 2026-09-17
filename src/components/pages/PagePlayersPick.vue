@@ -3,10 +3,10 @@
     <template #backdrop>
       <!-- Canonical galaxy/planets art, but at this page's own offsets. -->
       <div class="page__art art-box" :style="artBox(-804, 566, 3049.644, 2284.992)">
-        <img :src="galaxy" alt="" :style="artImg(2759, 1793, 10.96)" />
+        <JArt :src="galaxy" alt="" :style="artImg(2759, 1793, 10.96)" />
       </div>
       <div class="page__art art-box" :style="artBox(-542.59, -548, 1501.563, 1258.608)">
-        <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
+        <JArt :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
     </template>
 

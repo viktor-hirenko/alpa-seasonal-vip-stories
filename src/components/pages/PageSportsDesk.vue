@@ -6,7 +6,7 @@
       <JHero :left="261" :top="566">
         <!-- `Lvl 1` ray burst: 1076 sq, centred, plus-lighter, rotated 90deg -->
         <div class="j-hero__rays" :style="artBox(-78.5, -78.5, 1076, 1076)">
-          <img :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
+          <JArt :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
         </div>
 
         <!-- Icon group `21770:3857`. ⚠️ ITS OWN BOX IS A DECOY, AND THIS PAGE

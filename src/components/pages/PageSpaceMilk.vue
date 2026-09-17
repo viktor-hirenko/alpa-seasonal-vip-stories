@@ -4,7 +4,7 @@
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'" :spine-fade-width="377" :spine-fade-stop="42.308">
     <template #backdrop>
       <div class="page__art art-box" :style="artBox(-637, -136, 1501.563, 1258.608)">
-        <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
+        <JArt :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
       <!-- 21770:4223/4226. The ellipse mask has its OWN box inside the bitmap's
            (V-91): 2798 x 1676.977 at (391.891, -41.922), not the whole
@@ -29,16 +29,16 @@
            i.e. the two smaller blooms sit ON TOP of the mascot and light her
            and the carton. Drawing all three before her buried them, which is
            the white gradient the owner could see in Figma and not in ours. -->
-      <img class="sm__ellipse sm__ellipse--a" :src="bloomTight" alt="" />
+      <JArt class="sm__ellipse sm__ellipse--a" :src="bloomTight" alt="" />
 
-      <div class="sm__cow" :style="{ '--cow': `url(${cow})` }">
-        <img :src="cow" alt="" />
+      <div class="sm__cow" :style="{ '--cow': artIsOpen ? `url(${cow})` : 'none' }">
+        <JArt :src="cow" alt="" />
         <!-- 21770:4229's inner shadow — see the `inner-glow` mixin. -->
         <div class="sm__inner" />
       </div>
 
-      <img class="sm__ellipse sm__ellipse--b" :src="bloomWide" alt="" />
-      <img class="sm__ellipse sm__ellipse--c" :src="bloomWide" alt="" />
+      <JArt class="sm__ellipse sm__ellipse--b" :src="bloomWide" alt="" />
+      <JArt class="sm__ellipse sm__ellipse--c" :src="bloomWide" alt="" />
       <!-- 21770:4231. After the cow and BEFORE the logo, which is the mock's
            own order: the fade dissolves the mascot into the page bottom, and
            the logo stays above it. Without it the body's edge cut her off. -->
@@ -54,9 +54,12 @@
            the page export pixel for pixel — the two routes agree to 4.5 px. -->
       <div
         class="page__art art-box sm__logo"
-        :style="{ ...artBox(646, -23.051, 796.969, 796.969), '--logo': `url(${logo})` }"
+        :style="{
+          ...artBox(646, -23.051, 796.969, 796.969),
+          '--logo': artIsOpen ? `url(${logo})` : 'none',
+        }"
       >
-        <img :src="logo" alt="" :style="artImg(700.867, 700.867, -8.52)" />
+        <JArt :src="logo" alt="" :style="artImg(700.867, 700.867, -8.52)" />
         <div class="sm__logo-inner" :style="artImg(700.867, 700.867, -8.52)" />
       </div>
     </template>
@@ -84,6 +87,7 @@
  * downloading both raw fills and looking at them before writing any markup.
  */
 import PageChrome from '@/components/shared/PageChrome.vue'
+import { artIsOpen } from '@/composables/useArtGate.js'
 import JHeading from '@/components/shared/JHeading.vue'
 import JGlow from '@/components/shared/JGlow.vue'
 import { artBox, artImg } from '@/components/shared/artBox.js'

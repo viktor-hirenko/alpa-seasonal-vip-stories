@@ -157,6 +157,7 @@ import { buildStoryTimeline } from '@/animations/buildStoryTimeline.js'
 import { installStoryDebugHook } from '@/animations/installStoryDebugHook.js'
 import { useStoryPlayback } from '@/composables/useStoryPlayback.js'
 import { useStoryBridge } from '@/composables/useStoryBridge.js'
+import { armArtGate, openArt } from '@/composables/useArtGate.js'
 import { useJournalFit } from '@/composables/useJournalFit.js'
 import { provideStoryData } from '@/composables/useStoryData.js'
 import { buildStoryPlan } from '@/story/storyPlan.js'
@@ -329,6 +330,7 @@ const handleVideoError = () => {
   if (videoFailed.value) return
   videoFailed.value = true
   isBuffering.value = false
+  openArt()
   hidePreloader(true)
   notify('video_error')
 }
@@ -389,6 +391,11 @@ onMounted(async () => {
   // first frame is presented.
   playback.applySegment(segments[0].start)
 
+  // ⚠️ ARMED BEFORE PLAYBACK, NOT AFTER. The guarantee has to be running before
+  // anything that can fail — a refused autoplay, a buffer that never fills —
+  // or a page could sit there with no art and nothing to open the gate.
+  armArtGate()
+
   playback.startPlayback()
 
   installStoryDebugHook({
@@ -418,6 +425,9 @@ const stopWatchingBuffer = (() => {
   const iv = setInterval(() => {
     if (!isBuffering.value) {
       bufferCleared = true
+      // The tape is playing, so the connection is no longer the thing standing
+      // between the player and the first frame. See useArtGate.js.
+      openArt()
       hidePreloader()
       clearInterval(iv)
     }

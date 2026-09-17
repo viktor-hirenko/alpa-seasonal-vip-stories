@@ -3,7 +3,7 @@
     <div class="cover__edge" />
     <div class="cover__body">
       <div class="page__art art-box cover__slots" :style="artBox(-519.15, -392.3, 4122.3, 1835.5)">
-        <img :src="slots" alt="" :style="artImg(4122.3, 1835.5, -5.3)" />
+        <JArt priority :src="slots" alt="" :style="artImg(4122.3, 1835.5, -5.3)" />
       </div>
 
       <div class="cover__fade-mid" />
@@ -16,7 +16,7 @@
         class="page__art art-box cover__ellipse"
         :style="artBox(358.91, 285.05, 777.896, 1079.753)"
       >
-        <img :src="ellipse" alt="" :style="artImg(664.492, 1008.987, 6.71)" />
+        <JArt priority :src="ellipse" alt="" :style="artImg(664.492, 1008.987, 6.71)" />
       </div>
 
       <div class="cover__fade-bottom" />

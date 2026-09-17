@@ -1,7 +1,12 @@
 <template>
   <div class="fly-obj" :data-fly="rec.id" :style="style">
     <div class="fly-obj__box">
-      <img class="fly-obj__art" :src="src" alt="" draggable="false" />
+      <!-- ⚠️ GATED LIKE THE PAGE ART, AND FOR A BIGGER REASON. There are thirty
+           flights, every one with its own sprite, and they were all requested
+           at boot — measured over 4G, they were most of the 1720 KB that went
+           out before the tape was asked for at all. Not one of them is on
+           screen in the first seconds. See JArt.vue. -->
+      <JArt class="fly-obj__art" :src="src" draggable="false" />
     </div>
   </div>
 </template>

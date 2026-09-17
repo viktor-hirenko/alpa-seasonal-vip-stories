@@ -1,7 +1,7 @@
 <template>
   <div class="j-level" :style="boxStyle">
     <div class="j-level__clip">
-      <img :src="src" alt="" />
+      <JArt :src="src" />
     </div>
   </div>
 </template>

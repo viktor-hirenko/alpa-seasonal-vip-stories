@@ -1,6 +1,6 @@
 <template>
   <div class="j-hero__slot" :style="slotStyle">
-    <img :src="src" alt="" :style="imgStyle" />
+    <JArt :src="src" :style="imgStyle" />
   </div>
 </template>
 

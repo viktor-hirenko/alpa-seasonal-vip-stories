@@ -1,14 +1,14 @@
 <template>
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
-      <img class="page__art page__starfield" :src="starfield" alt="" />
+      <JArt class="page__art page__starfield" :src="starfield" alt="" />
     </template>
 
     <template #art>
       <JHero :left="261" :top="566" :glow-plus="false">
         <!-- `Lvl 1` ray burst: 1076 sq centred at y + 16.5, rotated 90deg -->
         <div class="j-hero__rays" :style="artBox(-78.5, -62, 1076, 1076)">
-          <img :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
+          <JArt :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
         </div>
 
         <JLevelBadge :src="badge" />

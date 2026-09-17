@@ -2,10 +2,10 @@
   <PageChrome>
     <template #backdrop>
       <div class="page__art art-box" :style="artBox(-907, 1032, 2759, 1793)">
-        <img :src="galaxy" alt="" :style="{ width: du(2759), height: du(1793) }" />
+        <JArt :src="galaxy" alt="" :style="{ width: du(2759), height: du(1793) }" />
       </div>
       <div class="page__art art-box" :style="artBox(436, -412, 1270.054, 1116.755)">
-        <img :src="planets" alt="" :style="artImg(1080, 670, -150.33)" />
+        <JArt :src="planets" alt="" :style="artImg(1080, 670, -150.33)" />
       </div>
     </template>
 
@@ -14,7 +14,7 @@
     </template>
 
     <div class="en__chip">
-      <img class="en__chip-dot" :src="dot" alt="" />
+      <JArt class="en__chip-dot" :src="dot" alt="" />
       <span>{{ copy.chip }}</span>
     </div>
 
@@ -52,14 +52,14 @@
             class="page__art art-box en__mini-slots"
             :style="artBox(-196.91, -148.81, 1563.55, 696.02)"
           >
-            <img :src="slots" alt="" :style="artImg(1563.55, 696.02, -5.3)" />
+            <JArt :src="slots" alt="" :style="artImg(1563.55, 696.02, -5.3)" />
           </div>
           <div class="en__mini-fade1" />
           <p class="en__mini-vip-club">{{ cover.vip_club }}</p>
           <div class="en__mini-glow-blob" />
           <div class="en__mini-astronaut" />
           <div class="page__art art-box" :style="artBox(135.97, 107.99, 294.695, 409.049)">
-            <img
+            <JArt
               class="en__mini-screen"
               :src="ellipse"
               alt=""

@@ -10,7 +10,12 @@
            left half, and without it the top of the page is black where the mock
            is pink. The owner saw exactly that and said so. A page without one
            simply omits `bg`. -->
-      <img v-if="bg" class="page__bg" :src="bg" alt="" />
+      <!-- ⚠️ THE ONE HEAVY FILE PER PAGE, AND THEREFORE GATED. The edge, sheen
+           and spine below are three shared files the very first page needs, so
+           they stay eager; `bg` is a different 116-232 KB picture for every one
+           of the seventeen and none of them is wanted before the story runs.
+           See JArt.vue. -->
+      <JArt v-if="bg" class="page__bg" :src="bg" />
 
       <!-- Backdrop art: sits BELOW the colour wash, so the wash tints it. -->
       <slot name="backdrop" />

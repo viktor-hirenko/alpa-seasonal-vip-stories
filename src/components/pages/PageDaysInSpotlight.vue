@@ -3,10 +3,10 @@
     <template #art>
       <!-- planets 4, rotated -150.33deg inside a 2230.908 x 1961.63 wrapper -->
       <div class="page__art days__planets">
-        <img :src="planets" alt="" />
+        <JArt :src="planets" alt="" />
       </div>
       <!-- roket 1, 752 x 956 at (186, 1245) -->
-      <img class="page__art days__rocket" :src="rocket" alt="" />
+      <JArt class="page__art days__rocket" :src="rocket" alt="" />
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>

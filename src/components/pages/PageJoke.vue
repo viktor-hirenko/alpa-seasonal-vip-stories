@@ -2,9 +2,9 @@
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
       <div class="page__art art-box" :style="artBox(-94, -551, 1501.563, 1258.608)">
-        <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
+        <JArt :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
-      <img class="page__art joke__rocket" :src="rocket" alt="" />
+      <JArt class="page__art joke__rocket" :src="rocket" alt="" />
     </template>
 
     <!-- The only slot in the deck that grows UPWARDS: FR and IT take a second

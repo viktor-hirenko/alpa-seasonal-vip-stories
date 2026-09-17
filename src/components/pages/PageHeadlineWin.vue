@@ -2,7 +2,7 @@
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'" :spine-fade-to="'rgba(0, 10, 18, 0.8)'">
     <template #backdrop>
       <div class="page__art art-box" :style="artBox(-576.33, 241.19, 2600.392, 2269.882)">
-        <img :src="bg" alt="" :style="artImg(2181.992, 1454.661, 26.26)" />
+        <JArt :src="bg" alt="" :style="artImg(2181.992, 1454.661, 26.26)" />
       </div>
     </template>
 
@@ -14,7 +14,7 @@
            analogy with a neighbour. -->
       <JGlow :left="-435.2" :top="790.59" :width="2272.4" :height="1136.2" />
       <div class="page__art art-box" :style="artBox(869, -167, 794.044, 711.581)">
-        <img :src="rocket" alt="" :style="artImg(515.674, 655.564, 110.37, 'scaleY(-1)')" />
+        <JArt :src="rocket" alt="" :style="artImg(515.674, 655.564, 110.37, 'scaleY(-1)')" />
       </div>
     </template>
 
@@ -61,7 +61,7 @@
          so this cannot move us away from the mock. -->
     <JValue :value="gameName" :top="787" :size="96" v-bind="L.game" />
 
-    <img class="page__art hw__coins" :src="coins" alt="" />
+    <JArt class="page__art hw__coins" :src="coins" alt="" />
     <JGameThumb :src="gameImage" :name="gameName" :top="947" />
   </PageChrome>
 </template>

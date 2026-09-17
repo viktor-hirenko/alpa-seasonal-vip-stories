@@ -2,21 +2,21 @@
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
       <PageBackdrop :planets="false" />
-      <img class="page__art page__starfield" :src="starfield" alt="" />
+      <JArt class="page__art page__starfield" :src="starfield" alt="" />
     </template>
 
     <template #art>
       <JHero :left="261" :top="566">
         <!-- `Lvl 1` ray burst: 1076 sq dead-centre, rotated 90deg -->
         <div class="j-hero__rays" :style="artBox(-78.5, -78.5, 1076, 1076)">
-          <img :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
+          <JArt :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
         </div>
 
         <!-- `Bonus_Comboboost`: 698.334 sq wrapper at (140, 51); inner box
              579.414 sq rotated 13.46deg with the image offset (-20.42, 4.89) -->
         <div class="j-hero__slot" :style="artBox(140, 51, 698.334, 698.334)">
           <div class="combo" :style="artImg(579.414, 579.414, 13.46)">
-            <img :src="combo" alt="" />
+            <JArt :src="combo" alt="" />
           </div>
         </div>
 

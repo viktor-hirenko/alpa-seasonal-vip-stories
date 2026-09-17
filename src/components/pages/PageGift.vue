@@ -2,10 +2,10 @@
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
       <div class="page__art art-box" :style="artBox(-804, -116, 3049.644, 2284.992)">
-        <img :src="galaxy" alt="" :style="artImg(2759, 1793, 10.96)" />
+        <JArt :src="galaxy" alt="" :style="artImg(2759, 1793, 10.96)" />
       </div>
       <div class="page__art art-box" :style="artBox(-542.59, 1026, 1501.563, 1258.608)">
-        <img :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
+        <JArt :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
       </div>
     </template>
 
@@ -17,12 +17,12 @@
            comes after the glow. Moving this glow below the wash by analogy cost
            27 points of brightness down the left edge (V-91). Check the page. -->
       <JGlow :left="-635.2" :top="530.16" :width="2665.6" :height="1332.8" />
-      <img class="gift__bloom" :src="bloom" alt="" />
+      <JArt class="gift__bloom" :src="bloom" alt="" />
       <div class="page__art art-box" :style="artBox(31.79, 469.13, 1321.579, 1321.579)">
-        <img :src="helmet" alt="" :style="artImg(1051.288, 1051.288, -17.74)" />
+        <JArt :src="helmet" alt="" :style="artImg(1051.288, 1051.288, -17.74)" />
       </div>
       <div class="page__art art-box" :style="artBox(81.95, 589.21, 777.896, 1079.753)">
-        <img class="gift__ring" :src="ring" alt="" :style="artImg(664.492, 1008.987, 6.71)" />
+        <JArt class="gift__ring" :src="ring" alt="" :style="artImg(664.492, 1008.987, 6.71)" />
       </div>
     </template>
 

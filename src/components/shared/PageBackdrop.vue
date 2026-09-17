@@ -1,9 +1,9 @@
 <template>
   <div class="page__art art-box" :style="artBox(-804, -208, 3049.644, 2284.992)">
-    <img :src="galaxy" alt="" :style="artImg(2759, 1793, 10.96)" />
+    <JArt :src="galaxy" alt="" :style="artImg(2759, 1793, 10.96)" />
   </div>
   <div v-if="planets" class="page__art art-box" :style="artBox(-542.59, 1026, 1501.563, 1258.608)">
-    <img :src="planetsSrc" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
+    <JArt :src="planetsSrc" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
   </div>
 </template>
 

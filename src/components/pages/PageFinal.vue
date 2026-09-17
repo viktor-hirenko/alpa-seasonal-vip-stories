@@ -1,7 +1,7 @@
 <template>
   <PageChrome class="pf" :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
-      <img class="page__art pf__warp" :src="warp" alt="" />
+      <JArt class="page__art pf__warp" :src="warp" alt="" />
     </template>
 
     <JHeading :text="copy.headline" :top="737.5" :size="90" v-bind="L.headline" />

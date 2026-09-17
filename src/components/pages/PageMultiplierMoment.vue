@@ -2,10 +2,10 @@
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'" :spine-fade-to="'rgba(0, 10, 18, 0.8)'">
     <template #backdrop>
       <div class="page__art art-box" :style="artBox(-519, 414, 2483.337, 1968.191)">
-        <img :src="bg" alt="" :style="artImg(2181.992, 1454.661, -165.05)" />
+        <JArt :src="bg" alt="" :style="artImg(2181.992, 1454.661, -165.05)" />
       </div>
       <div class="page__art art-box" :style="artBox(-104, -155, 531.996, 668.325)">
-        <img :src="rocket" alt="" :style="artImg(515.674, 655.564, -1.44, 'scaleY(-1)')" />
+        <JArt :src="rocket" alt="" :style="artImg(515.674, 655.564, -1.44, 'scaleY(-1)')" />
       </div>
     </template>
 
