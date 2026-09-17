@@ -115,7 +115,7 @@
              journal on storyboard frames 22-25, 25 and 27 — and `.stage__ui` is
              the one layer with no perspective ancestor. -->
         <StoryOutro :visible="showOutro" :lines="copy.outro" />
-        <StoryCta :visible="showCta" :label="copy.continue_journey" @click="getGift" />
+        <StoryCta :progress="ctaProgress" :label="copy.continue_journey" @click="getGift" />
         <StoryReplay :visible="showReplay" :label="copy.watch_again" @click="watchAgain" />
       </div>
 
@@ -248,9 +248,25 @@ const { notify, closeStory, getGift } = useStoryBridge({ endLink })
 // derived from the storyboard frames they appear on), so nothing here decides
 // when they show — it only reads the clock.
 const copy = story.t('ui')
-const showCta = computed(
-  () => currentTime.value >= TIMING.cta.from && currentTime.value < TIMING.cta.to,
-)
+/**
+ * The CTA's window AND its entrance in one number: 0 while it has nothing to
+ * show, and once the beat after the page turn has passed, how far the clock
+ * stands through `TIMING.cta.rise`.
+ *
+ * ⚠️ A NUMBER OFF THE CLOCK, NOT A CSS TRANSITION ON `v-if`, and that is the
+ * same law the page cut obeys (ADR-0008). This story is seeked constantly — tap
+ * navigation, the desktop arrows, "watch again", the holes left by pages a link
+ * carries no data for — and a transition fires on the APPEARANCE rather than on
+ * the second: a tap landing at 85 s would play an entrance that finished six
+ * seconds ago, and a tap backwards would leave the button parked below the
+ * frame. A clamped ramp draws the one correct frame for any second.
+ */
+const ctaProgress = computed(() => {
+  const t = currentTime.value
+  const begins = TIMING.cta.from + TIMING.cta.delay
+  if (t < begins || t >= TIMING.cta.to) return 0
+  return Math.min(1, (t - begins) / TIMING.cta.rise)
+})
 const showReplay = computed(() => currentTime.value >= TIMING.replay.at)
 // The outro title. Its SCALE is the timeline's (the `outroText` preset); this
 // only says when the element is on screen at all, and it has to, because a
@@ -462,8 +478,11 @@ const stopWatchingBuffer = (() => {
   const iv = setInterval(() => {
     if (!isBuffering.value) {
       bufferCleared = true
-      // The tape is playing, so the connection is no longer the thing standing
-      // between the player and the first frame. See useArtGate.js.
+      // ⚠️ A BACKSTOP NOW, NOT THE MAIN PATH. `startPlayback` opens the gate the
+      // moment the tape has its first seconds, which is earlier and is what
+      // keeps the art's download and decode out of the window the player is
+      // watching. This line still matters for the path with no <video> at all,
+      // and `openArt` is idempotent. See useArtGate.js.
       openArt()
       hidePreloader()
       clearInterval(iv)

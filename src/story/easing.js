@@ -92,6 +92,27 @@ export const EASE = {
    */
   flyPath: 'none',
 
+  /**
+   * THE CTA'S RISE, and the overshoot is the whole point of choosing `back`.
+   *
+   * The button travels 1.4 of its own heights, which is a long way, and a plain
+   * decelerating curve over that distance reads as a panel being pushed into
+   * place and stopping dead. A SMALL overshoot lets it settle instead, and that
+   * is the difference between "slid in" and "floated up". 1.1 overshoots by
+   * about 6 % of the travel — four design px at a phone size, one frame of
+   * softness. The stock 1.7 is a bounce and reads as a toy; that is the trap
+   * here, not too little.
+   */
+  ctaRise: 'back.out(1.1)',
+
+  /**
+   * ...and the two things that must NOT overshoot with it. The fade and the
+   * micro-scale ride plain decelerations, because an opacity or a size that
+   * wobbles past its target is visible as a flicker where the position's
+   * overshoot is read as weight.
+   */
+  ctaSettle: 'power2.out',
+
   /** The brief's simple entrance. */
   backOut: 'back.out(1.5)',
 }

@@ -1,4 +1,5 @@
 import { gsap } from 'gsap'
+import { openArt } from '@/composables/useArtGate.js'
 import { EASE } from '@/story/easing.js'
 import { STORY_SEGMENTS } from '@/story/slides.js'
 import { FPS, TIMING } from '@/story/timing.js'
@@ -667,7 +668,25 @@ export function useStoryPlayback(ctx) {
     } catch {
       /* no-op */
     }
-    Promise.all([awaitStartBuffer(v), ready]).then(launch)
+    // ⚠️ THE ART IS LET GO HERE — WHEN THE TAPE HAS ITS FIRST SECONDS, NOT WHEN
+    // THE STORY STARTS. Those are the same moment only when the font is quick,
+    // and on the owner's phone it is not: the curtain waits for the font, so
+    // gating the art on the story's start moved 46 files and some 100 MB of
+    // decoded pixels INTO the window the player is watching. He saw it within
+    // minutes of the deploy — «все анимации журнала просто дергаются» — and on
+    // his second visit it was gone, because by then everything was in the
+    // cache. A first-time player does not get a second visit.
+    //
+    // The gate's own reason is untouched: what it must never do is let 3.9 MB
+    // of art race the tape for the connection BEFORE the tape can play at all
+    // (useArtGate.js). `awaitStartBuffer` resolving is precisely the proof that
+    // it can — readyState 3 and START_BUFFER seconds buffered — so from here the
+    // art is welcome, and on a slow font it has the whole curtain to arrive and
+    // decode in.
+    awaitStartBuffer(v)
+      .then(() => openArt())
+      .then(() => ready)
+      .then(launch)
   }
 
   const playVideo = () => {

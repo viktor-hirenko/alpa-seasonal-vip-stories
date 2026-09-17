@@ -418,7 +418,14 @@ $arrow-edge: 1vh; // minimum clearance from the viewport edge when clamped
   /// were simply left out.
   z-index: 2;
 
-  transform: translateX(-50%);
+  /// ⚠️ ONE `transform` HERE, AND THE ENTRANCE RIDES INSIDE IT AS VARIABLES.
+  /// The button is centred by `translateX(-50%)`, so a second transform written
+  /// from the component would silently drop the centring and leave it half a
+  /// button to the right — the CSS form of the trap ADR-0002 describes for GSAP.
+  /// `StoryCta.vue` sets these three off the clock; the defaults are the
+  /// arrived state, so the button is correct even if nothing sets them.
+  transform: translateX(-50%) translateY(var(--cta-rise, 0)) scale(var(--cta-scale, 1));
+  opacity: var(--cta-fade, 1);
 
   .j-cta {
     width: du(834.672);

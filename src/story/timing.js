@@ -291,7 +291,27 @@ export const TIMING = {
    * `replay` — "Watch again" (21811:3980) on storyboard frame 27, i.e. once the
    * burst has finished (speed.at + speed.dur), and it stays for good.
    */
-  cta: { from: 78.07, to: 92.83 },
+  /**
+   * `delay` and `rise` — the mock's own instruction for the Gift page
+   * (21770:2043): «Кнопка виїжджає знизу», restored on 2026-09-18 at the
+   * owner's word after the 16.09 "keep everything static" decision had taken it
+   * out. It is the ONE entrance the button gets: the two frames after it say
+   * «кнопка лишається на місці», so both numbers are measured from `from` and
+   * nothing replays them on a later page.
+   *
+   * ⚠️ `delay` IS NOT DECORATION — THE PAGE TURN HAS TO BE OVER FIRST. `from` is
+   * the Gift page's own cut, and the turn that reveals it runs for
+   * flip.out + flip.back = 0.74 s after it. A button rising through a page
+   * that is still swinging competes with the only motion the eye is following.
+   * 0.9 leaves a beat of stillness after the turn lands, which is what the
+   * owner asked for in so many words: «переключили слайд, и она через какое-то
+   * время, с небольшой задержкой, снизу выплывает».
+   *
+   * `rise` is 0.7 and not the 0.45 of the first attempt: over 1.4 button
+   * heights, 0.45 is a snap and 0.7 is a float. It still lands 13 s before the
+   * window closes.
+   */
+  cta: { from: 78.07, to: 92.83, delay: 0.9, rise: 0.7 },
   replay: { at: 93.93 },
 
   /** Story length, from the reference video. */
