@@ -639,16 +639,34 @@ export function useStoryPlayback(ctx) {
   }
 
   /**
-   * Landing rule. Each page's window opens with the journal still mid-turn, so
-   * landing exactly on `start` while PAUSED freezes a half-rotated frame. When
-   * paused we land past the whole turn so the page reads as fully formed; when
-   * playing we land on the exact start so the turn plays.
+   * Landing rule for the ARROWS AND TAPS. Ordinary playback never comes here.
+   *
+   * ⚠️ IT LANDS ON `cut`, THE EDGE-ON INSTANT, NOT ON `start`. A page's window
+   * opens with the journal flat and the OUTGOING page still facing the camera —
+   * by design, because the turn has to carry the old page away before the
+   * content may swap (ADR-0008, 34-page-flip.md). That is right when the story
+   * plays: the page you have been reading takes its leave. It is wrong when the
+   * player ASKS for the next page, because then the first thing they get is
+   * another look at the one they just left: measured, after a forward arrow the
+   * journal rotated 11 -> 89 degrees still showing `space_milk`, and only swapped
+   * to `joke` at -74. The owner photographed exactly that and called it what it
+   * is — «мы на перевернутом наполовину слайде ещё видим предыдущее
+   * изображение».
+   *
+   * Landing on `cut` puts the swap at the landing instant, where the front face
+   * is a hairline and nothing can be read off it, and the back leg of the turn
+   * then swings the NEW page in. Manual navigation reads as "the page flips and
+   * here is the next one", which is what pressing an arrow means.
+   *
+   * ⚠️ AND PAUSED IS STILL DIFFERENT. Frozen at `cut` the journal would sit
+   * edge-on, a hairline with nothing on it, so a paused jump keeps landing past
+   * the whole turn where the page reads as fully formed.
    */
   const SETTLE_LEAD = TIMING.flip.out + TIMING.flip.back
 
   const landingTime = seg => {
     const v = videoPlayer.value
-    if (!v || !v.paused) return seg.start
+    if (!v || !v.paused) return seg.cut
     return seg.start + Math.min(SETTLE_LEAD, Math.max(0, seg.dur - 0.3))
   }
 
