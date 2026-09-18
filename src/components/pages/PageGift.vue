@@ -37,8 +37,8 @@
 <script setup>
 /**
  * Gift. Figma set 21770:4366, EN body 21770:4367.
- * Slide frame 22, cut at 78.07 s. Dynamic: `promocode`, `bonus_label`,
- * `final_link` — none of which have a page slot (see JPromoCode.vue and
+ * Slide frame 22, cut at 78.07 s. Dynamic: `final_link` alone, and it has no
+ * page slot either — it is the address the scene's CTA carries (see
  * 31-pages.md open question 6). The mock's "Icon_Promocode" frame
  * (21945:3038) holds two layers, `Icon_Promocode` and `roket 1`, and BOTH
  * are `hidden` — so the designer sketched something there and switched it

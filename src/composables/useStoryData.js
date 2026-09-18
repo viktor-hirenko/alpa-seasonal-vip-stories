@@ -110,7 +110,7 @@ export function createStoryData(opts = {}) {
   const data = {
     name: v.name || '',
     days: fmt.tiles(v.days),
-    packs: fmt.tiles(v.days),
+    packs: fmt.tiles(v.packs),
     points: fmt.grouped(v.points),
     levelBadge: level.badge || LEVEL_BADGES.IRON,
     // Proprietary nouns; identical in all four files by design and listed in
@@ -129,8 +129,6 @@ export function createStoryData(opts = {}) {
     sportsWins: fmt.tiles(v.sportsWins),
     sportsMultiplier: fmt.tiles(v.sportsMultiplier),
     currency: fmt.currency(parsed.currency),
-    promocode: v.promocode || '',
-    bonusLabel: v.bonusLabel || '',
     finalLink: v.finalLink || '',
   }
 

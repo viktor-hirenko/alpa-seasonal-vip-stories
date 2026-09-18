@@ -105,7 +105,11 @@ import { useStory } from '@/composables/useStoryData.js'
 const story = useStory()
 const L = story.layout('space_milk')
 const copy = story.t('pages.space_milk')
-// The same `days` value the Days page shows, re-used as a pack count
+// ⚠️ ITS OWN PARAMETER (`packs`), NOT `days`. The copy says «one for every day
+// you spent», and until 18.09 the code took that sentence for a rule and read
+// the Days page's number here. Two unrelated slides on one link parameter is a
+// fault an integrator cannot work around, so the page now gates on `packs`:
+// no `packs` on the link, no Space Milk page.
 // (31-pages.md: "[X] packs"). "SPACE MILK" itself is baked into the logo image
 // and stays English in every variant, so only the "Packs of" half translates.
 const packs = story.data.packs

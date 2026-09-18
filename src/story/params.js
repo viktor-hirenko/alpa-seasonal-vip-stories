@@ -50,6 +50,9 @@ export const DEFAULT_CURRENCY = 'USD'
 export const SAMPLE = {
   name: 'Mariannaa!',
   days: 2257,
+  // ⚠️ DELIBERATELY NOT `days`. They are different things, and a dev sample that
+  // repeats the same number would hide the day the two get crossed again.
+  packs: 257,
   points: 1200000,
   level: 'SILVER',
   totalWins: 2222577,
@@ -64,8 +67,6 @@ export const SAMPLE = {
   bonuses: 2572257,
   sportsWins: 2572257,
   sportsMultiplier: 257,
-  promocode: '',
-  bonusLabel: '',
   finalLink: '',
 }
 
@@ -84,13 +85,17 @@ export const SAMPLE = {
 /** @type {ParamSpec[]} */
 export const PARAMS = [
   { key: 'name', query: ['name'], type: 'text', pages: ['cover', 'editors_note'] },
-  {
-    key: 'days',
-    query: ['days'],
-    type: 'int',
-    pages: ['days_in_spotlight', 'space_milk'],
-    skip: 'days',
-  },
+  { key: 'days', query: ['days'], type: 'int', pages: ['days_in_spotlight'], skip: 'days' },
+  /**
+   * ⚠️ SPACE MILK COUNTS PACKS, AND THAT IS NOT THE NUMBER OF DAYS.
+   *
+   * Until 2026-09-18 this page had no parameter of its own and read `days`,
+   * because the copy reads «[X] packs of Space Milk — one for every day you
+   * spent» and a session took the sentence for a rule. It is not one: the two
+   * are different values from different places, and one link parameter driving
+   * two unrelated slides is a fault the integrator cannot work around.
+   */
+  { key: 'packs', query: ['packs'], type: 'int', pages: ['space_milk'], skip: 'packs' },
   { key: 'points', query: ['points'], type: 'int', pages: ['seasonal_power'], skip: 'points' },
   { key: 'level', query: ['level'], type: 'level', pages: ['vip_status'], skip: 'level' },
   {
@@ -161,8 +166,6 @@ export const PARAMS = [
     pages: ['top_sport_signal'],
     skip: 'sportsMultiplier',
   },
-  { key: 'promocode', query: ['promocode'], type: 'text', pages: ['gift'] },
-  { key: 'bonusLabel', query: ['bonus_label'], type: 'text', pages: ['gift'] },
   { key: 'finalLink', query: ['final_link'], type: 'url', pages: ['gift', 'final'] },
 ]
 
@@ -340,6 +343,7 @@ export function computeSkips(values) {
   const blank = v => v === null || v === '' || v === 0
   return {
     days: blank(values.days),
+    packs: blank(values.packs),
     points: blank(values.points),
     // The level gate is levelConfig's to answer: REGULAR resolves to the Iron
     // badge under SHOW_IRON_FOR_REGULAR, and an unknown string is not a level.

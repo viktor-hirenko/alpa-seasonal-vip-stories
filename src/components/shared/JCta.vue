@@ -12,8 +12,8 @@
  * the journal, only on storyboard frames 22-25 (gift + final). No page
  * component renders it; whoever wires the scene's button-visible window
  * (open question 6 in 31-pages.md) mounts this directly on the stage.
- * Built now because the pixel spec exists (unlike JPromoCode, see its own
- * doc comment) — only the wiring is deferred, not the component.
+ * Built now because the pixel spec exists — only the wiring is deferred, not
+ * the component.
  */
 defineEmits(['click'])
 </script>

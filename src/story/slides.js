@@ -45,7 +45,7 @@ const RAW = [
   // no `days`. It was the only page in the deck with a dynamic value and no
   // `skip`, and the omission was silent: the drop rule selects on the field's
   // presence, so a page that forgets to declare one can never be dropped.
-  { frame: 20, at: 67.07, page: 'space_milk', face: 'page', skip: 'days' },
+  { frame: 20, at: 67.07, page: 'space_milk', face: 'page', skip: 'packs' },
   { frame: 21, at: 73.07, page: 'joke', face: 'page' },
   { frame: 22, at: 78.07, page: 'gift', face: 'page' },
   { frame: 23, at: 83.03, page: 'final', face: 'page' },
