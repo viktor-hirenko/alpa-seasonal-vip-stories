@@ -126,6 +126,28 @@ export const PARK = t => `(async () => {
 })()`
 
 /**
+ * WHICH PAGE THE STORY IS ACTUALLY SHOWING AT A GIVEN SECOND.
+ *
+ * Verbatim from clip-fit, where it cost a day. `slides.js` says what SHOULD be
+ * on screen; this asks the running story what IS. The two part company whenever
+ * the link drops a page, because storyPlan.js then rebuilds the timeline
+ * shorter and every page after the hole moves earlier. No registration can
+ * notice — two pages of the same journal look equally like a journal — so the
+ * run reports a confident-looking number for a comparison nobody meant to make.
+ *
+ * ⚠️ THE LEAN MEASURER HAD NO SUCH GUARD UNTIL SESSION AT-2, and it is the tool
+ * that needs it most: it is the only one that parks at sixty-odd instants in one
+ * unattended run, so a dropped page silently spoils every row after it rather
+ * than one.
+ */
+export const PAGE_AT = t => `(() => {
+  const segs = window.__story && window.__story.segments
+  if (!segs) return null
+  const s = segs.find(x => ${t} >= x.start && ${t} < x.end) || segs[segs.length - 1]
+  return { page: s.page, frame: s.firstFrame, dur: window.__story.tl.duration() }
+})()`
+
+/**
  * Lean the page, and say how near the camera is while doing it.
  *
  * `rotationX`/`rotationY` go on `.journal-box`, which is where the page turn
@@ -517,25 +539,51 @@ export async function probe(cdp, scorer, rx, ry, persp, png) {
  * in eighteen, and at three seconds a render that difference is the whole run.
  * The walk is what makes the answer finer than the grid — the rungs are three
  * to four degrees apart, so a sweep alone can never speak to a degree.
+ *
+ * ⚠️ THE FLAT PAGE IS ALWAYS A CANDIDATE, AND UNTIL SESSION AT-2 IT WAS NOT.
+ * A seeded call — which is every instant inside a slide but the first, the
+ * whole reason a walk is cheaper than a sweep — started at the previous
+ * instant's answer and stepped locally from there, and NEVER TRIED (0,0). A
+ * local walk only ever moves to something better than where it started, so
+ * seeded into the wrong basin it returns the best of that basin, which can be
+ * WORSE THAN NO LEAN AT ALL: measured on 2026-09-18, slide 8 at 14.37 came back
+ * at -11 % against flat and slide 21 returned four such rows out of nine.
+ *
+ * Probing (0,0) alongside the carry and starting from whichever wins costs one
+ * render an instant and makes the margin over flat non-negative BY
+ * CONSTRUCTION — the walk cannot end below a start it was free to keep. That
+ * turns the margin column back into what it is read as: how much the lean is
+ * worth, never how badly the search got stuck. It does not make the answer
+ * right, only honest; a row can still be a shallow local winner, and the test
+ * for that is the one slide 14 passes and slide 15 fails — a smooth arc of
+ * angle with the score arcing the same way.
  */
 export async function findLean(cdp, scorer, persp, opt = {}) {
   const grid = opt.grid || [-14, -10, -6, -3, 0, 3, 6, 10, 14]
   const png = opt.png || '/tmp/.tiltprobe.png'
   const steps = opt.steps || [2, 1, 0.5, 0.25]
-  let best = opt.seedAngle ? await probe(cdp, scorer, opt.seedAngle.rx, opt.seedAngle.ry, persp, png) : null // prettier-ignore
-  let probes = best ? 1 : 0
-  if (!opt.seedAngle) {
+  let best = null
+  let probes = 0
+  const consider = async (rx, ry) => {
+    const r = await probe(cdp, scorer, rx, ry, persp, png)
+    probes++
+    if (r && (!best || r.v > best.v)) best = r
+    return r
+  }
+  // Flat goes in first in BOTH branches. The sweep reaches it only when the
+  // caller's grid happens to carry a zero rung — `TILT_GRID` is an environment
+  // variable, so that is an assumption and not a fact — and the seeded branch
+  // never reached it at all.
+  await consider(0, 0)
+  if (opt.seedAngle) {
+    await consider(opt.seedAngle.rx, opt.seedAngle.ry)
+  } else {
     for (const ry of grid) {
-      const r = await probe(cdp, scorer, 0, ry, persp, png)
-      probes++
-      if (r && (!best || r.v > best.v)) best = r
+      if (ry !== 0) await consider(0, ry)
     }
     if (!best) return null
     for (const rx of grid) {
-      if (rx === 0) continue
-      const r = await probe(cdp, scorer, rx, best.ry, persp, png)
-      probes++
-      if (r && r.v > best.v) best = r
+      if (rx !== 0) await consider(rx, best.ry)
     }
   }
   if (!best) return null

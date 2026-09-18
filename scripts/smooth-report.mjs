@@ -67,6 +67,10 @@ const SIGNALS = [
   },
   { key: 'rotZ', unit: 'deg', floor: 0.05, get: r => (r.vis ? r.rotZ : null) },
   { key: 'rotY', unit: 'deg', floor: 0.05, get: r => (r.vis ? r.rotY : null) },
+  // Same floor as the other two angles: it is the same kind of number on the
+  // same element, and a scan taken before session AT-2 simply has no rotX key,
+  // which `get` returns as null and the reader skips.
+  { key: 'rotX', unit: 'deg', floor: 0.05, get: r => (r.vis ? (r.rotX ?? null) : null) },
   { key: 'scale', unit: 'x', floor: 0.0008, get: r => (r.vis ? r.sc : null) },
   { key: 'alpha', unit: 'a', floor: 0.01, get: r => r.op },
   { key: 'outroSc', unit: 'x', floor: 0.01, get: r => r.outro?.sc ?? null },

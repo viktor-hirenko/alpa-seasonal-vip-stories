@@ -15,6 +15,17 @@
  * (JOURNAL_PATH, 233 rows at a quarter second); the two depth channels are not.
  * This walks the same question across each slide so they can be.
  *
+ * ⚠️ DO NOT EDIT ANYTHING UNDER `src/` WHILE THIS IS RUNNING. It measures
+ * through the DEV server, and Vite pushes every save into the browser it has
+ * open — so a run started before an edit is measuring one build for its first
+ * rows and another for the rest, with a hot module swap somewhere in the middle
+ * of a parked page. It does not fail: it returns numbers. Session AT-2 lost an
+ * hour of run this way and read the result as a bug in its own search, because
+ * the give-away was subtle — the flat scores stayed right (they are re-shot per
+ * instant) while the searched scores collapsed from 0.55 to 0.21. A two-hour
+ * unattended run is exactly the shape of job this bites. Finish the code, then
+ * measure, then paste the table.
+ *
  * ⚠️ THE GATE COMES FIRST, AND IT IS NOT THIS FILE. `tilt-selftest.mjs` plants
  * an angle we chose in a photograph of our own page and makes the same search
  * find it again, off the grid, through the clip's own codec. Until that passes
@@ -29,7 +40,7 @@
  * twenty seven flying objects and three slides of scale untouched.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { openStage, shoot, probe, findLean, makeScorer, rgbOfVideo, rgbOfPng, PARK, TILT } from './lib/tiltprobe.mjs' // prettier-ignore
+import { openStage, shoot, probe, findLean, makeScorer, rgbOfVideo, rgbOfPng, PARK, TILT, PAGE_AT } from './lib/tiltprobe.mjs' // prettier-ignore
 
 const ROOT = new URL('..', import.meta.url).pathname
 const CLIP = process.env.TILT_CLIP || `${ROOT}_refs/DP-15152 - preview.mp4`
@@ -67,6 +78,15 @@ const STRIDES = (process.env.TILT_STRIDES || '1,2').split(',').map(Number)
  * is being asked to match a picture it cannot match, on the very pixels the
  * score is built from. Same table as clip-fit's CLIP_QUERY and review.html's
  * CLIP_PRINT.
+ *
+ * ⚠️ AND IT IS NOT OPTIONAL — SESSION AT-1c's WHOLE RUN WAS TAKEN WITHOUT IT.
+ * That run's conditions were never written down, so AT-2 reconstructed them by
+ * re-scoring a flat page against the clip and matching the number: at 22.87 the
+ * recorded flat is 0.8937453, our page on the demo SAMPLE scores 0.8937453, and
+ * on the clip's print 0.8658564. It had been measured on the player's own demo
+ * numbers — 1 200 000 points where the clip prints 120 — which is trap 5 in
+ * `90-next-session.md` word for word. The run's first line now says which print
+ * it used, so nobody has to do that again.
  *
  * ⚠️ IT USED TO MAKE THINGS WORSE, AND 2026-09-18 FOUND OUT WHY. Tried on slide
  * 20 at 68.67 the whole curve fell from 0.09…0.15 to 0.02…0.03 — the signature
@@ -109,7 +129,134 @@ function window_(all, sl) {
   return ts
 }
 
+/**
+ * THE MEASUREMENT, TURNED INTO THE TABLE THE BUILD READS — and the acceptance
+ * rule applied out loud rather than by eye.
+ *
+ *   node scripts/journal-lean-path.mjs --print [--in <lean-path.json>]
+ *
+ * ⚠️ SLIDE_LEAN_PATH IS PRINTED, NEVER HAND-EDITED, for the same reason
+ * JOURNAL_PATH is (`journal-path.mjs`, and the rule written next to the table):
+ * a measured table that someone can nudge by hand is no longer a measurement,
+ * and the nudge survives every later re-measurement as a number nobody can
+ * source. Re-run this and paste the whole block.
+ *
+ * WHAT DECIDES WHETHER A SLIDE GOES IN. Not the winning angle — a search always
+ * returns a winner — but three things, all of which the eight measured slides
+ * separate cleanly:
+ *
+ *  1. NO ROW WORSE THAN A FLAT PAGE. Since the walk tries (0,0) alongside its
+ *     carry this cannot happen by construction, so a negative row now means the
+ *     run predates that fix, not that the slide is bad. Refuse it either way.
+ *     ⚠️ JUDGED AGAINST A FLOOR, NOT AGAINST ZERO. The flat score and the
+ *     walk's own (0,0) probe are two separate screenshots of the same state, so
+ *     they differ in the ninth decimal and a slide that is exactly flat prints
+ *     its margin as "-0%". Read literally, that rejected slide 10 for two rows
+ *     that were perfect. Real failures are tens of per cent — -11, -18, -44 —
+ *     so anything worse than -0.5 % is the search stuck and anything above it
+ *     is arithmetic.
+ *  2. THE LEAN DOES REAL WORK SOMEWHERE IN THE SLIDE: PEAK margin at or above
+ *     30 %. ⚠️ Peak and not median, and that is a correction to this session's
+ *     own first guess. A median is the right bar for ONE answer per slide, which
+ *     is what SLIDE_LEAN holds and where its note set it at 15 %. A path is not
+ *     one answer: slide 10 opens genuinely flat — two instants that come back
+ *     exactly (0,0) — and then leans away to -12 deg with the margin climbing
+ *     2 -> 35 %. Its median is 6 % and its shape is textbook. Judging a path by
+ *     its median throws away every slide whose lean STARTS somewhere, which is
+ *     most of the ones worth having. 30 % is twice the constants' bar, which is
+ *     the right way round: a path has many instants to be convincing at, so at
+ *     least one of them should be decisive rather than merely positive.
+ *  3. THE ANSWERS HOLD ON TO EACH OTHER. Neighbouring instants are half a second
+ *     apart, and a page does not swing tens of degrees in half a second: a step
+ *     over STEP_CAP on either channel is the search hopping between basins, not
+ *     the page moving. This is what separates slide 14 (a smooth arc, and the
+ *     margin arcing with it) from slide 15 (twenty-seven degrees between
+ *     neighbours). ⚠️ The cap is 12 deg and not 8, because a step is only
+ *     suspicious when the SCORE does not follow it. Slide 18's rotX goes
+ *     5, 5, 7.75, 18.5, 11.5, 9.25, 9.75 — a 10.75 deg step — and the margin
+ *     goes 29, 38, 42, 102, 82, 66, 35: the big step lands exactly on the
+ *     instant where the registration is twice as sure as anywhere else, which is
+ *     a page that really is there, not a search that slipped. Whether such a
+ *     step PLAYS smoothly is a different question and has its own gate —
+ *     `smooth:scan`, which reads rotX since this session.
+ *
+ * ⚠️ A BREAK IN THE LAST ROW IS TRIMMED, A BREAK INSIDE IS FATAL. The final
+ * instant of a slide sits against the next cut, where the clip's page is already
+ * being taken into its turn and ours is not yet — slide 14's 43.87 breaks its
+ * own arc there and nowhere else. Dropping a tail row costs nothing: the lean
+ * simply holds its last measured value into the turn, which is what it did for
+ * the whole slide under the old constant. A break in the MIDDLE means the search
+ * was unreliable across the slide and no part of it can be trusted.
+ */
+const STEP_CAP = Number(process.env.TILT_STEP_CAP || 12)
+const MIN_PEAK = Number(process.env.TILT_MIN_PEAK || 0.3)
+/** Below this a row is genuinely stuck; above it, two screenshots disagreeing. */
+const WORSE_THAN_FLAT = -0.005
+
+function printTable() {
+  const file = flag('--in') || `${OUT}/lean-path.json`
+  const all = JSON.parse(readFileSync(file, 'utf8'))
+  const byFrame = new Map()
+  for (const r of all) {
+    if (!byFrame.has(r.frame)) byFrame.set(r.frame, [])
+    byFrame.get(r.frame).push(r)
+  }
+  const med = xs => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]
+  const worstStep = rows => {
+    let w = 0
+    for (let i = 1; i < rows.length; i++)
+      w = Math.max(w, Math.abs(rows[i].rx - rows[i - 1].rx), Math.abs(rows[i].ry - rows[i - 1].ry))
+    return w
+  }
+  console.log(`\n// from ${file.split('/').pop()}, ${all.length} instants`)
+  console.log(`// accept: no row under flat, peak margin >= ${(MIN_PEAK * 100).toFixed(0)} %, no neighbour step > ${STEP_CAP} deg\n`) // prettier-ignore
+  const verdicts = []
+  const accepted = []
+  for (const frame of [...byFrame.keys()].sort((a, b) => a - b)) {
+    let rows = byFrame.get(frame)
+    const page = rows[0].page
+    const bad = rows.filter(r => r.gain < WORSE_THAN_FLAT).length
+    let trimmed = 0
+    // Only ever from the tail, and only while the tail is what breaks the step.
+    while (
+      rows.length > 3 &&
+      worstStep(rows) > STEP_CAP &&
+      worstStep(rows.slice(0, -1)) <= STEP_CAP
+    ) {
+      // prettier-ignore
+      rows = rows.slice(0, -1)
+      trimmed++
+    }
+    const m = med(rows.map(r => r.gain))
+    const peak = Math.max(...rows.map(r => r.gain))
+    const step = worstStep(rows)
+    const why = []
+    if (bad) why.push(`${bad} row(s) worse than flat`)
+    if (peak < MIN_PEAK) why.push(`peak margin ${(peak * 100).toFixed(0)} % under ${(MIN_PEAK * 100).toFixed(0)} %`) // prettier-ignore
+    if (step > STEP_CAP) why.push(`neighbours ${step.toFixed(1)} deg apart`)
+    if (rows.length < 4) why.push(`only ${rows.length} instants`)
+    verdicts.push(
+      `//   ${String(frame).padStart(2)} ${page.padEnd(18)} ${rows.length} pts  peak ${(peak * 100).toFixed(0).padStart(4)} %  median ${(m * 100).toFixed(0).padStart(4)} %  worst step ${step.toFixed(1).padStart(5)} deg  ` + // prettier-ignore
+        (why.length ? `LEFT OUT — ${why.join('; ')}` : `in${trimmed ? `, last ${trimmed} row(s) trimmed` : ''}`), // prettier-ignore
+    )
+    if (!why.length) accepted.push({ frame, page, rows })
+  }
+  console.log(verdicts.join('\n'))
+  console.log('\n// paste into src/story/slides.js\n')
+  console.log('export const SLIDE_LEAN_PATH = {')
+  for (const { frame, page, rows } of accepted) {
+    console.log(`  // frame ${frame} ${page}`)
+    console.log(`  ${frame}: [`)
+    for (const r of rows)
+      console.log(`    [${r.t.toFixed(2)}, ${r.rx.toFixed(2)}, ${r.ry.toFixed(2)}],`)
+    console.log('  ],')
+  }
+  console.log('}')
+  process.exit(0)
+}
+
 const main = async () => {
+  if (argv.includes('--print')) return printTable()
   mkdirSync(OUT, { recursive: true })
   const all = slides()
   const want = flag('--slide')
@@ -145,8 +292,15 @@ const main = async () => {
   const rows = []
   const png = `${OUT}/.p.png`
   let done = 0
+  let wrongPage = 0
+  // ⚠️ SAY WHICH PRINT THIS RUN USED, IN THE RUN'S OWN FIRST LINE. Session
+  // AT-1c's 66-instant run left it unrecorded, and session AT-2 had to
+  // reconstruct it by re-scoring a flat page against the clip and matching the
+  // number: it had been taken on the demo SAMPLE, which is the one thing trap 5
+  // says a pose measurement must never do. A run whose conditions are not in
+  // its own log is a run somebody has to re-do to find out what it means.
   console.log(
-    `${nPts} instants, clip ${CLIP.split('/').pop()}, persp ${PERSP}, grid ${GRID.join(',')}\n`,
+    `${nPts} instants, clip ${CLIP.split('/').pop()}, persp ${PERSP}, print ${QUERY ? 'CLIP' : '⚠️ SAMPLE (demo)'}, grid ${GRID.join(',')}\n`, // prettier-ignore
   )
   console.log('   t   slide page                rotX    rotY    score   flat   better  probes')
   for (const { sl, ts } of plan) {
@@ -157,6 +311,18 @@ const main = async () => {
     let carry = null
     for (const t of ts) {
       await cdp.eval(PARK(t))
+      // The guard refuses rather than warns: a row measured against the wrong
+      // page is worse than a missing row, because it looks like an answer.
+      const now = await cdp.eval(PAGE_AT(t))
+      if (now && now.page !== sl.page) {
+        wrongPage++
+        console.log(
+          `${String(t).padStart(6)}  ${sl.frame}  ⚠️  WRONG PAGE — showing '${now.page}', not '${sl.page}'.` +
+            `\n        The link dropped a page and the timeline is ${now.dur.toFixed(2)} s, not 94.37.` +
+            `\n        Every skip-gated parameter must be on the query. NOT MEASURED.`,
+        )
+        continue
+      }
       const flat = await shoot(cdp, 0, 0, PERSP, `${OUT}/.flat.png`)
       if (!flat) {
         console.log(`${String(t).padStart(6)}  ${sl.frame}  page not on screen`)
@@ -192,8 +358,9 @@ const main = async () => {
     await cdp.eval(TILT(0, 0, 1800))
   }
   console.log(`\n-> ${OUT}/lean-path.json`)
+  if (wrongPage) console.log(`⚠️  ${wrongPage} instants NOT MEASURED: wrong page on screen.`)
   ws.close()
-  process.exit(0)
+  process.exit(wrongPage ? 3 : 0)
 }
 
 /**
