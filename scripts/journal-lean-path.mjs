@@ -46,6 +46,15 @@ const SETTLE = Number(process.env.TILT_SETTLE || 0.8)
 const STEP = Number(process.env.TILT_STEP || 0.5)
 const TAIL = Number(process.env.TILT_TAIL || 0.05)
 const PERSP = Number(process.env.TILT_PERSP || 1800)
+const CURVE = (process.env.TILT_CURVE || '-20,20,1').split(',').map(Number)
+/**
+ * ⚠️ THE COARSE SWEEP HAS TO BE WIDER THAN THE ANSWER. The probe's default
+ * rungs stop at +/-14, and on 2026-09-18 (AT-1c) slide 18 was still climbing at -20 —
+ * a walk seeded at -14 cannot reach an answer at -30 with a 2 degree step in
+ * four rounds. Widen it for the slides where the curve runs off the end, and
+ * say in the log which sweep produced the numbers.
+ */
+const GRID = (process.env.TILT_GRID || '-14,-10,-6,-3,0,3,6,10,14').split(',').map(Number)
 const LEVELS = (process.env.TILT_LEVELS || '2,1').split(',').map(Number)
 const STRIDES = (process.env.TILT_STRIDES || '1,2').split(',').map(Number)
 /**
@@ -136,7 +145,9 @@ const main = async () => {
   const rows = []
   const png = `${OUT}/.p.png`
   let done = 0
-  console.log(`${nPts} instants, clip ${CLIP.split('/').pop()}, persp ${PERSP}\n`)
+  console.log(
+    `${nPts} instants, clip ${CLIP.split('/').pop()}, persp ${PERSP}, grid ${GRID.join(',')}\n`,
+  )
   console.log('   t   slide page                rotX    rotY    score   flat   better  probes')
   for (const { sl, ts } of plan) {
     // Each slide starts from scratch: the lean does not carry across a turn,
@@ -155,6 +166,7 @@ const main = async () => {
       const flatScore = scorer(rgbOfPng(flat.png), flat.geo).v
       const r = await findLean(cdp, scorer, PERSP, {
         png,
+        grid: GRID,
         seedAngle: carry,
         steps: carry ? [1, 0.5, 0.25] : [2, 1, 0.5, 0.25],
       })
@@ -198,15 +210,22 @@ async function curve(cdp, t) {
   await cdp.eval(PARK(t))
   const flat = await shoot(cdp, 0, 0, PERSP, `${OUT}/.flat.png`)
   const scorer = makeScorer(rgbOfVideo(CLIP, t), flat, { levels: LEVELS, strides: STRIDES })
-  console.log(`score against the clip at t=${t}, persp ${PERSP}\n`)
+  console.log(`score against the clip at t=${t}, persp ${PERSP}, window ${scorer.window}, agree ${scorer.group.length}/${scorer.tried.length}\n`) // prettier-ignore
   const out = []
-  for (let ry = -20; ry <= 20.001; ry += 1) {
+  // ⚠️ THE SWEEP HAS TO BE WIDER THAN THE ANSWER, AND ONCE IT WAS NOT. On
+  // 2026-09-18 (AT-1c) slide 18 peaked at -20 — the last rung — still climbing,
+  // which
+  // says the answer is outside the sweep and not that the score is flat there.
+  // Reading a boundary peak as "the lean does not help" is the trap this file's
+  // own notes already paid for once (`32-poses.md`, "ЛОВУШКА, УЖЕ ОПЛАЧЕННАЯ").
+  for (let ry = CURVE[0]; ry <= CURVE[1] + 0.001; ry += CURVE[2]) {
     const r = await probe(cdp, scorer, 0, +ry.toFixed(2), PERSP, `${OUT}/.p.png`)
     out.push({ ry: +ry.toFixed(2), v: r ? r.v : null })
     const bar = r ? '#'.repeat(Math.max(0, Math.round((r.v - 0.35) * 150))) : ''
     console.log(`  ry ${ry.toFixed(1).padStart(6)}°  ${r ? r.v.toFixed(4) : '  -  '}  ${bar}`)
   }
-  writeFileSync(`${OUT}/clip-curve-${t}.json`, JSON.stringify(out, null, 1))
+  const tag = `${t}-p${PERSP}-${CURVE[0]}_${CURVE[1]}`
+  writeFileSync(`${OUT}/clip-curve-${tag}.json`, JSON.stringify(out, null, 1))
   process.exit(0)
 }
 

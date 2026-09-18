@@ -9,12 +9,26 @@
  * between the two uses, which is the point of putting it in one file: a gate
  * that exercises a different code path from the measurement is not a gate.
  *
+ * ⚠️ AND THAT SENTENCE WAS NOT TRUE UNTIL SESSION AT-1c. `tilt-selftest.mjs` was
+ * written out a second time in the same commit that created this file — its own
+ * PARK, TILT, QUAD, scorer, shoot, probe and search — so the gate and the
+ * measurement shared nothing, and a change here could not move a number there.
+ * It imports this file now, which is what makes re-running it mean anything.
+ *
  * The scoring is clip-fit's gradient registration (see lib/gradfit.mjs): only
  * the DIRECTION of the edges is compared, because the journal in the clip sits
  * inside a bloom as big as itself and any brightness-based comparison scores
  * the bloom. `journal-tilt.mjs` established the shape of this; what is new here
  * is that a candidate may be scored at any instant rather than one per slide,
  * and that it does not re-find the page from scratch every time.
+ *
+ * ⚠️ WHAT THE WINDOW IS, AND WHY SESSION AT-1c CHANGED IT. This file used to
+ * measure through the largest <img> on the page, boxed by `getBoundingClientRect`
+ * — which on six of the eight lean slides is the sheet's own gloss, and which
+ * on a page turned ten to twenty degrees is a box holding as much ROOM as page.
+ * The room is the same footage in both pictures being compared. clip-fit was
+ * cured of this the day before; the cure is ported here in WINDOWS, QUAD and
+ * makeScorer, and the gate was re-run on the result rather than trusted.
  */
 import { spawn, execFileSync } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
@@ -26,8 +40,10 @@ import {
   register,
   descend,
   points,
+  margin,
   pageMask,
-  boxMask,
+  quadMask,
+  localRectQuad,
   reachMask,
 } from './gradfit.mjs'
 
@@ -130,84 +146,119 @@ export const TILT = (rx, ry, persp) => `(() => {
   return true
 })()`
 
-/** The front face's box on the design canvas, for the mask and the pivot. */
+/**
+ * THE FRONT FACE'S FOUR CORNERS, AS THE BROWSER ITSELF PROJECTS THEM.
+ *
+ * ⚠️ THIS WAS ONE `getBoundingClientRect()` UNTIL AT-1c, AND A RECT IS AN
+ * AXIS-ALIGNED BOX. Measured on the eight lean slides, that box ran 84 % to
+ * 126 % of the whole canvas while the page itself is about half of it — on
+ * slide 20 the box was LARGER THAN THE FRAME. Everything it held beyond the
+ * page is ROOM, and the room is not neutral here: our render plays the clip's
+ * own background behind the journal, so it is the same footage in both pictures
+ * being compared and its long straight edges score the same after a shift along
+ * themselves. Every mask built on it carried that room, and so did the pivot.
+ *
+ * Verbatim from clip-fit's QUAD: four zero-size markers at the face's corners,
+ * read back with getBoundingClientRect. getBoxQuads() would be the direct way
+ * and is not in this Chrome. A zero-size child has no extent to bound, so its
+ * rect IS its projected point — and the browser does the perspective divide for
+ * us, which is the part that cannot be reconstructed from the pose numbers
+ * alone. `.jface--front` is `position: absolute` (the j-face mixin), so the
+ * markers hang off the face and not off some ancestor.
+ *
+ * ⚠️ THE SCALE COMES OFF THE VIEWPORT, NOT OFF `.stage-3d`. The screenshot is
+ * the viewport and `rgbOfPng` rescales the viewport onto the design canvas;
+ * `.stage-3d` IS the canvas and on any shape that is not 9:16 it is cropped by
+ * the viewport rather than equal to it. The old line asked for `.stage3d` — a
+ * class that does not exist in this DOM, the element is `.stage-3d` — and fell
+ * silently through to `.stage`, which is `inset: 0` of the viewport and is the
+ * only reason it ever agreed. At 540x960 all three coincide; say which one is
+ * meant rather than relying on that.
+ */
 export const QUAD = `(() => {
   const face = document.querySelector('.jface--front')
   const pos = document.querySelector('.journal-pos')
   if (!face || getComputedStyle(pos).visibility === 'hidden') return null
-  const s3d = document.querySelector('.stage3d') || document.querySelector('.stage')
-  const sr = s3d.getBoundingClientRect()
-  const r = face.getBoundingClientRect()
-  const k = ${W} / sr.width, kk = ${H} / sr.height
-  const quad = [
-    [(r.left - sr.left) * k, (r.top - sr.top) * kk],
-    [(r.right - sr.left) * k, (r.top - sr.top) * kk],
-    [(r.right - sr.left) * k, (r.bottom - sr.top) * kk],
-    [(r.left - sr.left) * k, (r.bottom - sr.top) * kk],
-  ]
-  return { quad, centre: [((r.left + r.right) / 2 - sr.left) * k, ((r.top + r.bottom) / 2 - sr.top) * kk] }
+  const k = ${W} / window.innerWidth, kk = ${H} / window.innerHeight
+  const mk = (l, t) => {
+    const d = document.createElement('i')
+    d.style.cssText = 'position:absolute;width:0;height:0;left:' + l + ';top:' + t + ';margin:0;padding:0'
+    face.appendChild(d)
+    return d
+  }
+  const ms = [mk('0','0'), mk('100%','0'), mk('100%','100%'), mk('0','100%')]
+  const quad = ms.map(d => { const r = d.getBoundingClientRect(); return [r.left * k, r.top * kk] })
+  ms.forEach(d => d.remove())
+  return { quad, centre: [(quad[0][0] + quad[2][0]) / 2, (quad[0][1] + quad[2][1]) / 2] }
 })()`
 
 /**
- * The page's ARTWORK box, in canvas px — the window clip-fit fits through.
+ * EVERY WINDOW THE PAGE OFFERS, IN THE PAGE'S OWN COORDINATES.
  *
- * ⚠️ THIS IS THE DIFFERENCE THAT MATTERS, and `journal-tilt.mjs` does not have
- * it. Its mask is `pageMask` over the axis-aligned bounding box of the front
- * face; on a slide where the page is turned twenty degrees in plane, that box
- * is nearly half again as large as the page and most of the extra is room and
- * bloom. clip-fit stopped fitting through the face for exactly that reason and
- * fits through the largest image on the page instead.
+ * WHY A WINDOW ON THE ART AND NOT ON THE WHOLE FACE. The art is the one thing
+ * on the page that is the SAME IMAGE FILE in both renders: our type is a
+ * different edition of the copy and our digits are a different number, but the
+ * galaxy, the cow and the helmet are the very files the clip was rendered from.
  *
- * Verbatim from clip-fit's ART, including the seventh-of-the-face floor: a
- * window smaller than that is a detail, and a detail is where a register finds
- * coincidences.
+ * ⚠️ THIS FILE'S OLD `ART` GOT THREE THINGS WRONG, ALL THREE MEASURED — the
+ * same three clip-fit was cured of on 2026-09-18 and this copy carried until
+ * in AT-1c. Re-measured here before the change, on all eight lean slides:
  *
- * ⚠️⚠️ AND CLIP-FIT'S ART IS NO LONGER THIS. 2026-09-18 found two faults in it
- * and this copy still has both. DO NOT TRUST A LEAN MEASURED THROUGH THIS
- * WINDOW; read clip-fit.mjs's WINDOWS and fitPage first, then come back.
+ *   IT WAS NOT PICKING THE ART. The rule was "the largest <img> inside the
+ *   front face", and the largest <img> on almost every page of this journal is
+ *   `page__sheen` — the sheet's own gloss, an inline SVG gradient covering the
+ *   page edge to edge. It won on six of the eight lean slides; on the other two
+ *   the winner was a full-bleed backdrop overflowing the face. So the window
+ *   was the whole page every time, and the promise above was never kept: a
+ *   gradient we draw ourselves is not a file the clip was rendered from. An
+ *   inline `data:` source is refused outright now — that promise written as a
+ *   rule, and it throws out `page__spine` and `page__edge` with it, which are
+ *   the journal's chrome rather than its art.
  *
- *   1. THE LARGEST <img> ON ANY PAGE OF THIS JOURNAL IS `page__sheen` — the
- *      sheet's own gloss, an inline SVG gradient covering the page edge to
- *      edge. So this never selected art at all: on all eight lean slides the
- *      window was the whole page. An inline `data:` source has to be refused.
+ *   IT WAS AN AXIS-ALIGNED BOX, both for the art and for the `face` fallback.
+ *   Measured: the window ran 81 % to 123 % of the canvas, and the face's own
+ *   rect 84 % to 126 % — on slide 20 a box larger than the frame. See QUAD.
  *
- *   2. `getBoundingClientRect()` IS AN AXIS-ALIGNED BOX, and on a page turned
- *      ten to twenty degrees it is half again as large as the page. Measured on
- *      slide 8 the window came out 1266 x 1514 on a 1080 x 1920 canvas — 92 %
- *      of the frame — and the third of it that is not page is ROOM, which is
- *      the same footage in both pictures being compared. clip-fit now returns
- *      the rectangle in PAGE coordinates and projects it through the
- *      homography the face's four corners define (`rectToQuad` in gradfit), so
- *      the mask is the art's real quad with no room in it.
+ *   AND "LARGEST" WAS THE WRONG QUESTION ANYWAY. On slide 8 the largest real
+ *   file is `galaxy-3`, a nebula — smooth, almost no gradient — and it scores
+ *   no better than its own neighbourhood, while the mini cover at half the area
+ *   locks hard. No property measurable on OUR side ranks those two correctly.
+ *   So the choice is not made in advance any more — see makeScorer().
  *
- * ⚠️ THE `QUAD` ABOVE IS AN AXIS-ALIGNED BOX TOO, so the `face` fallback here
- * carries the same room. clip-fit's QUAD reads four zero-size markers and gets
- * the true projected corners; this one reads one `getBoundingClientRect`.
+ * The floor stays what it was: a window smaller than a seventh of the face is a
+ * detail, and a detail is where a register finds coincidences.
  *
- * Left as it is on purpose: `tilt-selftest.mjs` passed against THIS code on
- * 2026-09-18 (worst miss 0.75 deg), and changing the probe under a passing gate
- * without re-running it would be worse than a documented fault. The lean
- * session that next touches this file changes both and re-runs the gate.
+ * Ported from clip-fit's WINDOWS, and checked against it: on the eight lean
+ * slides this returns the same windows clip-fit reported, slide for slide.
  */
-export const ART = `(() => {
+export const WINDOWS = `(() => {
   const face = document.querySelector('.jface--front')
   if (!face) return null
-  const dpr = 2
-  const f = face.getBoundingClientRect()
-  const fx0 = f.left * dpr, fy0 = f.top * dpr, fx1 = f.right * dpr, fy1 = f.bottom * dpr
-  let best = null
+  const fw = face.offsetWidth, fh = face.offsetHeight
+  if (!fw || !fh) return null
+  // An element's box in the FACE's own untransformed pixels. offsetLeft is
+  // measured against offsetParent, so the two are walked together; anything
+  // that does not land on the face is not part of the page and is dropped.
+  const local = el => {
+    let x = 0, y = 0, n = el
+    for (let i = 0; n && n !== face && i < 16; i++) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent }
+    return n === face ? [x, y, el.offsetWidth, el.offsetHeight] : null
+  }
+  const out = []
   for (const im of face.querySelectorAll('img')) {
     const st = getComputedStyle(im)
     if (st.visibility === 'hidden' || st.display === 'none' || Number(st.opacity) < 0.2) continue
-    const r = im.getBoundingClientRect()
-    const x0 = Math.max(r.left * dpr, fx0), y0 = Math.max(r.top * dpr, fy0)
-    const x1 = Math.min(r.right * dpr, fx1), y1 = Math.min(r.bottom * dpr, fy1)
-    if (x1 - x0 < 120 || y1 - y0 < 120) continue
-    const a = (x1 - x0) * (y1 - y0)
-    if (!best || a > best.a) best = { a, box: [x0, y0, x1 - x0, y1 - y0] }
+    const src = im.currentSrc || im.src || ''
+    // A file, not a gradient we drew. See the note above.
+    if (!src || src.startsWith('data:')) continue
+    const b = local(im)
+    if (!b) continue
+    const x0 = Math.max(b[0], 0), y0 = Math.max(b[1], 0)
+    const x1 = Math.min(b[0] + b[2], fw), y1 = Math.min(b[1] + b[3], fh)
+    if ((x1 - x0) * (y1 - y0) < fw * fh / 7) continue
+    out.push({ src: src.split('/').pop(), local: [x0, y0, x1 - x0, y1 - y0] })
   }
-  if (!best || best.a < (fx1 - fx0) * (fy1 - fy0) / 7) return null
-  return best.box
+  return { face: [fw, fh], list: out }
 })()`
 
 const READY = `(async () => {
@@ -273,16 +324,24 @@ export async function openStage({ port, profile, origin, query = '', vw = 540, v
   return { cdp, ws, chrome }
 }
 
-/** Lean the page and photograph it. Returns the picture's own quad with it. */
+/**
+ * Lean the page and photograph it. Returns the picture's own geometry with it.
+ *
+ * `win` is read on every shot rather than once per parking spot, so a shot is
+ * self-contained — but its contents do not depend on the lean: the rectangles
+ * are in the face's own untransformed pixels and `rotationX/Y` on `.journal-box`
+ * moves the face, not the layout inside it. What does change per candidate is
+ * `quad`, and that is what projects them.
+ */
 export async function shoot(cdp, rx, ry, persp, png) {
   await cdp.eval(TILT(rx, ry, persp))
   await sleep(45)
   const geo = await cdp.eval(QUAD)
   if (!geo) return null
-  const art = await cdp.eval(ART)
+  const win = await cdp.eval(WINDOWS)
   const shot = await cdp.send('Page.captureScreenshot', { format: 'png' })
   writeFileSync(png, Buffer.from(shot.data, 'base64'))
-  return { geo: { ...geo, art }, png }
+  return { geo: { ...geo, win }, png }
 }
 
 // ===========================================================================
@@ -325,57 +384,119 @@ export function registerSeeded(Ap, Bp, Mp, pivot, seed, levels, strides) {
   return best
 }
 
+/** How far two windows' shifts may differ and still count as the same place. */
+export const TOL = Number(process.env.TILT_TOL || 25)
+
 /**
- * A scorer bound to one target picture and one parking spot.
+ * A scorer bound to one target picture and one parking spot — MEASURING
+ * THROUGH THE WINDOW THE PAGE'S WINDOWS AGREE ON.
  *
  * `flat` is our page at zero lean, photographed at this same instant. It does
- * two jobs: its quad picks the region the target's quantile is taken over — so
- * the target's edge field is built without any knowledge of the angle being
- * hunted — and its full registration is the seed every candidate starts from.
- * Seeding from the first candidate instead would be a bug worth naming: the
- * first candidate may be fifteen degrees out, and a local descent started from
- * a bad alignment stays in it.
+ * three jobs now: it chooses the window, it gives the region the target's
+ * quantile is taken over — so the target's edge field is built without any
+ * knowledge of the angle being hunted — and its registration is the seed every
+ * candidate starts from. Seeding from the first candidate instead would be a
+ * bug worth naming: the first candidate may be fifteen degrees out, and a local
+ * descent started from a bad alignment stays in it.
+ *
+ * WHY THE WINDOW IS NOT PICKED IN ADVANCE, and why the loneliest peak is not
+ * the rule either. This is clip-fit's finding, ported (`fitPage`, and
+ * `_context/32-poses.md`, "ПОЧЕМУ КЛИП НЕ ОТВЕЧАЛ"): no property computable on
+ * our side ranks the windows correctly — on slide 8 the nebula is both larger
+ * and denser in edge energy than the mini cover, and the mini cover is the one
+ * that locks. And the window that locks hardest can be answering the WRONG
+ * QUESTION: that same mini cover says our journal sits 100 px right of the
+ * clip's while the page, the planets and the nebula all say 7 px left, because
+ * the cover is simply laid out elsewhere inside the page. That is the mock's
+ * business, not the animation's — the owner, 2026-09-18: «Вёрстку мы берём из
+ * журнала… Меня интересует только анимация самого журнала».
+ *
+ * SO EACH WINDOW IS AN INDEPENDENT WITNESS AND THE POSE IS WHAT THEY AGREE ON.
+ * Every window is registered once, on the flat page, against the target; the
+ * largest group whose shifts fall within `TOL` of each other is the pose, and
+ * inside that group the loneliest peak speaks for it. A window that agrees with
+ * nobody is not promoted whatever its confidence — it is measuring layout — and
+ * it is named in `f.outside` rather than dropped silently.
+ *
+ * ⚠️ THE PAGE IS ALWAYS A WITNESS. It is the only window that is the journal
+ * rather than something printed on it, so it is the one that cannot be
+ * answering a layout question by mistake. `opt.window === 'face'` forces it
+ * alone, for comparison.
+ *
+ * ⚠️ AND THE PIVOT IS THE FACE'S CENTRE FOR EVERY WINDOW, not each window's own
+ * centre. The shifts have to be in one frame to be comparable at all, which is
+ * the whole point of the agreement test.
+ *
+ * WHAT THIS COSTS. One full registration per window per parking spot, where
+ * before there was one (or, in faithful mode, none). It is paid once and the
+ * candidate walk is unchanged — and it is the same price clip-fit pays per
+ * slide.
  */
 export function makeScorer(rgbTarget, flat, opt = {}) {
   const levels = opt.levels || null
   const strides = opt.strides || []
   const faithful = !levels
-  // The art window when the page has one, the whole face when it does not —
-  // the same fallback clip-fit makes, and for the same reason.
-  const useArt = opt.window !== 'face' && !!flat.geo.art
-  const maskOf = geo => {
-    if (!useArt || !geo.art) return pageMask(geo.quad)
-    const [x, y, w, h] = geo.art
-    return boxMask(x, y, w, h)
+  const list = opt.window === 'face' || !flat.geo.win ? [] : flat.geo.win.list
+
+  // A window is a page-local rectangle, or `null` for the face itself. The quad
+  // is rebuilt per candidate: everything on the page is coplanar with the page,
+  // so the homography its four corners define places any of them exactly.
+  //
+  // ⚠️ THE FACE'S OWN SIZE IS TAKEN ONCE, OFF THE FLAT SHOT. It is layout —
+  // `offsetWidth`/`offsetHeight`, which `rotationX/Y` on `.journal-box` cannot
+  // touch — so it is the same for every candidate. Reading it off each shot
+  // instead would put a silent fallback to the whole page in the middle of a
+  // search on any shot whose WINDOWS came back empty, and a mask that changes
+  // size mid-search does not measure one thing.
+  const faceDims = flat.geo.win ? flat.geo.win.face : null
+  const quadOf = (c, geo) =>
+    c.local && faceDims ? localRectQuad(faceDims, c.local, geo.quad) : geo.quad
+  const maskOf = (c, geo) => (c.local ? quadMask(quadOf(c, geo)) : pageMask(geo.quad))
+  const reachOf = (c, geo) => reachMask(quadOf(c, geo), geo.centre, 2.0)
+
+  const cands = [...list.map(c => ({ win: c.src, local: c.local })), { win: 'face', local: null }]
+  const flatRgb = rgbOfPng(flat.png)
+  const tried = []
+  for (const c of cands) {
+    const mask = maskOf(c, flat.geo)
+    const Mp = maskPyramid(mask)
+    const Ap = pyramid(flatRgb, KEEP, mask)
+    const Bp = pyramid(rgbTarget, KEEP, reachOf(c, flat.geo))
+    const best = register(Ap, Bp, Mp, flat.geo.centre, REG)
+    tried.push({ ...c, r: best, rival: margin(Ap, Bp, Mp, flat.geo.centre, best) })
   }
-  const reachOf = geo => {
-    if (!useArt || !geo.art) return reachMask(geo.quad, geo.centre, 2.0)
-    const [x, y, w, h] = geo.art
-    return boxMask(x - w / 2, y - h / 2, w * 2, h * 2)
+
+  const lonely = x => x.r.v - x.rival
+  const near = (a, b) => Math.hypot(a.r.dx - b.r.dx, a.r.dy - b.r.dy) <= TOL
+  let group = []
+  for (const a of tried) {
+    const g = tried.filter(b => near(a, b))
+    // Bigger group wins; same size, the one whose best member is loneliest.
+    const conf = xs => Math.max(...xs.map(lonely))
+    if (g.length > group.length || (g.length === group.length && conf(g) > conf(group))) group = g
   }
-  const reach = reachOf(flat.geo)
-  const cachedB = opt.cacheTarget === false ? null : pyramid(rgbTarget, KEEP, reach)
-  let seed = null
-  if (!faithful) {
-    const mask = maskOf(flat.geo)
-    seed = register(
-      pyramid(rgbOfPng(flat.png), KEEP, mask),
-      cachedB || pyramid(rgbTarget, KEEP, reach),
-      maskPyramid(mask),
-      flat.geo.centre,
-      REG,
-    )
-  }
+  const chosen = group.slice().sort((a, b) => lonely(b) - lonely(a))[0]
+  const seed = faithful ? null : { ...chosen.r }
+
+  const cachedB =
+    opt.cacheTarget === false ? null : pyramid(rgbTarget, KEEP, reachOf(chosen, flat.geo))
   const f = (rgbA, geo) => {
-    const mask = maskOf(geo)
+    const mask = maskOf(chosen, geo)
     const Mp = maskPyramid(mask)
     const Ap = pyramid(rgbA, KEEP, mask)
-    const Bp = cachedB || pyramid(rgbTarget, KEEP, reachOf(geo))
+    const Bp = cachedB || pyramid(rgbTarget, KEEP, reachOf(chosen, geo))
     if (faithful) return register(Ap, Bp, Mp, geo.centre, REG)
     return registerSeeded(Ap, Bp, Mp, geo.centre, { ...seed }, levels, strides)
   }
   f.seed = seed
-  f.window = useArt ? 'art' : 'face'
+  f.window = chosen.win
+  f.group = group.map(x => x.win)
+  f.outside = tried.filter(x => !group.includes(x)).map(x => x.win)
+  f.spread =
+    group.length > 1
+      ? Math.max(...group.map(a => Math.max(...group.map(b => Math.hypot(a.r.dx - b.r.dx, a.r.dy - b.r.dy))))) // prettier-ignore
+      : 0
+  f.tried = tried.map(x => ({ win: x.win, dx: x.r.dx, dy: x.r.dy, v: x.r.v, rival: x.rival }))
   return f
 }
 

@@ -27,6 +27,28 @@
  *
  * The flying objects and the UI are hidden, and the backdrop is left alone: it
  * is the same room in both pictures and it anchors the registration.
+ *
+ * ⚠️⚠️ THAT LAST SENTENCE IS WRONG, AND IT IS WHY THE EIGHT NUMBERS THIS TOOL
+ * PUT IN `SLIDE_LEAN` ARE NOT TO BE TRUSTED. The room being the same footage in
+ * both pictures does not anchor anything — it SWAMPS the answer. Its edges are
+ * long straight lines (a pen, two neon arcs), and a long straight line scores
+ * the same after a shift along itself, so a window holding room keeps the rival
+ * high and the peak un-lonely no matter where the journal is. Measured
+ * 2026-09-18 in clip-fit (AT-1b) and again in the probe (AT-1c): outside the
+ * journal the two pictures differ by 1.6…6.7 grey levels out of 255.
+ *
+ * And the room IS in this tool's window twice over. `pageMask(geo.quad)` is fed
+ * an AXIS-ALIGNED box (line 188 reads one `getBoundingClientRect`), and on these
+ * slides that box runs 84 % to 126 % of the whole canvas while the page is about
+ * half of it. This tool also shoots 420x747 and lets ffmpeg stretch the frame by
+ * 29 % before the Sobel runs.
+ *
+ * ⚠️ FIXED IN `lib/tiltprobe.mjs` BY SESSION AT-1c, NOT HERE. The probe reads four
+ * zero-size corner markers, refuses `data:` sources, projects each window
+ * through the face's homography, and takes the answer the windows agree on;
+ * `tilt-selftest.mjs` runs that probe and passed on it. Re-measuring the eight
+ * SLIDE_LEAN constants through the probe is session AT-2's work. Until that is
+ * done, no new number from THIS file goes anywhere.
  */
 import { spawn, execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
