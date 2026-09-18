@@ -1,4 +1,4 @@
-import { SLIDES, JOURNAL_PATH, STORY_END, PAGE_ORDER, STORY_SEGMENTS } from './slides.js'
+import { SLIDES, JOURNAL_PATH, SLIDE_LEAN_PATH, STORY_END, PAGE_ORDER, STORY_SEGMENTS } from './slides.js' // prettier-ignore
 import { TIMING, snap } from './timing.js'
 
 /**
@@ -178,6 +178,16 @@ export function buildStoryPlan(skip = {}, opts = {}) {
     row => [toStory(row[0]), ...row.slice(1)],
   )
 
+  // A LEAN BELONGS TO ITS SLIDE, so a dropped page takes its rows with it and
+  // the survivors' rows move with the rest. Simpler than the path's case: the
+  // rows never span a hole, because they never span a cut in the first place —
+  // each slide's lean lives strictly between its own turn and the next.
+  const lean = Object.fromEntries(
+    Object.entries(SLIDE_LEAN_PATH)
+      .filter(([frame]) => !dropped.has(Number(frame)))
+      .map(([frame, rows]) => [frame, rows.map(row => [toStory(row[0]), row[1], row[2]])]),
+  )
+
   // A flight belongs to the page it was measured on, so a dropped page takes
   // its objects with it. The `frame` field is what says which page that is.
   const flights = FLIGHTS.filter(
@@ -201,6 +211,7 @@ export function buildStoryPlan(skip = {}, opts = {}) {
     slides,
     segments,
     path,
+    lean,
     flights,
     timing: shiftTiming(TIMING, toStory),
     storyEnd,
@@ -251,6 +262,7 @@ function identityPlan(FLIGHTS) {
     slides: SLIDES,
     segments: STORY_SEGMENTS,
     path: JOURNAL_PATH,
+    lean: SLIDE_LEAN_PATH,
     flights: FLIGHTS,
     timing: TIMING,
     storyEnd: STORY_END,

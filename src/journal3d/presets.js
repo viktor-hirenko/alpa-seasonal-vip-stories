@@ -288,6 +288,56 @@ export function journalPath(t, keys) {
 journalPath.PARAM_SCHEMA = {}
 
 /**
+ * THE LEAN, THROUGH THE SLIDE — the two depth channels `journalPath` does not
+ * touch and the page turn only lands.
+ *
+ * WHY IT IS A SEPARATE PRESET FROM `journalPath` even though both read a
+ * measured polyline the same way. The pose path is ONE curve from the settled
+ * cover to the dissolve and is nested once; the lean exists only on the slides
+ * where the clip's page actually leans, so it is nested once PER SLIDE, between
+ * that slide's turn and the next. Two tables, two lifetimes, two instruments —
+ * clip-fit measured the pose, tiltprobe the lean.
+ *
+ * WHAT IT WRITES AND WHO ELSE WRITES IT. `rotationX` and `rotationY` on
+ * `.journal-box`. `pageTurn` writes both too, and the two never overlap: the
+ * turn runs from the cut to `flip.out + flip.back` and this starts at the
+ * slide's first measured instant, which is later. Where they meet they agree by
+ * construction — the turn lands on this table's first row (see SLIDE_LEAN_PATH).
+ *
+ * ⚠️ NOTHING NEEDS TO PUT rotationX BACK. A slide without measured rows never
+ * gets one of these, and its turn carries rotationX to zero absolutely on the
+ * way in, the same way it has always carried rotationY. So the channel cannot
+ * leak from a leaning slide into a flat one, and an arbitrary backwards seek
+ * (ADR-0008) lands on the same numbers as playing forwards to it: everything
+ * here is a pure function of the clock, `set` and `fromTo` only, no `+=`.
+ *
+ * ⚠️ AND NO INVENTED WOBBLE UNDERNEATH IT. AT-1's plan said to damp
+ * `HOVER_AMP.rotX/.rotY` on measured slides so a synthetic sine would not argue
+ * with a measured curve. That is already true and for a better reason: the story
+ * stopped building `hover` at all when the pose became a path (see `hover`
+ * below). There is nothing to damp.
+ */
+export function journalLean(t, rows) {
+  const at = splineReader(rows)
+  const t0 = rows[0][0]
+  const t1 = rows[rows.length - 1][0]
+  const head = { t: t0 }
+  const s = tl()
+  s.to(head, {
+    t: t1,
+    duration: t1 - t0,
+    ease: 'none',
+    onUpdate() {
+      const time = head.t
+      gsap.set(t.box, { rotationX: at(time, 1), rotationY: at(time, 2) })
+    },
+  })
+  return s
+}
+/** The times live IN the rows; a slider cannot move a measurement. */
+journalLean.PARAM_SCHEMA = {}
+
+/**
  * THE PAGE TURN, on its own.
  *
  * It used to be a flag on `rePose`, because a re-pose and a turn happened at the
@@ -316,18 +366,44 @@ journalPath.PARAM_SCHEMA = {}
  *
  * The measurement behind `peak`, `out` and `back` is in TIMING.flip.
  */
+/**
+ * `fromX` AND `toX` ARE THE SAME CONTRACT ON THE OTHER DEPTH AXIS, and they are
+ * new in session AT-2. Until then `rotationX` was written exactly once in the
+ * whole story — `swingOpen`'s head `set`, at zero — so a turn had nothing to
+ * hand over and nothing to reset. Now that a slide can lean in depth
+ * (SLIDE_LEAN_PATH), the turn has to do for `rotationX` precisely what it
+ * already does for `rotationY`: begin at the value the previous slide left,
+ * carry it across the swing, and land ABSOLUTELY on the value the incoming
+ * slide starts from — which is zero for every slide that does not lean, and is
+ * what keeps the channel from leaking out of the three slides that do.
+ *
+ * It rides the BACK leg, not the whole turn. The out leg is 0.14 s of the page
+ * swinging to edge-on; depth on a page seen edge-on is invisible, and starting
+ * the carry there would only spend it where no one can see it.
+ */
 export function pageTurn(t, params) {
   const p = P(
-    { ...TIMING.flip, from: 0, to: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack },
+    { ...TIMING.flip, from: 0, to: 0, fromX: 0, toX: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack }, // prettier-ignore
     params,
   )
   const s = tl()
-  s.set(t.box, { rotationY: p.from }, 0)
+  s.set(t.box, { rotationY: p.from, rotationX: p.fromX }, 0)
   yawTurn(s, t, p)
+  // Kept out of `yawTurn` deliberately: that helper is shared with `rePose`,
+  // which the lab drives with its own rotationX slider, and it is the YAW both
+  // callers have to agree on. One extra leg here is cheaper than a shared
+  // helper that quietly zeroes a channel the lab is steering by hand.
+  s.fromTo(
+    t.box,
+    { rotationX: p.fromX },
+    { rotationX: p.toX, duration: p.back, ease: p.easeBack, immediateRender: false },
+    p.out,
+  )
   return s
 }
 pageTurn.PARAM_SCHEMA = {
   to: { min: -30, max: 30, step: 1 },
+  toX: { min: -30, max: 30, step: 1 },
   peak: { min: 0, max: 180, step: 1 },
   out: { min: 0.02, max: 0.6, step: 0.01 },
   back: { min: 0.05, max: 1.5, step: 0.01 },

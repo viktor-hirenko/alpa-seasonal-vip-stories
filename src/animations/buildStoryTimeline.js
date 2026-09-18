@@ -5,6 +5,7 @@ import { snap } from '@/story/timing.js'
 import {
   swingOpen,
   journalPath,
+  journalLean,
   pageTurn,
   journalDissolve,
   hyperspaceBurst,
@@ -174,6 +175,24 @@ export function buildStoryTimeline(targets, ctx) {
   // turn — 18 design px of silhouette width and 7 px of position, where the
   // neighbouring frames were moving under 2.5. Every later turn already begins
   // at zero, so they pass 0 and nothing changes for them.
+  //
+  // WHERE A TURN LANDS AND WHERE THE NEXT ONE STARTS, on both depth axes.
+  // A slide that has measured lean rows hands the turn its FIRST row to land on
+  // and its LAST row for the next turn to start from; a slide without rows keeps
+  // the single constant in SLIDE_LEAN and rotationX zero. Reading the head and
+  // tail from the rows rather than repeating them as constants is what stops the
+  // two tables drifting apart — the same reason swingOpen's last key is quoted
+  // from JOURNAL_PATH[0] instead of retyped.
+  const rowsFor = frame => plan.lean?.[frame] ?? null
+  const landsAt = frame => {
+    const rows = rowsFor(frame)
+    return rows ? { y: rows[0][2], x: rows[0][1] } : { y: SLIDE_LEAN[frame] ?? 0, x: 0 }
+  }
+  const leavesAt = frame => {
+    const rows = rowsFor(frame)
+    return rows ? { y: rows[rows.length - 1][2], x: rows[rows.length - 1][1] } : { y: SLIDE_LEAN[frame] ?? 0, x: 0 } // prettier-ignore
+  }
+
   slides
     .filter(s => s.frame >= 8 && s.frame <= 23)
     .forEach((slide, i, arr) => {
@@ -186,8 +205,30 @@ export function buildStoryTimeline(targets, ctx) {
       // the next turn - the same twitch the HANDOVER_YAW note below describes,
       // only on every slide that leans.
       const prev = arr[i - 1]
-      const from = i === 0 ? HANDOVER_YAW : (SLIDE_LEAN[prev.frame] ?? 0)
-      nest(tl, pageTurn(targets, { from, to: SLIDE_LEAN[slide.frame] ?? 0 }), snap(slide.at))
+      const left = i === 0 ? { y: HANDOVER_YAW, x: 0 } : leavesAt(prev.frame)
+      const lands = landsAt(slide.frame)
+      nest(
+        tl,
+        pageTurn(targets, { from: left.y, to: lands.y, fromX: left.x, toX: lands.x }),
+        snap(slide.at),
+      )
+    })
+
+  // THE LEAN, ONE CHILD PER SLIDE THAT HAS ONE. Nested at its own first measured
+  // instant, which is past the turn that lands on it — between the turn's end
+  // and that instant (under two frames at 30 fps) nothing writes the two depth
+  // channels, so they hold exactly where the turn left them, which is this
+  // table's first row. Same handover the entrance already has with the path:
+  // swingOpen lands at HANDOVER_YAW and nothing drives yaw for five seconds.
+  //
+  // Nested AFTER the turns so that at the single instant where a turn's end and
+  // a lean's start could both render, the measurement is what lands. They agree
+  // there by construction, so this is belt and braces rather than a fix.
+  slides
+    .filter(s => rowsFor(s.frame))
+    .forEach(slide => {
+      const rows = rowsFor(slide.frame)
+      nest(tl, journalLean(targets, rows), rows[0][0])
     })
 
   // Nested at 0 because the flight timeline is already in absolute video time.

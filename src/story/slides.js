@@ -242,6 +242,110 @@ export const SLIDE_LEAN = {
   23: 16,
 }
 
+/**
+ * THE LEAN AS A PATH THROUGH THE SLIDE, not one angle held for five seconds —
+ * and the SECOND depth channel with it.
+ *
+ * WHAT THIS REPLACES, per slide that has a row here. SLIDE_LEAN above is one
+ * `rotationY` per slide, landed by the turn and then held until the next cut,
+ * and `rotationX` is not driven by anything at all: `swingOpen` zeroes it once
+ * at the entrance and no table has ever written it since. The owner, 2026-09-18,
+ * watching review.html: «на видео видно, как перспектива тоже меняется на
+ * слайде. Он может как бы ближе к нам, то дальше к нам… у нас просто
+ * перспектива задана статически». He is describing rotationX, and he is right
+ * that ours is a constant — it is a constant zero.
+ *
+ * Measured against the clip by `scripts/journal-lean-path.mjs`, one answer every
+ * half second across each slide, through the same gradient registration as
+ * everything else here (`lib/tiltprobe.mjs`, gated by `tilt-selftest.mjs`).
+ *
+ * ROWS ARE `[t, rotX, rotY]` IN ABSOLUTE VIDEO SECONDS, read through the shared
+ * Hermite reader like JOURNAL_PATH and the flight table — exactly through every
+ * measured instant, with continuous velocity so nothing snaps at a row.
+ *
+ * ⚠️ WHY THIS IS ITS OWN TABLE AND NOT TWO MORE COLUMNS ON JOURNAL_PATH, which
+ * is what session AT-1's plan proposed. JOURNAL_PATH is PRINTED by
+ * `npm run journal:path` and pasted in whole — the rule next to it says never to
+ * hand-edit it — so two columns added here by hand would be erased by the next
+ * run of a tool that knows nothing about lean. They are also different
+ * measurements from different instruments, and the lean exists on eight slides
+ * out of twenty-one rather than everywhere.
+ *
+ * HOW IT MEETS THE PAGE TURN. The turn owns both depth channels while it runs
+ * (0.74 s from the cut) and lands on this table's FIRST row; the next turn
+ * starts from its LAST row. So the head and tail of each slide's rows are
+ * handover values, not just measurements — the same contract swingOpen's last
+ * key has with JOURNAL_PATH[0], and the same one HANDOVER_YAW already describes.
+ * A slide with no rows here keeps SLIDE_LEAN's constant and rotationX zero.
+ *
+ * ⚠️ A SLIDE WHOSE MEASUREMENT IS NOT CONFIDENT STAYS OUT OF THIS TABLE. The
+ * margin over a page with NO lean is what decides, never the winning angle: a
+ * search always returns a winner. The test a slide has to pass is the one
+ * slide 14 passes and slide 15 fails — the angle walks a smooth arc AND the
+ * margin arcs with it. Same rule that left ten of twenty-seven flights and three
+ * slides of scale untouched.
+ */
+// Printed by `node scripts/journal-lean-path.mjs --print`, 2026-09-18 (AT-2),
+// from a 66-instant run on the clip's own print. The verdict on all eight
+// measured slides, in the tool's own words:
+//
+//    8 editors_note       11 pts  peak   16 %  median    4 %  worst step   9.5 deg  LEFT OUT — peak margin 16 % under 30 %
+//   10 seasonal_power     7 pts  peak   35 %  median    6 %  worst step   5.3 deg  in
+//   14 multiplier_moment  8 pts  peak  111 %  median   74 %  worst step   4.3 deg  in, last 1 row(s) trimmed
+//   15 players_pick       9 pts  peak   57 %  median   11 %  worst step  26.8 deg  LEFT OUT — neighbours 26.8 deg apart
+//   18 top_sport_signal   7 pts  peak  102 %  median   42 %  worst step  10.8 deg  in
+//   20 space_milk         11 pts  peak   86 %  median   34 %  worst step   6.3 deg  in
+//   21 joke               9 pts  peak   15 %  median   13 %  worst step  11.3 deg  LEFT OUT — peak margin 15 % under 30 %
+//   23 final              3 pts  peak   49 %  median   18 %  worst step  27.5 deg  LEFT OUT — neighbours 27.5 deg apart; only 3 instants
+// prettier-ignore
+export const SLIDE_LEAN_PATH = {
+  // frame 10 seasonal_power
+  10: [
+    [22.87, 1.50, -2.50],
+    [23.37, 0.00, 0.00],
+    [23.87, 0.00, 0.00],
+    [24.37, -2.50, -4.75],
+    [24.87, -6.75, -4.75],
+    [25.37, -12.00, -7.50],
+    [25.87, -10.75, -8.50],
+  ],
+  // frame 14 multiplier_moment
+  14: [
+    [39.87, 2.25, 10.50],
+    [40.37, 3.25, 12.50],
+    [40.87, 5.25, 13.00],
+    [41.37, 5.50, 14.00],
+    [41.87, 4.00, 12.25],
+    [42.37, 3.25, 8.00],
+    [42.87, 2.50, 6.25],
+    [43.37, 1.00, 4.50],
+  ],
+  // frame 18 top_sport_signal
+  18: [
+    [57.87, 5.25, -6.75],
+    [58.37, 5.00, -14.00],
+    [58.87, 7.75, -12.75],
+    [59.37, 18.50, -10.75],
+    [59.87, 11.50, -2.25],
+    [60.37, 9.25, -1.75],
+    [60.87, 9.75, -1.25],
+  ],
+  // frame 20 space_milk
+  20: [
+    [67.87, -0.25, 15.75],
+    [68.37, -6.00, 22.00],
+    [68.87, -8.00, 20.75],
+    [69.37, -5.00, 15.75],
+    [69.87, -5.00, 17.75],
+    [70.37, -0.75, 14.50],
+    [70.87, 0.50, 12.75],
+    [71.37, 3.25, 11.50],
+    [71.87, 3.00, 9.75],
+    [72.37, -0.75, 8.25],
+    [72.87, -0.75, 7.75],
+  ],
+}
+
 // prettier-ignore
 export const JOURNAL_PATH = [
   // frame 7 cover
