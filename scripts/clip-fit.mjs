@@ -63,6 +63,8 @@ import {
   boxMask,
   pageMask,
   silhouetteBox,
+  localRectQuad,
+  rollBetween,
 } from './lib/gradfit.mjs'
 
 const ROOT = new URL('..', import.meta.url).pathname
@@ -110,7 +112,33 @@ const CLIP_QUERY =
   '?days=257&points=120&level=SILVER&total_wins=257' +
   '&biggest_win=257&biggest_win_game=Dragon%20Coins%20Jackpot&top_multiplier=257' +
   '&top_multiplier_game=Tiger%20Jackpots&favorite_game_name=Tiger%20Jackpots' +
-  '&bonuses=257&sports_wins=257&sports_multiplier=257'
+  '&bonuses=257&sports_wins=257&sports_multiplier=257&packs=257'
+
+/**
+ * ⚠️ `packs` IS IN THAT LIST BECAUSE LEAVING IT OUT DELETED A PAGE, and the
+ * deletion was silent. Measured 2026-09-18.
+ *
+ * A dev URL carrying even one data parameter is taken at its word and the
+ * sample fills nothing (useStoryData.js); a parameter a page gates on and the
+ * link does not carry means that page is DROPPED, and storyPlan.js then
+ * rebuilds the story without it. `packs` gates `space_milk`, and it was added
+ * on 2026-09-18 — after this table was written on 09-06. So the table that was
+ * meant to make our print match the clip's was, since that morning, cutting
+ * 5.4 seconds out of the story: with it the timeline is 88.97 s where the clip
+ * is 94.37, and from 67 s on every page we park on is the NEXT one. Parked at
+ * 68.02 we showed the joke page against the clip's Space Milk, at 74.02 the
+ * gift page against the clip's joke.
+ *
+ * That is the whole of "TILT_CLIP_PRINT=1 made it worse": on slide 20 it took
+ * the score from 0.09-0.15 down to 0.02-0.03 because it had stopped comparing
+ * the same page. The clip prints 257 there — read off the frame at 68.02 s.
+ *
+ * THE GUARD BELOW IS THE REAL FIX. A list of parameters is a thing that goes
+ * stale; `pageAt()` asks the running story which page it is actually showing
+ * and refuses to report a row where that is not the page we asked for. Any
+ * future gate added to any page trips it on the first run instead of being
+ * discovered in a number that looks plausible.
+ */
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const ff = (a, stdin) =>
@@ -249,6 +277,23 @@ const PARK = t => `(async () => {
 })()`
 
 /**
+ * WHICH PAGE THE STORY IS ACTUALLY SHOWING AT A GIVEN SECOND.
+ *
+ * `slides.js` says what SHOULD be on screen at `at + LEAD`; this asks the
+ * running story what IS. The two part company whenever the link drops a page,
+ * because storyPlan.js then rebuilds the timeline shorter and every page after
+ * the hole moves earlier. The measurement cannot see that — two pages of the
+ * same journal look equally like a journal — so it reports a confident-looking
+ * number for a comparison nobody meant to make. It cost this file a day.
+ */
+const PAGE_AT = t => `(() => {
+  const segs = window.__story && window.__story.segments
+  if (!segs) return null
+  const s = segs.find(x => ${t} >= x.start && ${t} < x.end) || segs[segs.length - 1]
+  return { page: s.page, frame: s.firstFrame, dur: window.__story.tl.duration() }
+})()`
+
+/**
  * The front face's four corners in design px, straight out of the browser's own
  * projection. getBoxQuads() walks the whole 3D chain including `perspective`,
  * so this is the real on-screen quad — an AABB would carry the room in its
@@ -295,50 +340,85 @@ const QUAD = `(() => {
 })()`
 
 /**
- * THE PAGE'S ART, AS A RECTANGLE ON THE CANVAS.
+ * EVERY WINDOW THE PAGE OFFERS, IN THE PAGE'S OWN COORDINATES.
  *
  * WHY A WINDOW ON THE ART AND NOT ON THE WHOLE FACE. Registering the whole
  * front face mixes the journal's POSE with our page's own LAYOUT, and the answer
  * then follows whichever of the two filled more of the window: measured over
  * nine slides it wandered from -120/+201 to +191/+43 with weak confidence
- * (_context/36-visual-diff.md, V-25, session M-2). Worse, over the sixteen
- * anchor seconds it simply goes quiet on half of them — eight of sixteen had no
- * peak that beat its own neighbourhood, and all but two of those eight are in
- * the second half of the story. The art is the one thing on the page that is
- * the SAME IMAGE FILE in both renders: our type is a different edition of the
- * copy (the clip's slide 8 reads "LET'S TAKE A LOOK" where ours reads "READY TO
- * TAKE A LOOK?"), our digits are a different number, but the galaxy, the cow
- * and the helmet are the very PNGs the clip was rendered from.
+ * (_context/36-visual-diff.md, V-25, session M-2). The art is the one thing on
+ * the page that is the SAME IMAGE FILE in both renders: our type is a different
+ * edition of the copy (the clip's slide 8 reads "LET'S TAKE A LOOK" where ours
+ * reads "READY TO TAKE A LOOK?"), our digits are a different number, but the
+ * galaxy, the cow and the helmet are the very PNGs the clip was rendered from.
  *
- * WHICH RECTANGLE, and why it is picked by the machine rather than by hand. The
- * largest `<img>` inside the front face, clipped to the face's own box. Session
- * M-2 chose its windows by eye and got numbers nobody else can reproduce; this
- * picks the same kind of window from the DOM every time, so a re-run a month
- * from now measures the same thing. A page with no art of its own — seasonal
- * power is one — has no such rectangle and falls back to the whole face, which
- * is stated in its row rather than hidden.
+ * ⚠️ THREE THINGS THIS GOT WRONG UNTIL 2026-09-18, AND ALL THREE WERE MEASURED.
+ *
+ *   IT WAS NOT PICKING THE ART. The rule was "the largest <img> inside the front
+ *   face", and the largest <img> on every page of this journal is `page__sheen`
+ *   — the sheet's own gloss, an inline SVG gradient that covers the page edge to
+ *   edge. So the window was the whole page on all eight slides, and the promise
+ *   above ("the same image file in both renders") was never kept: a gradient we
+ *   draw ourselves is not a file the clip was rendered from. An inline `data:`
+ *   source is now refused outright, which is that promise written as a rule and
+ *   which also throws out `page__spine` and `page__edge` — the journal's chrome,
+ *   not its art.
+ *
+ *   IT WAS AN AXIS-ALIGNED BOX. `getBoundingClientRect()` on a page turned ten
+ *   to twenty degrees returns a box half again as large as the page, so the
+ *   window carried a frame of ROOM — and the room is not neutral here, it is
+ *   the very same footage in both pictures (our render plays the clip's
+ *   background behind the journal). Measured on slide 8: the window came out
+ *   1266 x 1514 on a 1080 x 1920 canvas, 92 % of the frame, of which the page
+ *   itself is about two thirds. The rest is a pen, two neon arcs and a bloom,
+ *   identical in both pictures and running in long straight lines — which is
+ *   exactly the shape that scores the same after a shift along itself, and so
+ *   exactly the shape that keeps `rival` high.
+ *
+ *   AND "LARGEST" WAS THE WRONG QUESTION ANYWAY. On slide 8 the largest real
+ *   image is `galaxy-3` — a nebula, smooth, almost no gradient — and fitting
+ *   through it scores 0.194 against a rival of 0.191, which is no answer at all.
+ *   The mini cover beside it, half the area, scores 0.431 against 0.194. No
+ *   property measurable on OUR side alone ranked those two correctly: the
+ *   nebula is bigger AND denser in edge energy. So the choice is not made in
+ *   advance any more — see fitPage().
+ *
+ * SO EVERY CANDIDATE IS RETURNED, in the page's own pixels, and projected in
+ * node through the homography the face's four corners define (`rectToQuad`,
+ * lib/gradfit.mjs). Everything on the page is coplanar with the page, so that
+ * map is exact, and each mask becomes a real quad with no room in it.
+ *
+ * The floor stays what it was: a window smaller than a seventh of the face is a
+ * detail, and a detail is where a register finds coincidences.
  */
-const ART = `(() => {
+const WINDOWS = `(() => {
   const face = document.querySelector('.jface--front')
   if (!face) return null
-  const dpr = 2
-  const f = face.getBoundingClientRect()
-  const fx0 = f.left * dpr, fy0 = f.top * dpr, fx1 = f.right * dpr, fy1 = f.bottom * dpr
-  let best = null
+  const fw = face.offsetWidth, fh = face.offsetHeight
+  if (!fw || !fh) return null
+  // An element's box in the FACE's own untransformed pixels. offsetLeft is
+  // measured against offsetParent, so the two are walked together; anything
+  // that does not land on the face is not part of the page and is dropped.
+  const local = el => {
+    let x = 0, y = 0, n = el
+    for (let i = 0; n && n !== face && i < 16; i++) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent }
+    return n === face ? [x, y, el.offsetWidth, el.offsetHeight] : null
+  }
+  const out = []
   for (const im of face.querySelectorAll('img')) {
     const st = getComputedStyle(im)
     if (st.visibility === 'hidden' || st.display === 'none' || Number(st.opacity) < 0.2) continue
-    const r = im.getBoundingClientRect()
-    const x0 = Math.max(r.left * dpr, fx0), y0 = Math.max(r.top * dpr, fy0)
-    const x1 = Math.min(r.right * dpr, fx1), y1 = Math.min(r.bottom * dpr, fy1)
-    if (x1 - x0 < 120 || y1 - y0 < 120) continue
-    const a = (x1 - x0) * (y1 - y0)
-    if (!best || a > best.a) best = { a, box: [x0, y0, x1 - x0, y1 - y0] }
+    const src = im.currentSrc || im.src || ''
+    // A file, not a gradient we drew. See the note above.
+    if (!src || src.startsWith('data:')) continue
+    const b = local(im)
+    if (!b) continue
+    const x0 = Math.max(b[0], 0), y0 = Math.max(b[1], 0)
+    const x1 = Math.min(b[0] + b[2], fw), y1 = Math.min(b[1] + b[3], fh)
+    if ((x1 - x0) * (y1 - y0) < fw * fh / 7) continue
+    out.push({ src: src.split('/').pop(), local: [x0, y0, x1 - x0, y1 - y0] })
   }
-  // A window smaller than a seventh of the face is a detail, not the art, and a
-  // detail is where the register finds coincidences.
-  if (!best || best.a < (fx1 - fx0) * (fy1 - fy0) / 7) return null
-  return best.box
+  return { face: [fw, fh], list: out }
 })()`
 
 // ===========================================================================
@@ -590,6 +670,8 @@ function drawQuad(rgb, quad, file, rgbColour = [255, 240, 0]) {
     ],
     b,
   )
+  // Handed back so a second quad can be painted onto the same picture.
+  return b
 }
 
 /** Paint a mask over a copy of the picture, so a mask bug is visible rather
@@ -646,24 +728,105 @@ async function ourFrame(t, file) {
   })()`)
   await sleep(320)
   const g = await cdp.eval(QUAD)
-  const art = await cdp.eval(ART)
+  const art = await cdp.eval(WINDOWS)
+  const page = await cdp.eval(PAGE_AT(t))
   const shot = await cdp.send('Page.captureScreenshot', { format: 'png' })
   writeFileSync(file, Buffer.from(shot.data, 'base64'))
-  return { rgb: rgbOfPng(file), geo: g && { ...g, art } }
+  return { rgb: rgbOfPng(file), geo: g && { ...g, art }, page }
 }
 
-/** The fit through the art window when there is one, through the whole face
- *  when there is not. `--face` forces the old behaviour for comparison. */
+/**
+ * THE FIT, THROUGH EVERY WINDOW THE PAGE HAS — AND THE POSE IS WHAT THEY AGREE ON.
+ *
+ * WHAT THIS FILE IS FOR, restated because it decides the rule below. The owner,
+ * 2026-09-18: «Не обращаем внимания на обложки, как они там расположены в клипе.
+ * Вёрстку мы берём из журнала… Меня интересует только анимация самого журнала,
+ * чтобы она была как видео.» The LAYOUT inside the page is the Figma mock's and
+ * is deliberately not the clip's. The only question here is where the JOURNAL is
+ * held and how big it is.
+ *
+ * WHY EVERY WINDOW, AND WHY THE WINNER IS NOT SIMPLY THE LONELIEST PEAK.
+ * Measured on the eight lean slides:
+ *
+ *   No rule computable on our side picks the right window in advance. On slide 8
+ *   the mini cover locks hard — 0.572 against a rival of 0.185 — while the
+ *   nebula beside it gives 0.195 against 0.200, and the nebula is both larger
+ *   and denser in edge energy. "Largest" and "busiest" both choose wrong.
+ *
+ *   AND THE LONELIEST PEAK CAN BE ANSWERING THE WRONG QUESTION. That same mini
+ *   cover on slide 8 says our journal sits 100 px to the right of the clip's,
+ *   while the page, the planets and the nebula all say it sits about 7 px left.
+ *   Put the two crops side by side and the cover is simply laid out elsewhere
+ *   inside the page — which is the mock's business, not the animation's. A
+ *   window on a piece of art measures WHERE THAT ART IS; it measures the pose
+ *   only when the art sits the same way in both, and whether it does is exactly
+ *   what cannot be known in advance.
+ *
+ * SO THE ANSWER IS THE ONE THE WINDOWS AGREE ON. Each window is an independent
+ * witness. The largest group of witnesses whose shifts fall within `FIT_TOL`
+ * (25 design px) of each other is the pose; inside that group the loneliest
+ * peak speaks for it. A window that agrees with nobody is not promoted whatever
+ * its confidence — it is layout, and it is printed as such rather than dropped.
+ * On slide 10 all four windows land on +51/+7 within a pixel; that is a far
+ * stronger statement than any single rival margin, and it is the check session
+ * M-2's hand-picked windows never had.
+ *
+ * `--face` forces the page alone, as before, for comparison.
+ */
+const TOL = Number(process.env.FIT_TOL || 25)
+
 function fitPage(rgbA, rgbB, geo, opt = {}) {
-  if (!geo.art || argv.includes('--face'))
-    return { r: fitJournal(rgbA, rgbB, geo, opt), win: 'face' }
-  const [x, y, w, h] = geo.art
-  const r = fitPair(rgbA, rgbB, boxMask(x, y, w, h), geo.centre, {
-    sRange: SRANGE,
-    ...opt,
-    reach: boxMask(x - w / 2, y - h / 2, w * 2, h * 2),
+  const faceTry = () => ({
+    win: 'face',
+    quad: geo.quad,
+    r: fitJournal(rgbA, rgbB, geo, opt),
   })
-  return { r, win: 'art' }
+  if (argv.includes('--face') || !geo.art || !geo.art.list.length)
+    return { ...faceTry(), tried: [], group: [] }
+
+  const tries = []
+  for (const c of geo.art.list) {
+    const q = localRectQuad(geo.art.face, c.local, geo.quad)
+    tries.push({
+      win: c.src,
+      quad: q,
+      r: fitPair(rgbA, rgbB, quadMask(q), geo.centre, {
+        sRange: SRANGE,
+        ...opt,
+        reach: reachMask(q, geo.centre, 2.0),
+      }),
+    })
+  }
+  // THE PAGE IS ALWAYS A WITNESS. It is the only window that is the journal
+  // rather than something printed on it, so it is the one that cannot be
+  // answering a layout question by mistake.
+  tries.push(faceTry())
+
+  const near = (a, b) => Math.hypot(a.r.dx - b.r.dx, a.r.dy - b.r.dy) <= TOL
+  let group = []
+  for (const a of tries) {
+    const g = tries.filter(b => near(a, b))
+    // Bigger group wins; same size, the one whose best member is loneliest.
+    const conf = xs => Math.max(...xs.map(x => x.r.v - x.r.rival))
+    if (g.length > group.length || (g.length === group.length && conf(g) > conf(group)))
+      group = g
+  }
+  const lonely = x => x.r.v - x.r.rival
+  const ranked = group.slice().sort((a, b) => lonely(b) - lonely(a))
+  const top = ranked[0]
+  const outside = tries.filter(x => !group.includes(x)).sort((a, b) => lonely(b) - lonely(a))
+  const spread = group.length > 1
+    ? Math.max(...group.map(a => Math.max(...group.map(b => Math.hypot(a.r.dx - b.r.dx, a.r.dy - b.r.dy))))) // prettier-ignore
+    : 0
+  return {
+    r: top.r,
+    win: top.win,
+    quad: top.quad,
+    tried: tries.slice().sort((a, b) => lonely(b) - lonely(a)),
+    group,
+    outside,
+    spread,
+  }
 }
 
 const slidesSrc = readFileSync(`${ROOT}src/story/slides.js`, 'utf8')
@@ -1365,7 +1528,7 @@ if (argv.includes('--t')) {
   const list = want.length ? want : SLIDES.map(s => s.frame)
   for (const n of list) {
     const s = SLIDES.find(x => x.frame === n)
-    if (s) times.push({ label: `${n} ${s.page}`, t: +(s.at + LEAD).toFixed(3) })
+    if (s) times.push({ label: `${n} ${s.page}`, t: +(s.at + LEAD).toFixed(3), want: s.page })
   }
 }
 
@@ -1400,19 +1563,69 @@ function impliedClipPose(pose, fit) {
 
 console.log(HEAD)
 const rows = []
-for (const { label, t } of times) {
-  const { rgb, geo } = await ourFrame(t, `${OUT}/.ours-${t}.png`)
+let wrongPage = 0
+for (const { label, t, want } of times) {
+  const { rgb, geo, page } = await ourFrame(t, `${OUT}/.ours-${t}.png`)
   if (!geo) {
     console.log(label + '  (no journal on screen)')
+    continue
+  }
+  // The guard, and it refuses rather than warns: a row measured against the
+  // wrong page is worse than a missing row, because it looks like an answer.
+  if (want && page && page.page !== want) {
+    wrongPage++
+    console.log(label)
+    console.log(
+      `  ⚠️  WRONG PAGE — the story is showing '${page.page}' at ${t} s, not '${want}'.` +
+        `\n      The link dropped a page and the timeline is ${page.dur.toFixed(2)} s instead of 94.37.` +
+        `\n      Fix the query (every skip-gated parameter must be on it) and re-run. NOT MEASURED.`,
+    )
     continue
   }
   const clipPng = `${OUT}/.clip-${t}.png`
   ff(['-y', '-ss', String(t), '-i', CLIP, '-frames:v', '1', clipPng])
   const clipRgb = rgbOfVideo(CLIP, t)
-  drawQuad(clipRgb, geo.quad, `${OUT}/outline-${t}.png`)
-  const { r, win } = fitPage(rgb, clipRgb, geo, { dSpan: Number(process.env.FIT_SPAN || 240) })
+  // OUR face in yellow and the WINDOW THE FIT ACTUALLY USED in cyan, both on
+  // the clip. The second one is new and it is the one that has been wrong: a
+  // window is a claim about which pixels carry the answer, and a claim that
+  // cannot be seen is a claim nobody checks.
+  const fitted = fitPage(rgb, clipRgb, geo, { dSpan: Number(process.env.FIT_SPAN || 240) })
+  const { r, win, tried, group, outside, spread } = fitted
+  // OUR face in yellow and the WINDOW THE FIT ACTUALLY USED in cyan, both on
+  // the clip. The second one is new and it is the one that had been wrong: a
+  // window is a claim about which pixels carry the answer, and a claim that
+  // cannot be seen is a claim nobody checks.
+  const painted = drawQuad(clipRgb, geo.quad, `${OUT}/outline-${t}.png`)
+  if (fitted.quad && win !== 'face')
+    drawQuad(painted, fitted.quad, `${OUT}/outline-${t}.png`, [0, 230, 255])
+  /**
+   * THE IN-PLANE ANGLE, READ A SECOND TIME AND WITHOUT A SEARCH.
+   *
+   * The register reports `rot` together with scale and shift, so any one of the
+   * three can be wrong in a way the other two pay for — and on a row with no
+   * confident peak all three are a guess. This reads the angle on its own, out
+   * of a histogram of edge directions that knows nothing about where anything
+   * is or how big it is (rollBetween, lib/gradfit.mjs). When the two agree the
+   * angle is not in doubt whatever the fit's confidence says; when they do not,
+   * the fit is lost and its other two numbers go with it.
+   */
+  const pm = pageMask(geo.quad)
+  const roll = rollBetween(pyramid(rgb, KEEP, pm)[0], pyramid(clipRgb, KEEP, pm)[0], pm)
   const implied = impliedClipPose(geo.pose, r)
-  rows.push({ label, t, fit: r, win, art: geo.art, ours: geo.box, pose: geo.pose, implied })
+  rows.push({
+    label,
+    t,
+    roll,
+    fit: r,
+    win,
+    group: (group || []).map(x => x.win),
+    spread,
+    windows: tried.map(x => ({ win: x.win, v: x.r.v, rival: x.r.rival, pct: x.r.pct, dx: x.r.dx, dy: x.r.dy })), // prettier-ignore
+    art: geo.art,
+    ours: geo.box,
+    pose: geo.pose,
+    implied,
+  })
   // A blend of the two, always: the number says how much and the picture says
   // whether the number is about the right thing.
   ff([
@@ -1430,8 +1643,32 @@ for (const { label, t } of times) {
     `${OUT}/blend-${t}.png`,
   ])
   const p = geo.pose
+  const line = (tag, x) =>
+    `    ${tag} ${x.win.padEnd(26)} ${x.r.v.toFixed(3)} / ${x.r.rival.toFixed(3)}` +
+    ` = ${(x.r.v - x.r.rival).toFixed(3).padStart(6)}   ` +
+    `${x.r.pct >= 0 ? '+' : ''}${x.r.pct.toFixed(1)} %  ` +
+    `${x.r.dx >= 0 ? '+' : ''}${x.r.dx.toFixed(0)}/${x.r.dy >= 0 ? '+' : ''}${x.r.dy.toFixed(0)}`
   console.log(label)
-  console.log(fmtOne(`fit ${win}`, r))
+  console.log(fmtOne('fit', r) + `   through ${win}`)
+  if (group && group.length > 1)
+    console.log(
+      `  ${group.length} of ${tried.length} windows agree to ${spread.toFixed(0)} px — ` +
+        group.map(x => x.win).join(', '),
+    )
+  else if (tried.length > 1) console.log(`  NO TWO WINDOWS AGREE — the numbers above are one window's word`)
+  for (const x of (group || []).filter(x => x.win !== win)) console.log(line('with', x))
+  for (const x of outside || []) console.log(line('  — ', x) + '   (disagrees: layout, not pose)')
+  console.log(
+    `  roll  ${roll.deg >= 0 ? '+' : ''}${roll.deg.toFixed(2)}°  ` +
+      `(${roll.v.toFixed(3)} against ${roll.rival.toFixed(3)} three degrees away, ` +
+      `${roll.flat.toFixed(3)} at no rotation at all)` +
+      (roll.v - roll.rival < 0.03
+        ? '   — flat, no angle to read'
+        : Math.abs(roll.deg - r.best.rot) < 2
+          ? '   — and the fit agrees'
+          : '   — THE FIT SAYS ' + r.best.rot.toFixed(2) + '°'),
+  )
+
   if (!p || !Number.isFinite(p.rot)) {
     console.log('  (pose unreadable)')
     continue
@@ -1446,5 +1683,7 @@ for (const { label, t } of times) {
   )
 }
 writeFileSync(`${OUT}/fit.json`, JSON.stringify(rows, null, 1))
+if (wrongPage)
+  console.log(`\n⚠️  ${wrongPage} slide(s) NOT MEASURED: the story was showing another page there.`)
 console.log(`\n-> ${OUT}/fit.json`)
 process.exit(0)

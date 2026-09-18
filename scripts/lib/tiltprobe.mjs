@@ -161,6 +161,33 @@ export const QUAD = `(() => {
  * Verbatim from clip-fit's ART, including the seventh-of-the-face floor: a
  * window smaller than that is a detail, and a detail is where a register finds
  * coincidences.
+ *
+ * ⚠️⚠️ AND CLIP-FIT'S ART IS NO LONGER THIS. 2026-09-18 found two faults in it
+ * and this copy still has both. DO NOT TRUST A LEAN MEASURED THROUGH THIS
+ * WINDOW; read clip-fit.mjs's WINDOWS and fitPage first, then come back.
+ *
+ *   1. THE LARGEST <img> ON ANY PAGE OF THIS JOURNAL IS `page__sheen` — the
+ *      sheet's own gloss, an inline SVG gradient covering the page edge to
+ *      edge. So this never selected art at all: on all eight lean slides the
+ *      window was the whole page. An inline `data:` source has to be refused.
+ *
+ *   2. `getBoundingClientRect()` IS AN AXIS-ALIGNED BOX, and on a page turned
+ *      ten to twenty degrees it is half again as large as the page. Measured on
+ *      slide 8 the window came out 1266 x 1514 on a 1080 x 1920 canvas — 92 %
+ *      of the frame — and the third of it that is not page is ROOM, which is
+ *      the same footage in both pictures being compared. clip-fit now returns
+ *      the rectangle in PAGE coordinates and projects it through the
+ *      homography the face's four corners define (`rectToQuad` in gradfit), so
+ *      the mask is the art's real quad with no room in it.
+ *
+ * ⚠️ THE `QUAD` ABOVE IS AN AXIS-ALIGNED BOX TOO, so the `face` fallback here
+ * carries the same room. clip-fit's QUAD reads four zero-size markers and gets
+ * the true projected corners; this one reads one `getBoundingClientRect`.
+ *
+ * Left as it is on purpose: `tilt-selftest.mjs` passed against THIS code on
+ * 2026-09-18 (worst miss 0.75 deg), and changing the probe under a passing gate
+ * without re-running it would be worse than a documented fault. The lean
+ * session that next touches this file changes both and re-runs the gate.
  */
 export const ART = `(() => {
   const face = document.querySelector('.jface--front')

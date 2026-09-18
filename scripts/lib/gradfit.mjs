@@ -657,6 +657,139 @@ function silhouetteBox(a, b, opt = {}) {
   return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, rows: ys.length }
 }
 
+/**
+ * THE MAP FROM A FLAT RECTANGLE TO ITS PICTURE ON THE CANVAS.
+ *
+ * Everything drawn on the journal's page — its art, its type, its tiles — lies
+ * in ONE PLANE with the page. A plane under a perspective camera projects by a
+ * homography, so the four corners of the face are enough to place any rectangle
+ * of the page exactly, with no second trip to the browser and no approximation:
+ * give it the face's own untransformed size and the four corners the browser
+ * projected, and it returns a function from page coordinates to canvas pixels.
+ *
+ * WHY THIS EXISTS AT ALL. The obvious way to place the art is
+ * `img.getBoundingClientRect()`, and that is an AXIS-ALIGNED BOX around the
+ * projected shape. On a page turned ten to twenty degrees the box is half again
+ * as large as the thing inside it, and the extra is room, bloom and whatever
+ * else the canvas happens to hold there. A measurement window built that way is
+ * not a window on the art; it is a window on the art plus a frame of room, and
+ * the room is the SAME FOOTAGE in both pictures being compared.
+ *
+ * Heckbert's unit-square form, with the affine case kept separate because a
+ * face seen dead-on has no vanishing point and the projective terms go to 0/0.
+ */
+function rectToQuad(w, h, quad) {
+  const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = quad
+  const sx = x0 - x1 + x2 - x3
+  const sy = y0 - y1 + y2 - y3
+  let a, b, c, d, e, f, g, i
+  if (Math.abs(sx) < 1e-9 && Math.abs(sy) < 1e-9) {
+    g = 0
+    i = 0
+    a = x1 - x0
+    b = x2 - x1
+    d = y1 - y0
+    e = y2 - y1
+  } else {
+    const dx1 = x1 - x2,
+      dx2 = x3 - x2,
+      dy1 = y1 - y2,
+      dy2 = y3 - y2
+    const den = dx1 * dy2 - dx2 * dy1
+    g = (sx * dy2 - dx2 * sy) / den
+    i = (dx1 * sy - sx * dy1) / den
+    a = x1 - x0 + g * x1
+    b = x3 - x0 + i * x3
+    d = y1 - y0 + g * y1
+    e = y3 - y0 + i * y3
+  }
+  c = x0
+  f = y0
+  return (px, py) => {
+    const u = px / w,
+      v = py / h
+    const k = g * u + i * v + 1
+    return [(a * u + b * v + c) / k, (d * u + e * v + f) / k]
+  }
+}
+
+/** The four corners of a page-local rectangle, as a quad on the canvas. */
+function localRectQuad(face, rect, quad) {
+  const m = rectToQuad(face[0], face[1], quad)
+  const [x, y, w, h] = rect
+  return [m(x, y), m(x + w, y), m(x + w, y + h), m(x, y + h)]
+}
+
+/** A convex polygon's centre of area is overkill here; the corner mean is not. */
+const quadCentre = q => [
+  q.reduce((a, p) => a + p[0], 0) / q.length,
+  q.reduce((a, p) => a + p[1], 0) / q.length,
+]
+
+/**
+ * THE IN-PLANE ANGLE BETWEEN TWO PICTURES, WITHOUT A REGISTRATION SEARCH.
+ *
+ * WHY A SECOND INSTRUMENT FOR A NUMBER THE REGISTER ALREADY REPORTS. The
+ * register finds scale, shift and angle TOGETHER, so any one of them can be
+ * wrong in a way the other two pay for — and when its peak is not lonely, all
+ * three are a guess with a plausible face. This reads the angle alone: every
+ * edge pixel votes its own direction into a histogram folded to 180 degrees (an
+ * edge has no sign), the two histograms are cross-correlated, and the shift that
+ * lines them up IS the rotation between the pictures. A histogram of directions
+ * does not know where anything is or how big it is, so the answer cannot be
+ * traded against a shift or a scale. Its own confidence is the peak against the
+ * best rival at least three degrees away.
+ *
+ * WHAT IT FOUND, 2026-09-18, and this is why it is here rather than in a
+ * throwaway script: on five slides of eight our journal is 8 to 10 degrees away
+ * in plane from the clip's — 44.98 +8.75, 58.02 +8.25, 68.02 +10.25, 74.02
+ * -9.50, 83.98 +8.25 — and the register, asked separately, agrees to within a
+ * third of a degree on every one of them. Two instruments that share no
+ * arithmetic beyond the edge field itself. That difference is a fact about the
+ * POSE, not about either instrument.
+ */
+function rollBetween(Afield, Bfield, mask, opt = {}) {
+  const bins = opt.bins || 720 // quarter of a degree
+  const span = opt.span ?? 60 // degrees either way
+  const hist = F => {
+    const h = new Float64Array(bins)
+    for (let p = 0; p < W * H; p++) {
+      if (!mask[p]) continue
+      const x = F.ex[p],
+        y = F.ey[p]
+      const m = Math.hypot(x, y)
+      if (m < 1e-6) continue
+      let a = (Math.atan2(y, x) * 180) / Math.PI
+      a = ((a % 180) + 180) % 180
+      h[Math.round((a / 180) * bins) % bins] += m
+    }
+    let ss = 0
+    for (const v of h) ss += v * v
+    const n = Math.sqrt(ss) || 1
+    for (let i = 0; i < bins; i++) h[i] /= n
+    return h
+  }
+  const ha = hist(Afield),
+    hb = hist(Bfield)
+  const at = d => {
+    let ss = 0
+    for (let i = 0; i < bins; i++) ss += ha[i] * hb[(((i + d) % bins) + bins) % bins]
+    return ss
+  }
+  const step = Math.round((span / 180) * bins)
+  let best = null
+  const curve = []
+  for (let d = -step; d <= step; d++) {
+    const v = at(d)
+    const deg = (d * 180) / bins
+    curve.push([deg, v])
+    if (!best || v > best.v) best = { deg, v }
+  }
+  let rival = -1
+  for (const [deg, v] of curve) if (Math.abs(deg - best.deg) >= 3 && v > rival) rival = v
+  return { deg: best.deg, v: best.v, rival, flat: at(0) }
+}
+
 export {
   reachMask,
   luma,
@@ -675,4 +808,8 @@ export {
   bandWidth,
   pageMask,
   silhouetteBox,
+  rectToQuad,
+  localRectQuad,
+  quadCentre,
+  rollBetween,
 }

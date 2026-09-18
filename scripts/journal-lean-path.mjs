@@ -59,20 +59,24 @@ const STRIDES = (process.env.TILT_STRIDES || '1,2').split(',').map(Number)
  * score is built from. Same table as clip-fit's CLIP_QUERY and review.html's
  * CLIP_PRINT.
  *
- * ⚠️ IT IS OFF BY DEFAULT, AND THAT IS A MEASURED DECISION, NOT AN OVERSIGHT.
- * Tried on slide 20 at 68.67 it made the agreement WORSE, not better — the
- * whole curve fell from 0.09…0.15 to 0.02…0.03, which is the signature of a
- * registration that has stopped finding the page at all rather than of a
- * slightly wrong print. Part of the reason is visible: the table has no `packs`
- * key, and `packs` is the one number space_milk prints. The rest is not
- * explained, so the flag is here to be turned on with `FIT_QUERY` when someone
- * has time to find out, and the numbers in the report were taken without it.
+ * ⚠️ IT USED TO MAKE THINGS WORSE, AND 2026-09-18 FOUND OUT WHY. Tried on slide
+ * 20 at 68.67 the whole curve fell from 0.09…0.15 to 0.02…0.03 — the signature
+ * of a registration that has stopped finding the page at all rather than of a
+ * slightly wrong print. It had: the table had no `packs`, `packs` gates
+ * `space_milk`, and a dev URL that carries any data parameter at all is taken
+ * at its word and fills nothing from the sample. So the page was DROPPED,
+ * storyPlan.js rebuilt the story 5.4 s shorter (88.97 s against 94.37), and
+ * from 67 s on the flag was parking us one page further along than the clip:
+ * at 68.67 our JOKE page against the clip's Space Milk. `packs=257` is on the
+ * table now — the clip prints 257 there, read off the frame — and clip-fit
+ * carries a guard that refuses to report a row whose page is not the page that
+ * was asked for.
  */
 const CLIP_QUERY =
   '?days=257&points=120&level=SILVER&total_wins=257' +
   '&biggest_win=257&biggest_win_game=Dragon%20Coins%20Jackpot&top_multiplier=257' +
   '&top_multiplier_game=Tiger%20Jackpots&favorite_game_name=Tiger%20Jackpots' +
-  '&bonuses=257&sports_wins=257&sports_multiplier=257'
+  '&bonuses=257&sports_wins=257&sports_multiplier=257&packs=257'
 const QUERY = process.env.FIT_QUERY ?? (process.env.TILT_CLIP_PRINT === '1' ? CLIP_QUERY : '')
 
 /** Frames 4-7 are the entrance, owned by swingOpen; 24 is past the last turn. */
