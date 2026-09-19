@@ -1745,7 +1745,23 @@ console.log("seed = our table's pose for that slide; pose = what the clip is doi
 const HEAD =
   '     t  frame page                    rot   scale     cx     cy    rotY   score  sharp    seed   soft'
 console.log(HEAD)
-const chain = !has('--nochain') && !has('--t')
+/**
+ * `--t` DOES NOT CHAIN, because the seconds it is given are usually unrelated —
+ * and `--chain` turns it back on for the case where they are not.
+ *
+ * ⚠️ IT IS NOT A CONVENIENCE. Measured on the outro, 84.03..88.03 at a half
+ * second, unchained against chained: unchained the angle comes back 20.6 / 0.1 /
+ * 7.6 / 5.6 / 13.6 / 11.8 / -0.7 / 3.0 / 2.2 and the yaw swings +14 / 0 / -16 /
+ * -15.5 / +14 / +15 — a search bouncing between local maxima, not a journal
+ * moving. Every one of those rows was seeded from OUR table, which on this slide
+ * is the storyboard's and 13 % out in size, so each second sets off from the
+ * same wrong place and lands wherever its own basin takes it. Seeded from the
+ * neighbour instead, the same seconds walk an arc.
+ *
+ * The outro needs the pair `--t ... --chain` rather than `--slide 23` because
+ * SLIDES cuts it in two at 85.0 (see the note on `--as-frame`).
+ */
+const chain = !has('--nochain') && (!has('--t') || has('--chain'))
 
 const rowAt = (t, seed, how) => {
   const slide = slideAt(t)
@@ -1852,6 +1868,184 @@ if (chain && rows.length > 1) {
 
 if (has('--overlay'))
   for (const r of rows) drawQuad(clipFrame(r.t), quadOf(r, r.face), `${OUT}/pose-${r.t}.png`)
+
+/**
+ * `--as-motion` FEEDS AN ABSOLUTE READ BACK INTO THE TABLE THE STORY PLAYS.
+ *
+ *   node scripts/journal-measure.mjs --slide 8 --as-motion
+ *   node scripts/journal-measure.mjs --t 84.03 ... --as-motion --as-frame 23
+ *   node scripts/journal-path.mjs                      # then rebuild, as always
+ *
+ * ⚠️ `--as-frame N` FILES EVERY ROW UNDER ONE FRAME, and the OUTRO needs it.
+ * `--slide 23` stops at 85.0, because SLIDES carries a frame 24 there — not a
+ * page change but a marker the retired `recede` hung its pose on — so a slide
+ * run covers two seconds of a four-second outro and, merging, replaces the nine
+ * rows the table has with those two. motion.json has always held the whole
+ * outro as frame 23 and JOURNAL_PATH is built from that, so the seconds past
+ * 85.0 must be filed there too or they are dropped: `journal-path` has no
+ * ANCHOR[24] and silently keeps no rows for a frame it does not know.
+ *
+ * WHY THIS EXISTS, and it is the missing half of a pipeline rather than a new
+ * idea. `journal-path.mjs` builds every row of JOURNAL_PATH as ANCHOR + MOTION,
+ * and until now MOTION could only come from `--motion`, which registers a clip
+ * frame against another clip frame of the SAME slide. That instrument is sound
+ * where it locks and useless where it does not, and where it does not is
+ * exactly the slides whose page WE print differently from the clip's run —
+ * 8, 22, 23. On those it has been reporting the room instead of the journal.
+ *
+ * This mode reads the clip's four page EDGES instead, so nothing inside the
+ * quad — no heading, no digits, no game art — enters the arithmetic, and our
+ * layout cannot contaminate it. What it writes is the same thing `--motion`
+ * writes, computed from the absolute poses rather than from a registration:
+ * each second's displacement, size ratio and turn RELATIVE TO the slide's first
+ * measured second. The table's shape is untouched and `journal-path.mjs` does
+ * not learn a new format.
+ *
+ * ⚠️ IT ALSO PRINTS THE ANCHOR, and the anchor must be pasted with it. A drift
+ * is relative by construction, so writing the drift alone would hang this
+ * slide's measured motion off whatever absolute pose ANCHOR still holds — which
+ * on these three slides is the storyboard's, i.e. the thing being replaced.
+ *
+ * ⚠️ AND IT MERGES, never overwrites, for the reason `--motion --merge` gives
+ * at length above: motion.json is the story's measurement, not a scratch file.
+ *
+ * WHAT IS NOT WRITTEN IS `rotY`. The clip yaws — frame 8 runs +1 to -15 deg
+ * across one slide — and JOURNAL_PATH has no column for it; the story's yaw
+ * lives in SLIDE_LEAN_PATH, a separate table with a separate reader. The yaw
+ * column is printed here so it can be carried there by hand, deliberately, and
+ * is not smuggled into the size column where a similarity fit would put it.
+ */
+if (has('--as-motion')) {
+  const dest = `${OUT}/motion.json`
+  const asFrame = val('--as-frame') ? Number(val('--as-frame')) : null
+  /**
+   * `--keep-anchor` ADDS SECONDS TO A SLIDE INSTEAD OF REPLACING IT.
+   *
+   *   node scripts/journal-measure.mjs --t 11.63 11.70 ... 12.04 --chain \
+   *        --as-motion --keep-anchor
+   *
+   * WHY, and it is the difference between a fix and a regression. A plain
+   * `--as-motion` run makes its own first second the slide's zero, so the slide
+   * takes this instrument's ABSOLUTE pose — anchor and all. That is right where
+   * no other instrument can see (frames 8, 22, 23) and wrong everywhere else:
+   * tried on frame 20 the same evening, it moved a page that clip-fit scored at
+   * -7/-18 px to -35/+106, with all four windows agreeing to 13 px that it had
+   * gone low and small. Four windows agreeing is the strongest verdict here.
+   *
+   * With this flag the run keeps the slide's existing anchor second as the zero
+   * and writes every other second as a displacement FROM it, measured by this
+   * instrument on both ends. The anchor's absolute pose — whatever measured it —
+   * is untouched, the slide's other rows are untouched, and what the run adds is
+   * only the seconds it covers that the table did not.
+   *
+   * WHAT IT IS FOR: the seconds INSIDE a page turn. `windowOf` starts a slide
+   * TURN_BLIND (0.97 s) after its cut, so between the turn ending and the first
+   * measured row the pose is a spline's guess, and it spends that gap CATCHING
+   * UP: measured frame by frame on frame 8, our roll is 10.3 deg behind the
+   * clip at 11.63 and does not arrive until 12.04, a quarter second after the
+   * page is already face-on. The owner's words for it were "он переворачивается,
+   * и ты его подгоняешь под позицию". The clip does not: it is at -11.98 by
+   * 11.63 and holds. These rows are how the table learns that.
+   *
+   * ⚠️ THE RUN MUST INCLUDE THE ANCHOR SECOND, or there is nothing to measure
+   * the new seconds against and the mode refuses rather than guessing.
+   */
+  const keepAnchor = has('--keep-anchor')
+  const byFrame = new Map()
+  for (const r of rows) {
+    const f = asFrame ?? r.frame
+    if (!byFrame.has(f)) byFrame.set(f, [])
+    byFrame.get(f).push(r)
+  }
+  const prevRows = existsSync(`${OUT}/motion.json`)
+    ? JSON.parse(readFileSync(`${OUT}/motion.json`, 'utf8')).rows
+    : []
+  const out2 = []
+  const anchors = []
+  for (const [frame, rs] of byFrame) {
+    rs.sort((a, b) => a.t - b.t)
+    let a = rs[0]
+    if (keepAnchor) {
+      const have = prevRows.filter(r => r.frame === frame).sort((x, y) => x.t - y.t)
+      if (!have.length) throw new Error(`--keep-anchor: frame ${frame} has no rows to anchor on`)
+      const at = have[0].t
+      const mine = rs.find(r => Math.abs(r.t - at) < 0.02)
+      if (!mine)
+        throw new Error(
+          `--keep-anchor: frame ${frame} is anchored at ${at} and this run does not cover it`,
+        )
+      a = mine
+    }
+    anchors.push({ frame, page: a.page, t: a.t, rot: a.rot, scale: a.scale, cx: a.cx, cy: a.cy })
+    let prev = null
+    for (const r of rs) {
+      const row = {
+        t: +r.t.toFixed(2),
+        frame,
+        page: r.page,
+        dx: Math.round(((r.cx - a.cx) / 100) * W),
+        dy: Math.round(((r.cy - a.cy) / 100) * H),
+        size: +(r.scale / a.scale).toFixed(4),
+        rot: +(r.rot - a.rot).toFixed(2),
+        // The edge fit has no rival pose to compare against, so it cannot
+        // report the loneliness `--motion` does. `score` is carried through as
+        // it stands and the pair is set well clear of journal-path's SHAKY
+        // cut, because a row that survived the backward pass has already been
+        // judged by the one number here that is not an opinion.
+        score: r.score,
+        rival: 0,
+        edges: true,
+      }
+      if (prev)
+        row.step = {
+          dx: Math.round(((r.cx - prev.cx) / 100) * W),
+          dy: Math.round(((r.cy - prev.cy) / 100) * H),
+          s: +(r.scale / prev.scale).toFixed(4),
+          rot: +(r.rot - prev.rot).toFixed(2),
+        }
+      prev = r
+      out2.push(row)
+    }
+  }
+  const prevFile = existsSync(dest) ? JSON.parse(readFileSync(dest, 'utf8')) : { rows: [] }
+  const mine = new Set(byFrame.keys())
+  // Replacing a whole frame is the default; `--keep-anchor` keeps every second
+  // the file already has and only overwrites the ones this run re-read.
+  const seen = new Set(out2.map(r => `${r.frame}@${r.t.toFixed(2)}`))
+  const merged = [
+    ...prevFile.rows.filter(r =>
+      keepAnchor ? !seen.has(`${r.frame}@${r.t.toFixed(2)}`) : !mine.has(r.frame),
+    ),
+    ...out2,
+  ].sort((a, b) => a.t - b.t)
+  mkdirSync(OUT, { recursive: true })
+  writeFileSync(
+    dest,
+    JSON.stringify(
+      {
+        measured: `${prevFile.measured || ''}, frame ${[...mine].join('/')} edges ${new Date().toISOString().slice(0, 10)}`,
+        rows: merged,
+      },
+      null,
+      1,
+    ),
+  )
+  console.log(`\n-> ${dest}  (${out2.length} rows replaced, ${merged.length} in the file)`)
+  if (keepAnchor) {
+    console.log('\nANCHOR IS UNCHANGED (--keep-anchor). Just re-run journal-path.')
+    console.log('The zero each added second was measured against:')
+  } else console.log('\nPASTE INTO ANCHOR in scripts/journal-path.mjs, then re-run journal-path:')
+  for (const a of anchors)
+    console.log(
+      `  ${a.frame}: { rot: ${a.rot}, scale: ${a.scale}, cx: ${a.cx}, cy: ${a.cy} }, // clip ${new Date().toISOString().slice(0, 10)}: page edges at ${a.t.toFixed(2)}`,
+    )
+  const yaws = rows.filter(r => r.rotY != null)
+  if (yaws.length) {
+    console.log('\nTHE CLIP YAW THIS RUN SAW — for SLIDE_LEAN_PATH, not for this table:')
+    for (const r of yaws) console.log(`  [${r.t.toFixed(2)}, 0.00, ${r.rotY.toFixed(2)}],`)
+  }
+  process.exit(0)
+}
 
 if (has('--write')) {
   writeFileSync(
