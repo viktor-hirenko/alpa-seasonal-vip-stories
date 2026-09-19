@@ -186,7 +186,7 @@ const SLIDES = [
 const ANCHOR = {
   // MEASURED OFF THE CLIP 2026-09-07 where the row says so, storyboard where it
   // does not. `rot` is the clip's on every row and has been since 05.09.
-  7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 }, // storyboard — the handover
+  7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 }, // ⚠️ THE COVER IS HALF FIXED. Its drift is measured off the clip now (19.09) — ours used to roll 10->21 deg while the clip falls 19->13.5, i.e. the two turned AWAY from each other, which is what the owner kept screenshotting. With the measured drift the roll error is 4 deg instead of 13.5. What is LEFT is a near-pure VERTICAL offset of ~104 px: the clip holds the cover at cy 54.1, we hold it at 48.7. That number is swingOpen's handover, so moving it alone tears the entrance — the whole entrance has to be re-measured with it, and that is its own session.
   8: { rot: -10.94, scale: 0.6871, cx: 53.0, cy: 53.24 }, // clip 07.09 — 19.09 re-read REJECTED: it read 4 px spread yet moved the page from 62 px off the clip to 122. A tight spread on a wrong window is still tight; the clip is the judge, not the spread.
   9: { rot: 6.46, scale: 0.6347, cx: 53.19, cy: 53.15 }, // clip 19.09: pos rot (spread cx 3px rot 0.25deg)
   10: { rot: -1.43, scale: 0.68, cx: 43.4, cy: 49.82 }, // clip 19.09: pos rot (spread cx 2px rot 1.51deg)

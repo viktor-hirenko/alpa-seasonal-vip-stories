@@ -9,6 +9,187 @@
  "units": "dx/dy design px, size ratio, rot degrees, all relative to the slide's first sample",
  "rows": [
   {
+   "t": 6,
+   "frame": 7,
+   "page": "cover",
+   "dx": 0,
+   "dy": 0,
+   "size": 1,
+   "rot": 0,
+   "score": 1,
+   "rival": 0
+  },
+  {
+   "t": 6.5,
+   "frame": 7,
+   "page": "cover",
+   "dx": -37,
+   "dy": 2,
+   "size": 1.0106,
+   "rot": -0.25,
+   "score": 0.536,
+   "rival": 0.262,
+   "step": {
+    "dx": -37,
+    "dy": 2,
+    "s": 1.0106,
+    "rot": -0.25
+   }
+  },
+  {
+   "t": 7,
+   "frame": 7,
+   "page": "cover",
+   "dx": -46,
+   "dy": -13,
+   "size": 0.9898,
+   "rot": -0.75,
+   "score": 0.55,
+   "rival": 0.274,
+   "step": {
+    "dx": -9,
+    "dy": -15,
+    "s": 0.9794,
+    "rot": -0.5
+   }
+  },
+  {
+   "t": 7.5,
+   "frame": 7,
+   "page": "cover",
+   "dx": -42,
+   "dy": -21,
+   "size": 0.9634,
+   "rot": -1.75,
+   "score": 0.612,
+   "rival": 0.269,
+   "step": {
+    "dx": 4,
+    "dy": -8,
+    "s": 0.9734,
+    "rot": -1
+   }
+  },
+  {
+   "t": 8,
+   "frame": 7,
+   "page": "cover",
+   "dx": -47,
+   "dy": -18,
+   "size": 0.9564,
+   "rot": -3,
+   "score": 0.562,
+   "rival": 0.296,
+   "step": {
+    "dx": -5,
+    "dy": 3,
+    "s": 0.9927,
+    "rot": -1.25
+   }
+  },
+  {
+   "t": 8.5,
+   "frame": 7,
+   "page": "cover",
+   "dx": -79,
+   "dy": -10,
+   "size": 0.9723,
+   "rot": -4.25,
+   "score": 0.607,
+   "rival": 0.281,
+   "step": {
+    "dx": -32,
+    "dy": 8,
+    "s": 1.0167,
+    "rot": -1.25
+   }
+  },
+  {
+   "t": 9,
+   "frame": 7,
+   "page": "cover",
+   "dx": -112,
+   "dy": -13,
+   "size": 0.9972,
+   "rot": -5.25,
+   "score": 0.69,
+   "rival": 0.303,
+   "step": {
+    "dx": -33,
+    "dy": -3,
+    "s": 1.0256,
+    "rot": -1
+   }
+  },
+  {
+   "t": 9.5,
+   "frame": 7,
+   "page": "cover",
+   "dx": -123,
+   "dy": -32,
+   "size": 1.0092,
+   "rot": -5.75,
+   "score": 0.848,
+   "rival": 0.3,
+   "step": {
+    "dx": -11,
+    "dy": -19,
+    "s": 1.012,
+    "rot": -0.5
+   }
+  },
+  {
+   "t": 10,
+   "frame": 7,
+   "page": "cover",
+   "dx": -119,
+   "dy": -58,
+   "size": 1.0035,
+   "rot": -5.75,
+   "score": 0.793,
+   "rival": 0.3,
+   "step": {
+    "dx": 4,
+    "dy": -26,
+    "s": 0.9944,
+    "rot": 0
+   }
+  },
+  {
+   "t": 10.5,
+   "frame": 7,
+   "page": "cover",
+   "dx": -126,
+   "dy": -73,
+   "size": 0.9992,
+   "rot": -5,
+   "score": 0.664,
+   "rival": 0.289,
+   "step": {
+    "dx": -7,
+    "dy": -15,
+    "s": 0.9957,
+    "rot": 0.75
+   }
+  },
+  {
+   "t": 11,
+   "frame": 7,
+   "page": "cover",
+   "dx": -134,
+   "dy": -87,
+   "size": 0.9889,
+   "rot": -4,
+   "score": 0.512,
+   "rival": 0.282,
+   "step": {
+    "dx": -8,
+    "dy": -14,
+    "s": 0.9897,
+    "rot": 1
+   }
+  },
+  {
    "t": 12.037,
    "frame": 8,
    "page": "editors_note",
