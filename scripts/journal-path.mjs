@@ -206,7 +206,16 @@ const ANCHOR = {
   // seconds by 0.05 deg and 0.001 in size, i.e. the chain is self-consistent.
   // Its control is frame 10, where the shipped table is independently verified
   // against the clip to 1 px: there it reads the size to 0.02-0.6 %.
-  9: { rot: 6.46, scale: 0.6347, cx: 53.19, cy: 53.15 }, // clip 19.09: pos rot (spread cx 3px rot 0.25deg)
+  9: { rot: 5.71, scale: 0.635, cx: 52.0, cy: 52.8 }, // clip 19.09 night: the PAGE EDGES at 18.07 — the cleanest read of the session
+  // ⚠️ THE "+147 PX" THIS SLIDE HAS BEEN CARRYING IS THE INSTRUMENT, NOT THE
+  // JOURNAL. `clip-fit` picks its primary window by score, and on this slide
+  // that is planets-4.webp, which answers -20.6 % and +153 px while reporting
+  // NO TWO WINDOWS AGREE — its `face` window says +1.9 % and -53 px in the other
+  // direction. The edge fit settles it: eight seconds, scores 0.661-0.754 (the
+  // highest anywhere in the story) and a backward pass that moved NONE of them,
+  // and it puts the shipped anchor right to 0.0003 in size, 13 px in cx and 7 px
+  // in cy. The slide was never out. The numbers here are the edge fit's, which
+  // is a refinement of a few pixels rather than a fix.
   10: { rot: -1.43, scale: 0.68, cx: 43.4, cy: 49.82 }, // clip 19.09: pos rot (spread cx 2px rot 1.51deg)
   11: { rot: -1.25, scale: 0.6416, cx: 48.26, cy: 50.28 }, // clip 19.09: pos rot (spread cx 3px rot 0.5deg)
   12: { rot: -2.05, scale: 0.6708, cx: 58.17, cy: 47.8 }, // clip 19.09: pos rot (spread cx 2px rot 0.5deg)
@@ -275,7 +284,13 @@ const ANCHOR = {
   // T-2's page box). `scale` and `cy` are NOT touched: both windows answer
   // 0.7060 and 46.9-47.0 against the shipped 0.7083 and 47.0, which is inside
   // their own spread and so is not a measurement of anything.
-  20: { rot: -12.58, scale: 0.7083, cx: 54.0, cy: 47.0 }, // clip: position and size 07.09 (kept) — ROLL ONLY from the page edges, 19.09 night
+  20: { rot: -12.58, scale: 0.7083, cx: 53.9, cy: 48.3 }, // clip: size 07.09, ROLL from the page edges 19.09 night, and `cy` re-read 19.09 night
+  // `cy` MOVED 25 PX DOWN, and two instruments asked for it together. With the
+  // roll corrected, clip-fit's four windows agreed to 17 px that the page sat
+  // +2/-25 — high — and the edge fit, seeded from the corrected pose, put the
+  // clip at cy 48.6 against our 47.0 at the same second. The owner had just
+  // photographed 68.7 s. The slide's MOTION is the edge fit's now as well
+  // (`--keep-anchor`, so only the drift moved and this anchor stayed the judge).
   // ⚠️ THE ROLL HERE WAS TEN DEGREES OUT AND THREE INSTRUMENTS NOW SAY SO. The
   // shipped -24.28 came from the registration on 07.09; today `clip-fit`'s own
   // dedicated roll probe puts the clip at -14.96 (0.986 against 0.924 three
@@ -489,7 +504,32 @@ for (const s of SLIDES) {
   const samples = byFrame.get(s.frame)
   if (!samples) continue
   samples.sort((a, b) => a.t - b.t)
-  const full = keysOf(s.frame, samples)
+  /**
+   * ⚠️ INSIDE A TURN, ONE ROW. THE REST IS THE INSTRUMENT SHAKING (2026-09-19).
+   *
+   * The seconds before a slide's anchor are the ones measured INSIDE its page
+   * turn, and they were measured at 0.07 s because that is a turn's whole
+   * timescale. At that spacing the edge fit's own scatter is bigger than the
+   * motion: on frame 16 it reads cx 55.11 / 58.35 / 57.98 / 54.19 across 0.2 s,
+   * which is 35 px out and 41 px back, and a journal does not do that in six
+   * frames. Shipped whole, the spline drew every one of those wobbles — measured
+   * on the rendered story the horizontal speed at 50.03 ran 2.05 % of the stage
+   * per frame and stepped by 1.39 between two frames. The owner saw it with the
+   * clip switched off: «сначала в одной позе, потом резко переходит в другое».
+   *
+   * What those rows are FOR is the arrival: without one the path does not reach
+   * the slide's pose until 0.97 s after the cut, a quarter second after the page
+   * is already face-on, and the journal spends that gap catching up. The FIRST
+   * of them buys that entirely — it is the earliest second the clip can be read
+   * at, and the segment from there to the anchor is two close values a spline
+   * crosses smoothly. The ones between buy nothing and carry the scatter.
+   *
+   * So: the earliest in-turn row is kept and the rest are dropped. The anchor
+   * and everything after it are untouched.
+   */
+  const zero = samples.findIndex(x => x.dx === 0 && x.dy === 0 && x.size === 1 && x.rot === 0)
+  const kept = zero > 1 ? [samples[0], ...samples.slice(zero)] : samples
+  const full = keysOf(s.frame, kept)
   /**
    * HOLD THE POSE UNTIL THE PAGE FOLDS, and this row is why the measured roll
    * can be shipped at all.
@@ -601,7 +641,7 @@ for (const s of SLIDES) {
   report.push({
     frame: s.frame,
     page: s.page,
-    samples: samples.length,
+    samples: kept.length,
     keys: 0,
     rotFrom: 0,
     rotTo: samples[samples.length - 1].rot,

@@ -490,108 +490,6 @@
    }
   },
   {
-   "t": 17.66,
-   "frame": 9,
-   "page": "days_in_spotlight",
-   "dx": 32,
-   "dy": -52,
-   "size": 1.0269,
-   "rot": -0.13,
-   "score": 0.687,
-   "rival": 0,
-   "edges": true
-  },
-  {
-   "t": 17.73,
-   "frame": 9,
-   "page": "days_in_spotlight",
-   "dx": 15,
-   "dy": -54,
-   "size": 1.0238,
-   "rot": -0.13,
-   "score": 0.613,
-   "rival": 0,
-   "edges": true,
-   "step": {
-    "dx": -17,
-    "dy": -2,
-    "s": 0.9969,
-    "rot": 0
-   }
-  },
-  {
-   "t": 17.8,
-   "frame": 9,
-   "page": "days_in_spotlight",
-   "dx": 23,
-   "dy": -25,
-   "size": 1.0025,
-   "rot": 0.01,
-   "score": 0.645,
-   "rival": 0,
-   "edges": true,
-   "step": {
-    "dx": 9,
-    "dy": 29,
-    "s": 0.9792,
-    "rot": 0.14
-   }
-  },
-  {
-   "t": 17.87,
-   "frame": 9,
-   "page": "days_in_spotlight",
-   "dx": 17,
-   "dy": -16,
-   "size": 1.0025,
-   "rot": 0.01,
-   "score": 0.702,
-   "rival": 0,
-   "edges": true,
-   "step": {
-    "dx": -6,
-    "dy": 9,
-    "s": 1,
-    "rot": 0
-   }
-  },
-  {
-   "t": 17.94,
-   "frame": 9,
-   "page": "days_in_spotlight",
-   "dx": 13,
-   "dy": -10,
-   "size": 1.0025,
-   "rot": 0.06,
-   "score": 0.717,
-   "rival": 0,
-   "edges": true,
-   "step": {
-    "dx": -5,
-    "dy": 6,
-    "s": 1,
-    "rot": 0.05
-   }
-  },
-  {
-   "t": 18.01,
-   "frame": 9,
-   "page": "days_in_spotlight",
-   "dx": 5,
-   "dy": -5,
-   "size": 1,
-   "rot": 0.05,
-   "score": 0.722,
-   "rival": 0,
-   "edges": true,
-   "step": {
-    "dx": -7,
-    "dy": 5,
-    "s": 0.9975,
-    "rot": -0.01
-   }
-  },
-  {
    "t": 18.07,
    "frame": 9,
    "page": "days_in_spotlight",
@@ -599,133 +497,134 @@
    "dy": 0,
    "size": 1,
    "rot": 0,
-   "score": 0.716,
+   "score": 0.711,
    "rival": 0,
-   "edges": true,
-   "step": {
-    "dx": -5,
-    "dy": 5,
-    "s": 1,
-    "rot": -0.05
-   }
+   "edges": true
   },
   {
    "t": 18.57,
    "frame": 9,
    "page": "days_in_spotlight",
-   "dx": -36,
-   "dy": 30,
-   "size": 0.9896,
-   "rot": -0.25,
-   "score": 0.615,
-   "rival": 0.307,
+   "dx": -30,
+   "dy": 38,
+   "size": 0.9913,
+   "rot": -0.15,
+   "score": 0.754,
+   "rival": 0,
+   "edges": true,
    "step": {
-    "dx": -36,
-    "dy": 30,
-    "s": 0.9896,
-    "rot": -0.25
+    "dx": -30,
+    "dy": 38,
+    "s": 0.9913,
+    "rot": -0.15
    }
   },
   {
    "t": 19.07,
    "frame": 9,
    "page": "days_in_spotlight",
-   "dx": -56,
-   "dy": 62,
-   "size": 0.9989,
-   "rot": 0,
-   "score": 0.663,
-   "rival": 0.302,
+   "dx": -48,
+   "dy": 77,
+   "size": 1.0022,
+   "rot": 0.25,
+   "score": 0.692,
+   "rival": 0,
+   "edges": true,
    "step": {
-    "dx": -20,
-    "dy": 32,
-    "s": 1.0094,
-    "rot": 0.25
+    "dx": -18,
+    "dy": 39,
+    "s": 1.011,
+    "rot": 0.4
    }
   },
   {
    "t": 19.57,
    "frame": 9,
    "page": "days_in_spotlight",
-   "dx": -55,
-   "dy": 70,
-   "size": 1.0156,
-   "rot": 0.5,
-   "score": 0.736,
-   "rival": 0.304,
+   "dx": -16,
+   "dy": 94,
+   "size": 1.0164,
+   "rot": 2.15,
+   "score": 0.672,
+   "rival": 0,
+   "edges": true,
    "step": {
-    "dx": 1,
-    "dy": 8,
-    "s": 1.0167,
-    "rot": 0.5
+    "dx": 32,
+    "dy": 17,
+    "s": 1.0142,
+    "rot": 1.9
    }
   },
   {
    "t": 20.07,
    "frame": 9,
    "page": "days_in_spotlight",
-   "dx": -39,
-   "dy": 49,
-   "size": 1.022,
-   "rot": 1.25,
-   "score": 0.825,
-   "rival": 0.298,
+   "dx": 2,
+   "dy": 74,
+   "size": 1.0243,
+   "rot": 2.65,
+   "score": 0.661,
+   "rival": 0,
+   "edges": true,
    "step": {
-    "dx": 16,
-    "dy": -21,
-    "s": 1.0064,
-    "rot": 0.75
+    "dx": 18,
+    "dy": -20,
+    "s": 1.0078,
+    "rot": 0.5
    }
   },
   {
    "t": 20.57,
    "frame": 9,
    "page": "days_in_spotlight",
-   "dx": -31,
-   "dy": 27,
+   "dx": 8,
+   "dy": 51,
    "size": 1.0054,
-   "rot": 1.75,
-   "score": 0.816,
-   "rival": 0.274,
+   "rot": 3.25,
+   "score": 0.686,
+   "rival": 0,
+   "edges": true,
    "step": {
-    "dx": 8,
-    "dy": -22,
-    "s": 0.9837,
-    "rot": 0.5
+    "dx": 6,
+    "dy": -23,
+    "s": 0.9815,
+    "rot": 0.6
    }
   },
   {
    "t": 21.07,
    "frame": 9,
    "page": "days_in_spotlight",
-   "dx": -27,
-   "dy": 17,
-   "size": 0.9812,
-   "rot": 2,
-   "score": 0.766,
-   "rival": 0.28,
+   "dx": 11,
+   "dy": 38,
+   "size": 0.9786,
+   "rot": 3.4,
+   "score": 0.712,
+   "rival": 0,
+   "edges": true,
    "step": {
-    "dx": 4,
-    "dy": -10,
-    "s": 0.976,
-    "rot": 0.25
+    "dx": 3,
+    "dy": -13,
+    "s": 0.9734,
+    "rot": 0.15
    }
   },
   {
    "t": 21.57,
    "frame": 9,
    "page": "days_in_spotlight",
-   "dx": -40,
-   "dy": 9,
-   "size": 0.9816,
-   "rot": 1.75,
-   "score": 0.758,
-   "rival": 0.282,
+   "dx": -33,
+   "dy": 18,
+   "size": 0.9864,
+   "rot": 2.1,
+   "score": 0.728,
+   "rival": 0,
+   "edges": true,
    "step": {
-    "dx": -13,
-    "dy": -8,
-    "s": 1.0004,
-    "rot": -0.25
+    "dx": -44,
+    "dy": -19,
+    "s": 1.0081,
+    "rot": -1.3
    }
   },
   {
