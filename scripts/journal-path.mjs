@@ -187,15 +187,15 @@ const ANCHOR = {
   // MEASURED OFF THE CLIP 2026-09-07 where the row says so, storyboard where it
   // does not. `rot` is the clip's on every row and has been since 05.09.
   7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 }, // storyboard — the handover
-  8: { rot: -10.94, scale: 0.6871, cx: 53.0, cy: 53.24 }, // clip: position and size
-  9: { rot: 13.96, scale: 0.6347, cx: 53.19, cy: 53.15 }, // clip 19.09: pos+size re-read, spread cx 3px cy 5px
-  10: { rot: -7.59, scale: 0.68, cx: 43.4, cy: 49.82 }, // clip 19.09: pos+size re-read, spread cx 2px cy 3px
-  11: { rot: -0.25, scale: 0.6416, cx: 48.26, cy: 50.28 }, // clip 19.09: pos+size re-read, spread cx 3px cy 3px
-  12: { rot: -4.72, scale: 0.6708, cx: 58.17, cy: 47.8 }, // clip 19.09: pos+size re-read, spread cx 2px cy 1px
-  13: { rot: 13.2, scale: 0.6631, cx: 50.94, cy: 54.51 }, // clip: position and size
-  14: { rot: -8.43, scale: 0.6472, cx: 43.5, cy: 52.9 }, // clip 19.09: pos+size re-read, spread cx 5px cy 5px
-  15: { rot: 10.28, scale: 0.6255, cx: 58.71, cy: 51.41 }, // clip 19.09: pos+size re-read, spread cx 10px cy 2px
-  16: { rot: -21.89, scale: 0.7, cx: 54.0, cy: 52.6 }, // clip 19.09: pos+size re-read, spread cx 5px cy 3px
+  8: { rot: -10.94, scale: 0.6871, cx: 53.0, cy: 53.24 }, // clip 07.09 — 19.09 re-read REJECTED: it read 4 px spread yet moved the page from 62 px off the clip to 122. A tight spread on a wrong window is still tight; the clip is the judge, not the spread.
+  9: { rot: 6.46, scale: 0.6347, cx: 53.19, cy: 53.15 }, // clip 19.09: pos rot (spread cx 3px rot 0.25deg)
+  10: { rot: -1.43, scale: 0.68, cx: 43.4, cy: 49.82 }, // clip 19.09: pos rot (spread cx 2px rot 1.51deg)
+  11: { rot: -1.25, scale: 0.6416, cx: 48.26, cy: 50.28 }, // clip 19.09: pos rot (spread cx 3px rot 0.5deg)
+  12: { rot: -2.05, scale: 0.6708, cx: 58.17, cy: 47.8 }, // clip 19.09: pos rot (spread cx 2px rot 0.5deg)
+  13: { rot: 2.46, scale: 0.6631, cx: 50.94, cy: 54.51 }, // clip 19.09: rot (spread cx 247px rot 1.5deg)
+  14: { rot: -8.68, scale: 0.6472, cx: 43.5, cy: 52.9 }, // clip 19.09: pos rot (spread cx 5px rot 0.76deg)
+  15: { rot: 18.78, scale: 0.6255, cx: 58.71, cy: 51.41 }, // clip 19.09: pos rot (spread cx 10px rot 1.16deg)
+  16: { rot: -14.64, scale: 0.7, cx: 54.0, cy: 52.6 }, // clip 19.09: pos rot (spread cx 5px rot 1deg)
   // `cy` RE-READ 2026-09-09 (session V): the page sat too low, and two
   // independent flights on this very slide say so in mirror image — the
   // basketball rides ABOVE the page's top edge and our page covered LESS of it
@@ -234,9 +234,9 @@ const ANCHOR = {
   //
   // `scale` and `cx` are NOT touched: -3.4 % and +8 px are each inside the
   // spread of those same readings, so neither is a measurement of anything.
-  17: { rot: 15.07, scale: 0.637, cx: 61.0, cy: 52.89 }, // clip 19.09: pos+size re-read, spread cx 13px cy 25px
-  18: { rot: -11.58, scale: 0.642, cx: 48.9, cy: 54.3 }, // clip 19.09: pos+size re-read, spread cx 8px cy 11px
-  19: { rot: 8.36, scale: 0.6485, cx: 46.57, cy: 54.32 }, // clip 19.09: pos+size re-read, spread cx 5px cy 12px
+  17: { rot: 22.06, scale: 0.637, cx: 61.0, cy: 52.89 }, // clip 19.09: pos rot (spread cx 13px rot 2.19deg)
+  18: { rot: -2.75, scale: 0.642, cx: 48.9, cy: 54.3 }, // clip 19.09: pos rot (spread cx 8px rot 1.76deg)
+  19: { rot: 18.11, scale: 0.6485, cx: 46.57, cy: 54.32 }, // clip 19.09: pos rot (spread cx 5px rot 0.37deg)
   // `cx` RE-READ 2026-09-09 (session U): 52.84 was the odd one out. Four
   // window runs — session Q's two on 07.09 and session U's two today, each ten
   // seconds of the slide carried back to 68.037 and filtered by the 1.0 deg
@@ -250,7 +250,7 @@ const ANCHOR = {
   // 0.7060 and 46.9-47.0 against the shipped 0.7083 and 47.0, which is inside
   // their own spread and so is not a measurement of anything.
   20: { rot: -24.28, scale: 0.7083, cx: 54.0, cy: 47.0 }, // clip: position and size
-  21: { rot: 11.03, scale: 0.6662, cx: 51.41, cy: 48.13 }, // clip 19.09: pos+size re-read, spread cx 3px cy 8px
+  21: { rot: 3.53, scale: 0.6662, cx: 51.41, cy: 48.13 }, // clip 19.09: pos rot (spread cx 3px rot 0.8deg)
   22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 }, // storyboard — the two windows disagreed
   23: { rot: 13.21, scale: 0.681, cx: 52.0, cy: 50.2 }, // storyboard — the outro, out of scope
 }
