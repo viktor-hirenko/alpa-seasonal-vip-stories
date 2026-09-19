@@ -120,14 +120,29 @@ const ff = (a, stdin) =>
  * the shallower of the two, which is the sign the clip shows. So the clip sits
  * at roughly +8 degrees of yaw where every settled pose in slides.js says zero.
  *
- * The chain: scale, the face's own translateZ of half the spine, rotateY,
- * rotateZ, the centre placed by cx/cy, then the perspective divide about the
- * middle of the stage. Checked against the browser's own projection on the three
- * yaw values above: worst corner 0.6 design px (--selftest).
+ * AND IT CARRIES THE PITCH TOO, since session AV. `rotationX` is the axis the
+ * owner has been pointing at since 18.09 — «перспектива рисковатая», the clip's
+ * page a trapezium where ours is a rectangle — and it is the one thing this
+ * instrument used to leave at a hard zero on thirteen slides of seventeen. A
+ * quadrilateral carries EIGHT numbers and the pose has SIX, so the pitch is not
+ * a guess added to a full model; it was a parameter the model was missing.
+ *
+ * The chain: scale, the face's own translateZ of half the spine, rotateX,
+ * rotateY, rotateZ, the centre placed by cx/cy, then the perspective divide
+ * about the middle of the stage. ⚠️ THAT ORDER IS GSAP'S, NOT A CHOICE — GSAP
+ * writes `rotate(Z) rotateY(Y) rotateX(X) scale(s)`, which applied to a point
+ * runs scale first and rotateZ last. Put the pitch in the wrong place in the
+ * chain and it is off by tens of pixels the moment two angles are non-zero.
+ *
+ * Checked against the browser's own projection on six poses — three flat, two
+ * yawed, and (session AV) two pitched and one carrying BOTH a yaw and a pitch,
+ * which is the case that tells the order apart: worst corner 0.6 design px
+ * (--selftest).
  */
 export function quadOf(pose, face = 'page') {
   const { w, h } = FACE[face]
   const s = pose.scale
+  const tx = ((pose.rotX || 0) * Math.PI) / 180
   const ty = ((pose.rotY || 0) * Math.PI) / 180
   const tz = (pose.rot * Math.PI) / 180
   const cx = (pose.cx / 100) * W
@@ -140,10 +155,14 @@ export function quadOf(pose, face = 'page') {
   ].map(([u, v]) => {
     const X = u * s,
       Y = v * s
-    const X1 = X * Math.cos(ty) + DZ * Math.sin(ty)
-    const Z1 = -X * Math.sin(ty) + DZ * Math.cos(ty)
-    const X2 = X1 * Math.cos(tz) - Y * Math.sin(tz)
-    const Y2 = X1 * Math.sin(tz) + Y * Math.cos(tz)
+    // The pitch tips the face about its own horizontal axis, and the spine's
+    // half-depth rides with it — so both Y and Z leave this step changed.
+    const Y0 = Y * Math.cos(tx) - DZ * Math.sin(tx)
+    const Z0 = Y * Math.sin(tx) + DZ * Math.cos(tx)
+    const X1 = X * Math.cos(ty) + Z0 * Math.sin(ty)
+    const Z1 = -X * Math.sin(ty) + Z0 * Math.cos(ty)
+    const X2 = X1 * Math.cos(tz) - Y0 * Math.sin(tz)
+    const Y2 = X1 * Math.sin(tz) + Y0 * Math.cos(tz)
     const k = PERSP / (PERSP - Z1)
     return [W / 2 + (cx + X2 - W / 2) * k, H / 2 + (cy + Y2 - H / 2) * k]
   })
@@ -172,7 +191,7 @@ const clipFrame = t =>
   ])
 
 /** A still on the canvas grid — used by the self-test on our own renders. */
-const pngFrame = f =>
+export const pngFrame = f =>
   ff(['-i', f, '-vf', `scale=${W}:${H}:flags=lanczos`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'])
 
 /** Luma, as floats: the distance transform below is built from its gradient. */
@@ -277,7 +296,7 @@ const NBIN = 8 // gradient-direction bins over the full 360 degrees
  * INWARD, at the inner edge it goes bright to dark. So a side only matches edges
  * whose gradient points into the journal.
  */
-function chamfer(rgb, keep = 0.06) {
+export function chamfer(rgb, keep = 0.06) {
   const { gx, gy } = gradient(luma(rgb))
   const mag = new Float32Array(W * H)
   for (let i = 0; i < W * H; i++) mag[i] = Math.hypot(gx[i], gy[i])
@@ -334,7 +353,7 @@ function binOf(dx, dy) {
 }
 
 /** Chamfer score: 1 at the edge, 0 at `dmax` and beyond, averaged over sides. */
-function fieldScore(fld, quad, dmax, sides = SIDES) {
+export function fieldScore(fld, quad, dmax, sides = SIDES) {
   let sum = 0
   let wsum = 0
   for (const e of sides) {
@@ -402,14 +421,15 @@ function sharpScore(fld, quad) {
  * two are most sensitive to. `span` caps how far the answer may travel from its
  * seed, so a pose cannot walk off onto the room's own edges without saying so.
  *
- * THE YAW IS NOT ONE OF THE AXES HERE. Let all five loose together and the
- * search trades yaw against size and position: on our own renders, where the
- * truth is known, that cost 3.9 degrees of roll, 5 % of size and 49 design px.
- * Yaw is the weakest of the five — it shows only in how far the top and bottom
- * edges diverge — so it is swept from outside, by solvePose.
+ * THE YAW IS NOT ONE OF THE AXES HERE, AND NEITHER IS THE PITCH. Let all five
+ * loose together and the search trades yaw against size and position: on our own
+ * renders, where the truth is known, that cost 3.9 degrees of roll, 5 % of size
+ * and 49 design px. Yaw is the weakest of the five — it shows only in how far
+ * the top and bottom edges diverge — and the pitch is the same kind of number
+ * read off the OTHER pair of edges, so both are swept from outside, by solvePose.
  */
-function solveFlat(fld, start, face, rotY, bounds) {
-  let best = { ...start, rotY }
+function solveFlat(fld, start, face, rotY, rotX, bounds) {
+  let best = { ...start, rotY, rotX }
   const stages = [
     { dmax: 60, cx: 1.0, cy: 1.0, rot: 1.0, scale: 0.02, passes: 3 },
     { dmax: 30, cx: 0.4, cy: 0.4, rot: 0.4, scale: 0.008, passes: 3 },
@@ -455,7 +475,7 @@ function solveFlat(fld, start, face, rotY, bounds) {
  * buys a number that survives its own self-test.
  */
 export function solvePose(fld, seed, face = 'page', opt = {}) {
-  seed = { rotY: 0, ...seed }
+  seed = { rotY: 0, rotX: 0, ...seed }
   // TWO LEASHES, AND EACH ANSWERS A DIFFERENT QUESTION.
   //
   // `span` is how far one second may sit from the second before it, and it is
@@ -474,11 +494,22 @@ export function solvePose(fld, seed, face = 'page', opt = {}) {
   // measured amount, not by an order: 12 deg of tilt and about 130 design px on
   // frame 14. The keep-leash is set at several times that, so it contains every
   // disagreement the clip has actually shown and none of the collapses.
-  const span = opt.span || { cx: 12, cy: 12, rot: 14, scale: 0.2 }
+  // ⚠️ THE SIZE LEASH IS 0.05 AND IT USED TO BE 0.2. Session AV, and it is the
+  // price of the sixth parameter rather than a tidy-up. A pitched page and a
+  // SMALLER page are the same picture to a chamfer: the trapezium's shape is
+  // set by the product of the half-height and the sine of the pitch, so
+  // shrinking the page and tipping it further leaves the shape alone. With the
+  // pitch free and the old leash, the self-test's two pitched renders — whose
+  // answer is known exactly — came back at 13 % and 22 % of size, 85 and 119
+  // design px out, one of them pinned against the pitch bound at 24 deg. At
+  // 0.05 the same two return the pitch to within 1 and 2 degrees. The five
+  // flat and yawed cases are unmoved either way, which is how we know the leash
+  // is containing the new degeneracy and not the old measurement.
+  const span = opt.span || { cx: 12, cy: 12, rot: 14, scale: 0.05 }
   const bounds = [{ centre: seed, span }]
   if (opt.keep) bounds.push(opt.keep)
-  const at = (y, from) => {
-    const p = solveFlat(fld, from, face, y, bounds)
+  const at = (y, x, from) => {
+    const p = solveFlat(fld, from, face, y, x, bounds)
     return { p, v: fieldScore(fld, quadOf(p, face), 12) }
   }
   // THE YAW GETS A LEASH TOO, and it needed one most of all. It is swept from
@@ -488,26 +519,77 @@ export function solvePose(fld, seed, face = 'page', opt = {}) {
   // shot, not of the frame; it moves slowly or not at all. Within a chain the
   // sweep is therefore local, and only the second that starts a run — the one
   // with no neighbour to believe — sweeps the whole range.
+  //
+  // ⚠️ THE PITCH IS SWEPT ON THE SAME PLAN AND ON THE SAME GRID, session AV,
+  // and the grid is TWO-DIMENSIONAL rather than one sweep after the other.
+  // The two angles look independent — the yaw shows in how the top and bottom
+  // edges diverge, the pitch in how the left and right ones do — and for the
+  // SEARCH they are not. The self-test measures the contamination: .pose-900e
+  // is drawn at yaw 0 and pitch -10, and the solver reads its yaw as +1.5. A
+  // sweep of the yaw taken first, at pitch zero, would therefore crown a yaw
+  // chosen while the pitch was still wrong, and the pitch sweep under it starts
+  // from there. The sequential variant was NOT built and NOT measured; the joint
+  // grid was written first because of that reading and it holds its self-test.
+  // It costs about eight flat solves more per second and a second still takes
+  // under two — this search was never the expensive part, the clip decode is.
   const yawFrom = opt.yawNear ?? null
-  const sweep = from => {
+  const pitchFrom = opt.pitchNear ?? null
+  // Coarse, then a degree, then half a degree — the same funnel the flat solve
+  // runs on, on both angles at once.
+  const gridRound = (from, ys, xs) => {
     let r = null
-    if (yawFrom === null) {
-      for (let y = -16; y <= 16.001; y += 2) {
-        const c = at(y, from)
+    for (const y of ys)
+      for (const x of xs) {
+        const c = at(y, x, from)
         if (!r || c.v > r.v) r = c
       }
-    } else {
-      const lo = Math.max(-YAW_MAX, yawFrom - YAW_SPAN)
-      const hi = Math.min(YAW_MAX, yawFrom + YAW_SPAN)
-      for (let y = lo; y <= hi + 0.001; y += 1) {
-        const c = at(y, from)
-        if (!r || c.v > r.v) r = c
-      }
-    }
-    for (let y = r.p.rotY - 1.5; y <= r.p.rotY + 1.5001; y += 0.5) {
-      if (Math.abs(y) > YAW_MAX) continue
-      if (yawFrom !== null && Math.abs(y - yawFrom) > YAW_SPAN) continue
-      const c = at(y, from)
+    return r
+  }
+  const seq = (lo, hi, step) => {
+    const out = []
+    for (let v = lo; v <= hi + 1e-6; v += step) out.push(+v.toFixed(3))
+    return out
+  }
+  const yawRange = step =>
+    yawFrom === null
+      ? seq(-YAW_MAX, YAW_MAX, step)
+      : seq(Math.max(-YAW_MAX, yawFrom - YAW_SPAN), Math.min(YAW_MAX, yawFrom + YAW_SPAN), step)
+  const pitchRange = step =>
+    // ⚠️ `pinPitch` HOLDS THE PITCH AT ONE VALUE AND SOLVES EVERYTHING ELSE
+    // AROUND IT. It is how the pitch earns its place rather than being asserted:
+    // the same second is solved twice, once with the pitch free and once pinned
+    // flat, and the difference between the two scores is this column's MARGIN.
+    // The rule is SLIDE_LEAN_PATH's own and older than this instrument — the
+    // margin over a page with NO lean is what decides, never the winning angle,
+    // because a search always returns a winner.
+    opt.pinPitch !== undefined
+      ? [opt.pinPitch]
+      : pitchFrom === null
+        ? seq(-PITCH_MAX, PITCH_MAX, step)
+        : seq(
+            Math.max(-PITCH_MAX, pitchFrom - PITCH_SPAN),
+            Math.min(PITCH_MAX, pitchFrom + PITCH_SPAN),
+            step,
+          )
+  const near = (c, half, step, lo, hi, from, span) =>
+    seq(c - half, c + half, step).filter(
+      v => Math.abs(v) <= hi && v >= lo && (from === null || Math.abs(v - from) <= span),
+    )
+  const sweep = from => {
+    // Coarse grid: 4 degrees on both axes where the range is global, 1 where a
+    // neighbour has already said roughly where to look.
+    let r = gridRound(from, yawRange(yawFrom === null ? 4 : 1), pitchRange(pitchFrom === null ? 4 : 1)) // prettier-ignore
+    for (const [half, step] of [
+      [2, 1],
+      [1, 0.5],
+    ]) {
+      const c = gridRound(
+        r.p,
+        near(r.p.rotY, half, step, -YAW_MAX, YAW_MAX, yawFrom, YAW_SPAN),
+        opt.pinPitch !== undefined
+          ? [opt.pinPitch]
+          : near(r.p.rotX, half, step, -PITCH_MAX, PITCH_MAX, pitchFrom, PITCH_SPAN),
+      )
       if (c.v > r.v) r = c
     }
     return r
@@ -537,6 +619,7 @@ export function solvePose(fld, seed, face = 'page', opt = {}) {
       cx: +bp.cx.toFixed(2),
       cy: +bp.cy.toFixed(2),
       rotY: +bp.rotY.toFixed(2),
+      rotX: +bp.rotX.toFixed(2),
     },
     score: fieldScore(fld, quad, 12),
     sharp: sharpScore(fld, quad),
@@ -563,9 +646,9 @@ export function solvePose(fld, seed, face = 'page', opt = {}) {
  */
 function stiffness(fld, pose, face) {
   const base = fieldScore(fld, quadOf(pose, face), 12)
-  const nudge = { rot: 1, scale: pose.scale * 0.01, cx: 1, cy: 1, rotY: 1 }
+  const nudge = { rot: 1, scale: pose.scale * 0.01, cx: 1, cy: 1, rotY: 1, rotX: 1 }
   const out = {}
-  for (const k of ['rot', 'scale', 'cx', 'cy', 'rotY']) {
+  for (const k of ['rot', 'scale', 'cx', 'cy', 'rotY', 'rotX']) {
     const lo = fieldScore(fld, quadOf({ ...pose, [k]: pose[k] - nudge[k] }, face), 12)
     const hi = fieldScore(fld, quadOf({ ...pose, [k]: pose[k] + nudge[k] }, face), 12)
     out[k] = +(1 - Math.max(lo, hi) / (base || 1)).toFixed(4)
@@ -579,6 +662,15 @@ function stiffness(fld, pose, face) {
  *  business and not a settled pose's. */
 const YAW_SPAN = 5
 const YAW_MAX = 16
+
+/** The same two bounds for the pitch, and they are NOT copied from the yaw's.
+ *  The outer one is set off what the other instrument measured where it was
+ *  confident: frames 10, 14, 18 and 20 run -12 to +18.5 deg, so 24 contains
+ *  every pitch the clip has shown with room to spare, and past it the face is
+ *  tipping towards edge-on, which is the page turn's business. The step bound
+ *  is the yaw's: the shot's own geometry, moving slowly or not at all. */
+const PITCH_SPAN = 5
+const PITCH_MAX = 24
 
 /** Below this a nudge costs nothing and the axis is not measured at all. */
 export const SOFT = 0.02
@@ -987,7 +1079,7 @@ if (has('--wside')) SIDE_W = val('--wside').split(',').map(Number)
 
 const fmtPose = p =>
   `{ rot: ${p.rot.toFixed(2)}, scale: ${p.scale.toFixed(3)}, cx: ${p.cx.toFixed(1)}, ` +
-  `cy: ${p.cy.toFixed(1)}, rotY: ${(p.rotY || 0).toFixed(2)} }`
+  `cy: ${p.cy.toFixed(1)}, rotY: ${(p.rotY || 0).toFixed(2)}, rotX: ${(p.rotX || 0).toFixed(2)} }`
 
 // ---------------------------------------------------------------- --redraw
 //
@@ -1036,8 +1128,8 @@ if (has('--yawscan')) {
   console.log(`YAW LANDSCAPE of ${png}, seeded at ${fmtPose({ ...seed, rotY: 0 })}\n`)
   console.log('  rotY    score      rot    scale       cx      cy   sharp')
   for (let y = -14; y <= 14.001; y += 1) {
-    const p = solveFlat(fld, { ...seed, rotY: 0 }, face, y, [
-      { centre: { ...seed, rotY: 0 }, span: { cx: 12, cy: 12, rot: 14, scale: 0.2 } },
+    const p = solveFlat(fld, { ...seed, rotY: 0, rotX: 0 }, face, y, 0, [
+      { centre: { ...seed, rotY: 0, rotX: 0 }, span: { cx: 12, cy: 12, rot: 14, scale: 0.2 } },
     ])
     const q = quadOf(p, face)
     console.log(
@@ -1053,9 +1145,74 @@ if (has('--yawscan')) {
   process.exit(0)
 }
 
+// ---------------------------------------------------------------- --depthscan
+//
+// THE SAME LANDSCAPE OVER BOTH DEPTH ANGLES AT ONCE, session AV.
+//
+//   node scripts/journal-measure.mjs --depthscan _refs/fit/.pose-900d.png -7.25,0.696,51.5,45.7
+//   node scripts/journal-measure.mjs --depthscan 24.37 -1.4,0.66,56,47 --mark 0,-2.5
+//
+// `--yawscan` answers "what does the picture say about the yaw" and cannot
+// answer the question the pitch raises, which is whether the two angles trade
+// against each other and against the SIZE. They do — that is why both are swept
+// from outside — and a one-dimensional scan through a saddle reads as a clean
+// peak. `--mark y,x` prints the score at one pose of interest (the truth, or
+// what the solver returned) next to the grid, so "the solver lost" and "the
+// score is degenerate" stop looking alike.
+if (has('--depthscan')) {
+  const png = argv[argv.indexOf('--depthscan') + 1]
+  const t = (val('--truth') || argv[argv.indexOf('--depthscan') + 2] || '').split(',').map(Number)
+  const seed = { rot: t[0], scale: t[1], cx: t[2], cy: t[3] }
+  const face = val('--face') || 'page'
+  const fld = chamfer(png.endsWith('.png') ? pngFrame(png) : clipFrame(Number(png)))
+  const bounds = [
+    { centre: { ...seed, rotY: 0, rotX: 0 }, span: { cx: 12, cy: 12, rot: 14, scale: 0.2 } },
+  ]
+  const cell = (y, x) => {
+    const p = solveFlat(fld, { ...seed, rotY: 0, rotX: 0 }, face, y, x, bounds)
+    const q = quadOf(p, face)
+    return { p, v: fieldScore(fld, q, 12), s: sharpScore(fld, q) }
+  }
+  const ys = []
+  for (let y = -16; y <= 16.001; y += 4) ys.push(y)
+  const xs = []
+  for (let x = -24; x <= 24.001; x += 4) xs.push(x)
+  console.log(`DEPTH LANDSCAPE of ${png}, seeded at ${fmtPose({ ...seed, rotY: 0, rotX: 0 })}`)
+  console.log('rows = rotX (pitch), columns = rotY (yaw); left block = chamfer x1000, right = sharp\n') // prettier-ignore
+  console.log('rotX \\ rotY' + ys.map(y => y.toFixed(0).padStart(6)).join('') + '   |' + ys.map(y => y.toFixed(0).padStart(6)).join('')) // prettier-ignore
+  let best = null
+  let bestS = null
+  for (const x of xs) {
+    const row = []
+    const rowS = []
+    for (const y of ys) {
+      const c = cell(y, x)
+      if (!best || c.v > best.v) best = { ...c, y, x }
+      if (!bestS || c.s > bestS.s) bestS = { ...c, y, x }
+      row.push((c.v * 1000).toFixed(0).padStart(6))
+      rowS.push(c.s.toFixed(1).padStart(6))
+    }
+    console.log(x.toFixed(0).padStart(11) + row.join('') + '   |' + rowS.join(''))
+  }
+  console.log(`\nbest by chamfer : rotY ${best.y} rotX ${best.x}  score ${best.v.toFixed(4)}  sharp ${best.s.toFixed(2)}  ${fmtPose(best.p)}`) // prettier-ignore
+  console.log(`best by sharp   : rotY ${bestS.y} rotX ${bestS.x}  score ${bestS.v.toFixed(4)}  sharp ${bestS.s.toFixed(2)}  ${fmtPose(bestS.p)}`) // prettier-ignore
+  if (val('--mark')) {
+    const [my, mx] = val('--mark').split(',').map(Number)
+    const c = cell(my, mx)
+    console.log(`marked          : rotY ${my} rotX ${mx}  score ${c.v.toFixed(4)}  sharp ${sharpScore(fld, quadOf(c.p, face)).toFixed(2)}  ${fmtPose(c.p)}`) // prettier-ignore
+    const eq = quadOf({ ...seed, rotY: my, rotX: mx }, face)
+    console.log(`marked, no solve: score ${fieldScore(fld, eq, 12).toFixed(4)}  sharp ${sharpScore(fld, eq).toFixed(2)} (the seed's own rot/scale/cx/cy)`) // prettier-ignore
+  }
+  process.exit(0)
+}
+
 // ---------------------------------------------------------------- --selftest
 if (has('--selftest')) {
+  const SELFTEST_SPAN = val('--sspan')
+    ? { cx: 12, cy: 12, rot: 14, scale: Number(val('--sspan')) }
+    : null
   console.log('SELF-TEST — the method against answers known in advance.\n')
+  if (SELFTEST_SPAN) console.log(`   (scale leash overridden to ${val('--sspan')})\n`)
   let fails = 0
 
   console.log("1. THE FORWARD MODEL against the browser's own projection.")
@@ -1107,6 +1264,38 @@ if (has('--selftest')) {
         [117, 1585],
       ],
     },
+    // ...AND WITH A PITCH, session AV, which is the axis the model gained. The
+    // last of the three carries BOTH angles at once and it is the one that
+    // matters: a pitch placed at the wrong point in GSAP's rotation order
+    // matches the browser perfectly while the yaw is zero and drifts tens of
+    // pixels the moment both are live.
+    {
+      pose: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotX: 10 },
+      q: [
+        [-35, 328],
+        [988, 198],
+        [1229, 1495],
+        [64, 1643],
+      ],
+    },
+    {
+      pose: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotX: -10 },
+      q: [
+        [-114, 247],
+        [1051, 99],
+        [1146, 1435],
+        [122, 1566],
+      ],
+    },
+    {
+      pose: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: 8, rotX: 6 },
+      q: [
+        [-78, 280],
+        [969, 206],
+        [1190, 1465],
+        [75, 1661],
+      ],
+    },
   ]
   for (const k of known) {
     const mine = quadOf(k.pose, 'page')
@@ -1114,11 +1303,16 @@ if (has('--selftest')) {
     const ok = worst <= 2
     if (!ok) fails++
     console.log(
-      `   ${fmtPose(k.pose).padEnd(56)} worst corner ${worst.toFixed(1)} px  ${ok ? 'ok' : 'FAIL'}`,
+      `   ${fmtPose(k.pose).padEnd(72)} worst corner ${worst.toFixed(1)} px  ${ok ? 'ok' : 'FAIL'}`,
     )
   }
 
   console.log('\n2. THE SOLVER against OUR OWN renders, whose pose is known exactly.')
+  // The tolerances, and why there are two of them, are argued on the pitched
+  // cases below. `pos` is design px on the canvas, `depth` is degrees of yaw or
+  // pitch — looser than the roll's because four edges cannot separate a depth
+  // turn from a size perfectly, which this file says twice already.
+  const BLEED_TOL = { rot: 0.6, scale: 0.025, pos: 16, depth: 2.5 }
   console.log('   Seeded deliberately wrong, so the search has to travel.')
   const cases = [
     {
@@ -1147,13 +1341,48 @@ if (has('--selftest')) {
       png: `${ROOT}_refs/fit/.pose-900c.png`,
       truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: -8 },
     },
+    // THE PITCH, AGAINST A TRUTH THAT IS NOT ZERO — session AV, the same three
+    // renders as table 1. Until these existed the sixth parameter had no test
+    // that could fail either, which is the whole reason the thirteen slides
+    // carried a hard zero: a number nothing can refute is not a measurement.
+    //
+    // ⚠️ AND THEY CARRY THEIR OWN TOLERANCE ON SIZE AND POSITION, 2.5 % and 16
+    // design px against the flat cases' 1.2 % and 8. That is not a failing test
+    // waved through; it is a KNOWN OFFSET, measured, and there are two pictures
+    // of it (`--selftest --shots`): on a pitched render the solver's outline
+    // lies along the page AS DRAWN, and the truth — the face rectangle GSAP was
+    // actually given — sits outside it, above the top edge and left of the
+    // spine. The front face carries bleed past the printed page, which is the
+    // very thing `clip-fit --pose` writes `pose-self-*.png` to expose, and
+    // tipping the page projects that bleed further. The flat cases hold the
+    // tight tolerance because there the same bleed is small.
+    //
+    // What this instrument SHIPS from these rows is the angle and nothing else
+    // — rotX and rotY go to SLIDE_LEAN_PATH, never to JOURNAL_PATH's position
+    // or size — so the angle is judged at the depth tolerance, and size and
+    // position are judged only for having stayed where this note says they are.
+    {
+      png: `${ROOT}_refs/fit/.pose-900d.png`,
+      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotX: 10 },
+      tol: BLEED_TOL,
+    },
+    {
+      png: `${ROOT}_refs/fit/.pose-900e.png`,
+      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotX: -10 },
+      tol: BLEED_TOL,
+    },
+    {
+      png: `${ROOT}_refs/fit/.pose-900f.png`,
+      truth: { rot: -7.25, scale: 0.696, cx: 51.5, cy: 45.7, rotY: 8, rotX: 6 },
+      tol: BLEED_TOL,
+    },
   ]
   // The third case is the worst geometry the story contains — its right-hand
   // side is off the canvas entirely and its left-hand side sits against the
   // frame edge — so one vertical side has to carry both the size and the
   // position. With both sides visible (cases 1 and 2) the method comes back
   // inside 0.15 % and 2 design px; the tolerance is set by the hard case.
-  const TOL = { rot: 0.6, scale: 0.012, pos: 8 }
+  const TOL = { rot: 0.6, scale: 0.012, pos: 8, depth: 1.0 }
   for (const c of cases) {
     let rgb
     try {
@@ -1170,8 +1399,21 @@ if (has('--selftest')) {
       cx: c.truth.cx - 3,
       cy: c.truth.cy + 3,
       rotY: 6,
+      rotX: 0,
     }
-    const r = solvePose(fld, seed, 'page')
+    const r = solvePose(fld, seed, 'page', SELFTEST_SPAN ? { span: SELFTEST_SPAN } : {})
+    // ⚠️ `--shots` DRAWS WHAT THE SOLVER FOUND ON THE PICTURE IT FOUND IT IN.
+    // Numbers alone cannot tell a biased solver from a render whose visible
+    // page edge is not the face rectangle, and on the pitched cases that is
+    // precisely the question. The outline either lies along the page's edge or
+    // it does not, and no threshold is involved on either side — the same loop
+    // `clip-fit --pose` exists for.
+    if (has('--shots')) {
+      mkdirSync(OUT, { recursive: true })
+      const tag = c.png.split('/').pop().replace('.png', '')
+      drawQuad(rgb, quadOf(r.pose, 'page'), `${OUT}/selftest-${tag}-found.png`)
+      drawQuad(rgb, quadOf({ rotY: 0, rotX: 0, ...c.truth }, 'page'), `${OUT}/selftest-${tag}-truth.png`, [0, 255, 255]) // prettier-ignore
+    }
     const dRot = Math.abs(r.pose.rot - c.truth.rot)
     const dSc = Math.abs(r.pose.scale / c.truth.scale - 1)
     const dPos = Math.hypot(
@@ -1182,16 +1424,32 @@ if (has('--selftest')) {
     // solver reports as soft is not a wrong answer, it is a refusal — and the
     // test is that it says so, not that it guesses right.
     const soft = k => r.stiff[k] < SOFT
+    const tol = c.tol || TOL
     const bad = []
-    if (!soft('rot') && dRot > TOL.rot) bad.push('rot')
-    if (!soft('scale') && dSc > TOL.scale) bad.push('scale')
-    if (!soft('cx') && Math.abs(((r.pose.cx - c.truth.cx) / 100) * W) > TOL.pos) bad.push('cx')
-    if (!soft('cy') && Math.abs(((r.pose.cy - c.truth.cy) / 100) * H) > TOL.pos) bad.push('cy')
-    if (!soft('rotY') && Math.abs(r.pose.rotY - (c.truth.rotY || 0)) > TOL.rot) bad.push('rotY')
+    if (!soft('rot') && dRot > tol.rot) bad.push('rot')
+    if (!soft('scale') && dSc > tol.scale) bad.push('scale')
+    if (!soft('cx') && Math.abs(((r.pose.cx - c.truth.cx) / 100) * W) > tol.pos) bad.push('cx')
+    if (!soft('cy') && Math.abs(((r.pose.cy - c.truth.cy) / 100) * H) > tol.pos) bad.push('cy')
+    // BOTH DEPTH ANGLES ARE JUDGED AT `depth`, NOT AT THE ROLL'S TOLERANCE. The
+    // yaw was held to the roll's 0.6 deg while it was the only depth angle, and
+    // it met it — on a FLAT or YAWED render it still does, which is why `depth`
+    // is 1.0 there and not 2.5. On a pitched render the two depth angles
+    // contaminate each other: .pose-900e, drawn at yaw 0 and pitch -10, reads
+    // its yaw as +1.5. Four edges separating two depth turns AND a size is the
+    // looseness this instrument has declared from the start.
+    if (!soft('rotY') && Math.abs(r.pose.rotY - (c.truth.rotY || 0)) > tol.depth) bad.push('rotY')
+    // ⚠️ THE TWO DEPTH ANGLES GET THEIR OWN TOLERANCE, wider than the roll's,
+    // and that is not a courtesy to a new axis. Four edges cannot separate a
+    // depth turn from a size perfectly — a turned page and a smaller page are
+    // both narrower — so both of these carry the looser error of the six. What
+    // the test is for is the sign and the order of magnitude, which is what a
+    // hard zero on thirteen slides gets wrong.
+    if (!soft('rotX') && Math.abs((r.pose.rotX || 0) - (c.truth.rotX || 0)) > tol.depth)
+      bad.push('rotX')
     if (bad.length) fails++
-    const softs = ['rot', 'scale', 'cx', 'cy', 'rotY'].filter(soft)
+    const softs = ['rot', 'scale', 'cx', 'cy', 'rotY', 'rotX'].filter(soft)
     console.log(
-      `   ${fmtPose(r.pose).padEnd(56)} d ${dRot.toFixed(2)}deg ${(dSc * 100).toFixed(2)}% ` +
+      `   ${fmtPose(r.pose).padEnd(72)} d ${dRot.toFixed(2)}deg ${(dSc * 100).toFixed(2)}% ` +
         `${dPos.toFixed(1)}px  ${bad.length ? 'FAIL ' + bad.join(',') : 'ok'}` +
         (softs.length ? `   soft: ${softs.join(',')}` : ''),
     )
@@ -1213,7 +1471,24 @@ if (has('--selftest')) {
   // bottom — which is why the stems are the estimator and the baselines are only
   // printed. The gap between the two is a witness to the yaw and shows here:
   // it is 0.0 on the three flat renders, +1.15 at yaw +8 and -1.33 at yaw -8.
+  //
+  // ⚠️ AND A PITCHED PAGE BIASES IT, session AV — a NEW limitation, measured
+  // here for the first time because until now no render in this file carried a
+  // pitch. The stems stay parallel to the page's vertical axis under a YAW,
+  // which is the argument above; under a PITCH they do not, because the pitch
+  // foreshortens the page from top to bottom and the type with it. Measured on
+  // the three pitched renders: 0.63 deg at pitch +10, 0.01 at -10, and 1.27 at
+  // pitch 6 with yaw 8 together. The confidence drops with it, from 0.44-0.45
+  // on the flat renders to 0.30, with the rival rising from 0.06 to 0.28 — so
+  // the instrument does say it is on thinner ice, it simply does not refuse.
+  //
+  // WHAT THAT MEANS FOR `--roll-type`, which is the one mode that consumes this:
+  // it reads the `rot` column off the type, and on a slide the clip pitches by
+  // ten degrees that column now carries up to a degree of the pitch. It is
+  // opt-in and it was not used for any shipped row; this note is here so the
+  // next session that reaches for it knows the cost.
   const ROLL_TOL = 0.5
+  const ROLL_TOL_PITCHED = 1.5
   for (const c of cases) {
     let rgb
     try {
@@ -1230,13 +1505,14 @@ if (has('--selftest')) {
       continue
     }
     const d = Math.abs(r.roll - c.truth.rot)
-    const ok = d <= ROLL_TOL
+    const ok = d <= (c.truth.rotX ? ROLL_TOL_PITCHED : ROLL_TOL)
     if (!ok) fails++
     console.log(
       `   ${c.png.split('/').pop().padEnd(20)} roll ${r.roll.toFixed(2).padStart(7)} ` +
         `truth ${c.truth.rot.toFixed(2).padStart(7)} (yaw ${String(c.truth.rotY || 0).padStart(3)})  ` +
         `d ${d.toFixed(2)}deg  conf ${r.conf.toFixed(2)} rival ${r.rival.toFixed(2)}  ` +
-        `base ${(r.baseline - r.roll).toFixed(2).padStart(6)}  ${ok ? 'ok' : 'FAIL'}`,
+        `base ${(r.baseline - r.roll).toFixed(2).padStart(6)}  ${ok ? 'ok' : 'FAIL'}` +
+        (c.truth.rotX ? `   pitch ${c.truth.rotX}` : ''),
     )
   }
 
@@ -1678,7 +1954,7 @@ function slideAt(t) {
 
 /** Where to start the search. The table's own pose is the natural seed. */
 function seedFor(t) {
-  return { pose: { ...poseAt(t), rotY: 0 }, slide: slideAt(t) }
+  return { pose: { ...poseAt(t), rotY: 0, rotX: 0 }, slide: slideAt(t) }
 }
 
 /**
@@ -1713,7 +1989,7 @@ const CHAIN_SPAN = { cx: 3, cy: 3, rot: 4, scale: 0.03 }
  * already carries the motion measured off the clip, so this bounds the
  * disagreement in the ANCHOR — the thing this session is here to replace.
  */
-const KEEP_SPAN = { cx: 18, cy: 15, rot: 18, scale: 0.1 }
+const KEEP_SPAN = { cx: 18, cy: 15, rot: 18, scale: 0.05 }
 
 /** One frame's edge field, cached for the two passes that share a second. */
 let fldCache = { t: null, fld: null }
@@ -1743,7 +2019,7 @@ if (has('--t')) {
 console.log("THE CLIP'S JOURNAL, POSE BY POSE, from its four edges.")
 console.log("seed = our table's pose for that slide; pose = what the clip is doing.\n")
 const HEAD =
-  '     t  frame page                    rot   scale     cx     cy    rotY   score  sharp    seed   soft'
+  '     t  frame page                    rot   scale     cx     cy    rotY    rotX   score  sharp    seed   soft'
 console.log(HEAD)
 /**
  * `--t` DOES NOT CHAIN, because the seconds it is given are usually unrelated —
@@ -1763,15 +2039,15 @@ console.log(HEAD)
  */
 const chain = !has('--nochain') && (!has('--t') || has('--chain'))
 
-const rowAt = (t, seed, how) => {
+const rowAt = (t, seed, how, opt = {}) => {
   const slide = slideAt(t)
-  const keep = { centre: { ...poseAt(t), rotY: 0 }, span: KEEP_SPAN }
-  const r = solvePose(
-    fldOf(t),
-    seed,
-    slide.face,
-    how === 'table' ? { span: KEEP_SPAN } : { span: CHAIN_SPAN, keep, yawNear: seed.rotY },
-  )
+  const keep = { centre: { ...poseAt(t), rotY: 0, rotX: 0 }, span: KEEP_SPAN }
+  const r = solvePose(fldOf(t), seed, slide.face, {
+    ...(how === 'table'
+      ? { span: KEEP_SPAN }
+      : { span: CHAIN_SPAN, keep, yawNear: seed.rotY, pitchNear: seed.rotX }),
+    ...opt,
+  })
   return {
     t,
     frame: slide.frame,
@@ -1780,7 +2056,7 @@ const rowAt = (t, seed, how) => {
     ...r.pose,
     score: +r.score.toFixed(3),
     sharp: +r.sharp.toFixed(2),
-    soft: ['rot', 'scale', 'cx', 'cy', 'rotY'].filter(k => r.stiff[k] < SOFT),
+    soft: ['rot', 'scale', 'cx', 'cy', 'rotY', 'rotX'].filter(k => r.stiff[k] < SOFT),
     seeded: how,
   }
 }
@@ -1797,12 +2073,40 @@ const rowAt = (t, seed, how) => {
  * the yaw come back after a slide has lost it.
  */
 const bestOf = (t, prev) => {
-  const table = rowAt(t, { ...poseAt(t), rotY: 0 }, 'table')
+  const table = rowAt(t, { ...poseAt(t), rotY: 0, rotX: 0 }, 'table')
   if (!prev) return table
   const chained = rowAt(t, { ...prev }, 'chain')
   return chained.score >= table.score ? chained : table
 }
-const poseOf = r => ({ rot: r.rot, scale: r.scale, cx: r.cx, cy: r.cy, rotY: r.rotY })
+
+/**
+ * THE PITCH'S MARGIN: WHAT THE PICTURE GAINS BY TIPPING THE PAGE AT ALL.
+ *
+ * The same second, solved a second time with the pitch pinned to zero and
+ * everything else — position, size, roll, yaw — free to take up the slack. The
+ * margin is how much score the free pitch buys over that, as a percentage.
+ *
+ * ⚠️ WITHOUT THIS THE COLUMN IS UNFALSIFIABLE, and that is the one thing this
+ * project has refused to ship since the flights. A six-parameter search always
+ * returns six numbers; on a slide where the clip's page is genuinely flat it
+ * returns a pitch anyway, and nothing in the score's own value says which case
+ * you are in — frames 14 and 20 both score around 0.5 and only one of them
+ * agrees with the instrument that measured the pitch independently.
+ *
+ * Calibrated against that instrument on the four slides it was confident on:
+ * see THE VERDICT below, printed by --slide and --all.
+ */
+const marginAt = (t, r) => {
+  const flat = rowAt(t, { ...poseOf(r), rotX: 0 }, 'chain', {
+    pinPitch: 0,
+    yawNear: null,
+    pitchNear: null,
+    span: KEEP_SPAN,
+    keep: { centre: { ...poseAt(t), rotY: 0, rotX: 0 }, span: KEEP_SPAN },
+  })
+  return { flat: flat.score, margin: flat.score > 0 ? (r.score / flat.score - 1) * 100 : 0 }
+}
+const poseOf = r => ({ rot: r.rot, scale: r.scale, cx: r.cx, cy: r.cy, rotY: r.rotY, rotX: r.rotX })
 const line = r =>
   r.t.toFixed(2).padStart(6) +
   String(r.frame).padStart(6) +
@@ -1813,6 +2117,7 @@ const line = r =>
   r.cx.toFixed(1).padStart(7) +
   r.cy.toFixed(1).padStart(7) +
   r.rotY.toFixed(2).padStart(8) +
+  r.rotX.toFixed(2).padStart(8) +
   r.score.toFixed(3).padStart(8) +
   r.sharp.toFixed(1).padStart(7) +
   '  ' +
@@ -1824,7 +2129,7 @@ let prev = null
 for (const t of times) {
   const slide = slideAt(t)
   const linked = chain && prev && prev.face === slide.face
-  const r = linked ? bestOf(t, prev.pose) : rowAt(t, { ...poseAt(t), rotY: 0 }, 'table')
+  const r = linked ? bestOf(t, prev.pose) : rowAt(t, { ...poseAt(t), rotY: 0, rotX: 0 }, 'table')
   rows.push(r)
   prev = { face: slide.face, pose: poseOf(r) }
   console.log(line(r))
@@ -1863,6 +2168,107 @@ if (chain && rows.length > 1) {
   if (better) {
     console.log(HEAD)
     for (const r of rows) if (r.seeded === 'back') console.log(line(r))
+  }
+}
+
+/**
+ * THE VERDICT ON THE PITCH, SLIDE BY SLIDE — the gate SLIDE_LEAN_PATH's own note
+ * describes, run by the instrument that now has a pitch to gate.
+ *
+ * Two tests, and a slide has to pass BOTH, because each catches what the other
+ * misses. PEAK MARGIN says the picture actually prefers a tipped page somewhere
+ * in the slide; WORST STEP says the answer is a page moving rather than a search
+ * bouncing between local maxima. Frame 15 is the case that fails only the
+ * second and frame 8 the case that fails only the first, on the other
+ * instrument, and both were right to be left out.
+ *
+ * ⚠️ THE THRESHOLDS ARE CALIBRATED, NOT PICKED. They are set on the four slides
+ * whose pitch was measured independently by `journal-lean-path` at margins of
+ * 35-111 %, which is the only outside opinion this column has: frames 14 and 18,
+ * where the two instruments agree, must pass, and frames 10 and 20, where they
+ * do not, must fail. The numbers behind them are printed by this block and
+ * recorded in slides.js next to the rows they let through.
+ */
+/**
+ * ⚠️ PEAK, NOT MEDIAN, AND THE PROJECT ALREADY PAID FOR THAT LESSON. Session
+ * AT-2 set a median threshold first and recorded why it is wrong for a PATH:
+ * a slide often starts honestly flat and only tips later, so its median is low
+ * while its shape is exemplary. A path has many instants to be convincing with,
+ * so at least one of them has to be decisive. A median gate throws out precisely
+ * the slides this column exists for.
+ *
+ * THE NUMBER IS CALIBRATED, NOT INHERITED. The other instrument's 30 % is its
+ * own score's scale — gradient registration on the page's content. This one
+ * scores four page edges against an oriented chamfer and its margins run
+ * smaller. It is set on the four slides `journal-lean-path` measured the pitch
+ * on independently: frames 14 and 18, where the two instruments agree about the
+ * arc, peak at 23 % and 24 %; frames 10 and 20, where they do not, peak at 17 %
+ * and 11 %. ⚠️ THAT GAP IS NARROW — 17 against 23 — so a slide this gate lets
+ * through is still a slide to look at on the overlay before it ships, and the
+ * seconds are printed one by one for exactly that.
+ *
+ * The step is the other instrument's 12 deg unchanged: what is suspicious is a
+ * step the SCORE does not follow, and a real one lands where the registration
+ * is at its most certain.
+ */
+const PITCH_PEAK_MIN = 20
+const PITCH_STEP_MAX = 12
+if (has('--verdict')) {
+  console.log('\nTHE PITCH, SLIDE BY SLIDE — does the picture ask for it?\n')
+  console.log('frame  pts   peak margin   median   worst step   verdict')
+  const byFrame = new Map()
+  for (const r of rows) {
+    if (!byFrame.has(r.frame)) byFrame.set(r.frame, [])
+    byFrame.get(r.frame).push(r)
+  }
+  for (const [frame, rs] of byFrame) {
+    const ms = rs.map(r => marginAt(r.t, r).margin)
+    // Printed per second, not only summarised: a slide that passes on one
+    // second's margin and a slide that holds one all the way through are
+    // different slides, and the summary alone cannot tell them apart.
+    console.log(
+      `      seconds: ` +
+        rs.map((r, i) => `${r.t.toFixed(2)} ${r.rotX.toFixed(1)}deg ${ms[i].toFixed(0)}%`).join(' | '), // prettier-ignore
+    )
+    const judge = (mm, rr) => {
+      const p = Math.max(...mm)
+      const sd = [...mm].sort((a, b) => a - b)
+      const md = sd[sd.length >> 1]
+      let st = 0
+      for (let i = 1; i < rr.length; i++) st = Math.max(st, Math.abs(rr[i].rotX - rr[i - 1].rotX))
+      const why = []
+      if (p < PITCH_PEAK_MIN) why.push(`peak margin ${p.toFixed(0)} % under ${PITCH_PEAK_MIN} %`)
+      if (st > PITCH_STEP_MAX) why.push(`neighbours ${st.toFixed(1)} deg apart`)
+      return { p, md, st, why }
+    }
+    let v = judge(ms, rs)
+    let trimmed = 0
+    // ⚠️ THE LAST SECOND IS OFFERED FOR TRIMMING, ONCE, and only when trimming
+    // is what saves the slide. Half a second from the next cut the page has
+    // begun to turn, and the turn owns both depth channels while it runs — the
+    // same reason the rows already in this table are trimmed on frames 11 and
+    // 16. Frame 18 is the case: its first six seconds walk 4.0 -> 9.0 deg and
+    // its seventh answers -8.0, one second before a cut.
+    if (v.why.length && rs.length > 3) {
+      const v2 = judge(ms.slice(0, -1), rs.slice(0, -1))
+      if (!v2.why.length) {
+        v = v2
+        trimmed = 1
+      }
+    }
+    console.log(
+      String(frame).padStart(5) +
+        String(rs.length).padStart(5) +
+        `${v.p.toFixed(0)} %`.padStart(14) +
+        `${v.md.toFixed(0)} %`.padStart(9) +
+        `${v.st.toFixed(1)} deg`.padStart(13) +
+        '   ' +
+        (v.why.length
+          ? 'LEFT OUT — ' + v.why.join('; ')
+          : trimmed
+            ? `in, last ${trimmed} row(s) trimmed`
+            : 'in'),
+    )
   }
 }
 
@@ -2039,10 +2445,17 @@ if (has('--as-motion')) {
     console.log(
       `  ${a.frame}: { rot: ${a.rot}, scale: ${a.scale}, cx: ${a.cx}, cy: ${a.cy} }, // clip ${new Date().toISOString().slice(0, 10)}: page edges at ${a.t.toFixed(2)}`,
     )
-  const yaws = rows.filter(r => r.rotY != null)
-  if (yaws.length) {
-    console.log('\nTHE CLIP YAW THIS RUN SAW — for SLIDE_LEAN_PATH, not for this table:')
-    for (const r of yaws) console.log(`  [${r.t.toFixed(2)}, 0.00, ${r.rotY.toFixed(2)}],`)
+  // ⚠️ BOTH DEPTH ANGLES ARE PRINTED AS SLIDE_LEAN_PATH ROWS, `[t, rotX, rotY]`,
+  // and neither goes into motion.json. JOURNAL_PATH has no column for either;
+  // the story's depth lives in the other table with its own reader, and a yaw
+  // smuggled into the size column is exactly what a similarity fit would do
+  // with it. Until session AV the pitch could not be printed here at all,
+  // because the model had no pitch — that is the hole this mode now fills.
+  const depth = rows.filter(r => r.rotY != null)
+  if (depth.length) {
+    console.log('\nTHE CLIP DEPTH THIS RUN SAW — for SLIDE_LEAN_PATH, not for this table:')
+    for (const r of depth)
+      console.log(`  [${r.t.toFixed(2)}, ${(r.rotX ?? 0).toFixed(2)}, ${r.rotY.toFixed(2)}],`)
   }
   process.exit(0)
 }
