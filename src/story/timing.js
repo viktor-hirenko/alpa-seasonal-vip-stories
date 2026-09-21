@@ -17,6 +17,73 @@ export const snap = t => Math.round(t * FPS) / FPS
 /** Only correct timeline drift beyond one frame. */
 export const SYNC_EPSILON = 1 / FPS
 
+/**
+ * HOW LONG THE CLIP TAKES TO BRING EACH PAGE BACK FROM EDGE-ON, one number per
+ * cut, measured 2026-09-20 by `scripts/flip-scan.mjs`.
+ *
+ * ⚠️ THIS IS NOT A CORRECTION OF `TIMING.flip.back`. Compared like for like our
+ * single curve is the clip's AVERAGE curve almost exactly — time from edge-on to
+ * 25 / 50 / 75 / 90 % of the flat width is 0.051 / 0.111 / 0.194 / 0.279 s for
+ * ours against 0.047 / 0.112 / 0.193 / 0.279 s for the clip, a mean miss of
+ * 0.0002 s across all sixteen cuts. Both the length AND the shape were right.
+ * (The trap worth naming: our tween's nominal 0.6 s is not its visible length —
+ * it asymptotes, and the last degrees fall below the idle drift. Comparing that
+ * 0.6 against the clip's 0.279 says "twice too slow" and is simply the wrong
+ * comparison.)
+ *
+ * WHAT IS WRONG IS THAT THERE IS ONE NUMBER AT ALL. The designer turns every
+ * page at its own speed and the spread is threefold: 0.145 s on frame 19,
+ * 0.439 s on frame 18. Playing the mean on all sixteen is right on average and
+ * wrong on every individual page — we drag by up to 0.133 s where the clip
+ * snaps, and arrive up to 0.160 s early where the clip lingers. That is what the
+ * owner saw on 2026-09-20 and called "разная скорость" and "резко"; one cause,
+ * both symptoms.
+ *
+ * HOW MEASURED. `preview.mp4` minus `clean bg.mp4` isolates the journal (the two
+ * clips differ nowhere else); of that difference's connected components take the
+ * tallest, and of ITS columns keep only the dense ones — a column is page only if
+ * it carries at least 70 % of the component's height. That density rule is what
+ * makes the reading honest, and it is CALIBRATED rather than chosen: at 0.7 the
+ * flat width on the cut at 17.10 reads 871 px, the exact number the hand
+ * measurement in `flip` records, and the whole curve follows the hand table
+ * within about a frame. Width over flat width is |cos(yaw)|.
+ *
+ * ⚠️ TWO FLAT WIDTHS, NOT ONE. The page that comes back is not the page that
+ * left — it settles at its own yaw and size — so the out-leg is judged against
+ * the width going in and the back-leg against the width coming out. Judged
+ * against a single width, frames 14 and 15 report no back-leg at all.
+ *
+ * THE VALUES ARE A LEAST-SQUARES FIT of our own ease against the clip's curve at
+ * all four checkpoints, not a read of one of them. And the spread is signal, not
+ * tail noise: the middle of the curve and its tail agree at r = 0.83, and on 13
+ * of the 16 cuts all three checkpoints fall on the same side of the median.
+ *
+ * ⚠️ FRAMES 11 AND 18 CANNOT HAVE THEIR MEASURED VALUE YET, and the cap is
+ * applied in buildStoryTimeline rather than here so this table stays the
+ * measurement. Their turns run past the first row of their own SLIDE_LEAN_PATH,
+ * and the turn and the lean both write rotationY; the two tables are allowed to
+ * meet but not to overlap. Lifting that needs those two slides' lean rows
+ * re-measured from a later instant, not a smaller number here.
+ */
+export const SLIDE_FLIP_BACK = {
+  8: 0.532,
+  9: 0.56,
+  10: 0.638,
+  11: 0.892,
+  12: 0.67,
+  13: 0.658,
+  14: 0.403,
+  15: 0.413,
+  16: 0.643,
+  17: 0.562,
+  18: 0.892,
+  19: 0.33,
+  20: 0.396,
+  21: 0.754,
+  22: 0.829,
+  23: 0.434,
+}
+
 export const TIMING = {
   /**
    * THE ENTRANCE, measured off the clip frame by frame (2026-09-04).

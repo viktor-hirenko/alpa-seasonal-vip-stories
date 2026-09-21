@@ -16,11 +16,33 @@
  *
  * A Hermite curve with finite-difference tangents fixes that at the source. It
  * passes exactly through every measured row, so the table stays the thing that
- * is checked, and its velocity is continuous, so nothing snaps. Tangents are
- * taken over unequal spacing — `(P[i+1] - P[i-1]) / (t[i+1] - t[i-1])` — because
- * decimation puts the rows where the motion needs them, not on a grid. The ends
- * are one-sided, so a path neither overshoots its first row nor curls past its
- * last.
+ * is checked, and its velocity is continuous, so nothing snaps. The ends are
+ * one-sided, so a path neither overshoots its first row nor curls past its last.
+ *
+ * ⚠️ THE ROWS ARE NOT ON A GRID, AND THE PLAIN CENTRED DIFFERENCE CANNOT COPE
+ * WITH THAT (2026-09-19). `(P[i+1] - P[i-1]) / (t[i+1] - t[i-1])` is one slope
+ * for both sides of a row, which is right while the spacing is even and wrong
+ * the moment it is not: it is the slope of the chord between the NEIGHBOURS, so
+ * when one of them is close and the other far, the far one decides it and the
+ * short segment gets traversed at a speed that belongs to the long one.
+ *
+ * That became visible the day the page turns were measured. Each slide gained
+ * rows 0.07 s apart inside its turn while its own rows stayed 0.5 s apart, so
+ * every slide's FIRST row suddenly had a neighbour 0.07 s behind it and one
+ * 0.5 s ahead. Measured on the rendered story, frame by frame, the horizontal
+ * speed at 50.07 stepped by 0.82 % of the stage in a single frame while running
+ * at 0.70 — it more than doubled between two frames — and the same kink sat on
+ * seven other slides, all of them at that first row. The owner saw it without
+ * the clip in front of him: «журнал сначала в одной позе, потом резко переходит
+ * в другое».
+ *
+ * The fix is the standard one for unequal knots and it is what PCHIP and
+ * Fritsch-Butland use: take the two ONE-SIDED slopes and blend them weighted by
+ * the opposite interval, `m = (d1(2h2+h1) + d2(h2+2h1)) / 3(h1+h2)`. Where the
+ * spacing is even it reduces exactly to the centred difference, so nothing that
+ * was smooth moves; where it is uneven the near segment's own slope dominates,
+ * which is what stops the kink. It still passes through every measured row —
+ * the tangent is the only thing that changes.
  *
  * THE TANGENTS ARE THEN LIMITED SO THE CURVE CANNOT LEAVE ITS OWN ROWS
  * (2026-09-06). Passing through every row is not the same as staying between
@@ -79,8 +101,19 @@ export function splineReader(keys) {
     for (let i = 0; i < n; i++) {
       const a = keys[Math.max(0, i - 1)]
       const b = keys[Math.min(n - 1, i + 1)]
-      const dt = b[0] - a[0]
-      m[i] = dt > 0 ? (b[ch] - a[ch]) / dt : 0
+      const h1 = keys[i][0] - a[0]
+      const h2 = b[0] - keys[i][0]
+      if (h1 > 0 && h2 > 0) {
+        // THE WEIGHTED THREE-POINT TANGENT — see THE ROWS ARE NOT ON A GRID
+        // above. The two one-sided slopes are blended by the OTHER side's
+        // width, so the short segment's slope is the one that dominates.
+        const d1 = (keys[i][ch] - a[ch]) / h1
+        const d2 = (b[ch] - keys[i][ch]) / h2
+        m[i] = (d1 * (2 * h2 + h1) + d2 * (h2 + 2 * h1)) / (3 * (h1 + h2))
+      } else {
+        const dt = b[0] - a[0]
+        m[i] = dt > 0 ? (b[ch] - a[ch]) / dt : 0
+      }
     }
     // A HOLD IS A HOLD. Where two neighbouring rows carry the same value, both
     // of that segment's tangents go to zero — a cubic with equal ends and a

@@ -189,6 +189,15 @@
         bonuses: '257',
         sports_wins: '257',
         sports_multiplier: '257',
+        // ⚠️ `packs` GATES THE SPACE MILK PAGE, AND WITHOUT IT THIS PAGE LIED FOR
+        // THE LAST THIRD OF THE STORY. A dev URL carrying any data parameter is
+        // taken at its word and fills nothing from SAMPLE, so a missing `packs`
+        // DROPPED frame 20 — storyPlan rebuilt the story 5.4 s shorter (88.97 s
+        // against 94.37) and from 67 s on our panel showed the page AFTER the
+        // clip's. Measured here on 2026-09-18: the iframe's timeline came up at
+        // 88.97. clip-fit was cured of exactly this the same day; this page,
+        // which is the one the OWNER judges by, still had the old table.
+        packs: '257',
       }
 
       function playerUrl(lang) {

@@ -808,16 +808,16 @@ function fitPage(rgbA, rgbB, geo, opt = {}) {
     const g = tries.filter(b => near(a, b))
     // Bigger group wins; same size, the one whose best member is loneliest.
     const conf = xs => Math.max(...xs.map(x => x.r.v - x.r.rival))
-    if (g.length > group.length || (g.length === group.length && conf(g) > conf(group)))
-      group = g
+    if (g.length > group.length || (g.length === group.length && conf(g) > conf(group))) group = g
   }
   const lonely = x => x.r.v - x.r.rival
   const ranked = group.slice().sort((a, b) => lonely(b) - lonely(a))
   const top = ranked[0]
   const outside = tries.filter(x => !group.includes(x)).sort((a, b) => lonely(b) - lonely(a))
-  const spread = group.length > 1
-    ? Math.max(...group.map(a => Math.max(...group.map(b => Math.hypot(a.r.dx - b.r.dx, a.r.dy - b.r.dy))))) // prettier-ignore
-    : 0
+  const spread =
+    group.length > 1
+      ? Math.max(...group.map(a => Math.max(...group.map(b => Math.hypot(a.r.dx - b.r.dx, a.r.dy - b.r.dy))))) // prettier-ignore
+      : 0
   return {
     r: top.r,
     win: top.win,
@@ -1170,7 +1170,7 @@ if (argv.includes('--solve')) {
 // PUT A POSE ON THE JOURNAL AND LAY IT OVER A FRAME OF THE CLIP.
 //
 //   node scripts/clip-fit.mjs --pose 138:7.8,1.02,60,50,-38 180:3.1,0.746,57.7,48.7
-//        frame : rotZ , scale , cx% , cy% [, rotY [, persp]]
+//        frame : rotZ , scale , cx% , cy% [, rotY [, persp [, rotX]]]
 //
 // WHY BY EYE AND NOT BY A FIT. Two attempts to get the clip's cover box out of
 // the pictures are recorded above and in the register; the fourth, a silhouette
@@ -1200,6 +1200,12 @@ if (argv.includes('--pose')) {
       cy: v[3],
       rotY: v[4] ?? 0,
       persp: v[5] ?? 1800,
+      // ⚠️ rotX IS LAST, after persp, and it looks wrong in the list. It is
+      // appended rather than slotted next to rotY because every --pose command
+      // recorded in the register and in the notes counts positions, and moving
+      // persp would silently re-read those as a pitch. Session AV, which needed
+      // renders at a KNOWN pitch to prove the six-parameter edge fit.
+      rotX: v[6] ?? 0,
     })
   }
   // Park somewhere the RIGHT FACE is live, then overwrite the pose. The default
@@ -1219,7 +1225,7 @@ if (argv.includes('--pose')) {
       const g = window.__story.gsap
       document.querySelector('.stage').style.setProperty('--persp', '${j.persp}')
       g.set('.journal-pos', { xPercent: ${j.cx}, yPercent: ${j.cy} })
-      g.set('.journal-box', { rotationZ: ${j.rot}, rotationY: ${j.rotY}, rotationX: 0, scale: ${j.scale} })
+      g.set('.journal-box', { rotationZ: ${j.rot}, rotationY: ${j.rotY}, rotationX: ${j.rotX}, scale: ${j.scale} })
       return 1
     })()`)
     await sleep(200)
@@ -1256,7 +1262,9 @@ if (argv.includes('--pose')) {
       j.tag.padStart(5) +
         t.toFixed(3).padStart(8) +
         '  ' +
-        `rot ${j.rot} sc ${j.scale} cx ${j.cx} cy ${j.cy} rotY ${j.rotY} p ${j.persp}`.padEnd(40) +
+        `rot ${j.rot} sc ${j.scale} cx ${j.cx} cy ${j.cy} rotY ${j.rotY} rotX ${j.rotX} p ${j.persp}`.padEnd(
+          52,
+        ) +
         `${qx.toFixed(0)}/${qy.toFixed(0)} ${(qX - qx).toFixed(0)}x${(qY - qy).toFixed(0)}`.padStart(
           20,
         ) +
@@ -1655,7 +1663,8 @@ for (const { label, t, want } of times) {
       `  ${group.length} of ${tried.length} windows agree to ${spread.toFixed(0)} px — ` +
         group.map(x => x.win).join(', '),
     )
-  else if (tried.length > 1) console.log(`  NO TWO WINDOWS AGREE — the numbers above are one window's word`)
+  else if (tried.length > 1)
+    console.log(`  NO TWO WINDOWS AGREE — the numbers above are one window's word`)
   for (const x of (group || []).filter(x => x.win !== win)) console.log(line('with', x))
   for (const x of outside || []) console.log(line('  — ', x) + '   (disagrees: layout, not pose)')
   console.log(

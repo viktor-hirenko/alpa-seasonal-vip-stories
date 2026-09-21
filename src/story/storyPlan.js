@@ -1,4 +1,4 @@
-import { SLIDES, JOURNAL_PATH, STORY_END, PAGE_ORDER, STORY_SEGMENTS } from './slides.js'
+import { SLIDES, JOURNAL_PATH, SLIDE_LEAN_PATH, STORY_END, PAGE_ORDER, STORY_SEGMENTS } from './slides.js' // prettier-ignore
 import { TIMING, snap } from './timing.js'
 
 /**
@@ -178,17 +178,53 @@ export function buildStoryPlan(skip = {}, opts = {}) {
     row => [toStory(row[0]), ...row.slice(1)],
   )
 
+  // A LEAN BELONGS TO ITS SLIDE, so a dropped page takes its rows with it and
+  // the survivors' rows move with the rest. Simpler than the path's case: the
+  // rows never span a hole, because they never span a cut in the first place —
+  // each slide's lean lives strictly between its own turn and the next.
+  const lean = Object.fromEntries(
+    Object.entries(SLIDE_LEAN_PATH)
+      .filter(([frame]) => !dropped.has(Number(frame)))
+      .map(([frame, rows]) => [frame, rows.map(row => [toStory(row[0]), row[1], row[2]])]),
+  )
+
   // A flight belongs to the page it was measured on, so a dropped page takes
   // its objects with it. The `frame` field is what says which page that is.
+  //
+  // ⚠️ A FLIGHT IS SHIFTED WHOLE, NEVER SQUEEZED — and that is the fix for the
+  // bug the owner found on 2026-09-20: with `packs` absent the Space Milk page
+  // goes, a 5.4 s hole opens right after the sponsor slide, and the planet cow
+  // "went out like a light instead of flying off behind the journal".
+  //
+  // WHY. Eighteen of the twenty-four flights OUTLIVE their own page — they are
+  // measured that way because the clip throws an object across the cut and lets
+  // it leave over the next page. `toStory` is the PATH's map and it compresses:
+  // every instant inside a hole lands on the hole's near edge. Applied to a
+  // flight's keys it collapsed the tail — 1.33 s of the planet's flight became
+  // one instant — so the object stopped dead at the seam and vanished. All
+  // eighteen do it; the planet is simply the one nobody can miss, because it is
+  // the largest object that flies in FRONT of the journal, where the turning
+  // page cannot hide it.
+  //
+  // A flight is a rigid body in time: its shape and its speed are the
+  // measurement. So it keeps its own duration and moves as one — by however
+  // much was removed BEFORE it started — and finishes over whatever page now
+  // follows, exactly as it finishes over the next page when nothing is dropped.
+  // A flight that starts inside a hole has no page left to belong to and is
+  // filtered out above.
   const flights = FLIGHTS.filter(
     f => !dropped.has(f.frame) && !gaps.some(g => f.t0 >= g.from && f.t0 < g.to),
-  ).map(f => ({
-    ...f,
-    keys: f.keys.map(k => [toStory(k[0]), ...k.slice(1)]),
-    t0: toStory(f.t0),
-    t1: toStory(f.t1),
-    zFlip: f.zFlip == null ? f.zFlip : toStory(f.zFlip),
-  }))
+  ).map(f => {
+    const shift = removedBefore(f.t0)
+    const move = v => +(v - shift).toFixed(4)
+    return {
+      ...f,
+      keys: f.keys.map(k => [move(k[0]), ...k.slice(1)]),
+      t0: move(f.t0),
+      t1: move(f.t1),
+      zFlip: f.zFlip == null ? f.zFlip : move(f.zFlip),
+    }
+  })
 
   const pageOrder = PAGE_ORDER.filter(p => slides.some(s => s.page === p))
   const storyEnd = toStory(STORY_END)
@@ -201,6 +237,7 @@ export function buildStoryPlan(skip = {}, opts = {}) {
     slides,
     segments,
     path,
+    lean,
     flights,
     timing: shiftTiming(TIMING, toStory),
     storyEnd,
@@ -251,6 +288,7 @@ function identityPlan(FLIGHTS) {
     slides: SLIDES,
     segments: STORY_SEGMENTS,
     path: JOURNAL_PATH,
+    lean: SLIDE_LEAN_PATH,
     flights: FLIGHTS,
     timing: TIMING,
     storyEnd: STORY_END,

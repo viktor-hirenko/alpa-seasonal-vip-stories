@@ -111,10 +111,18 @@ flyInFromFloor.PARAM_SCHEMA = {
  * WHAT COULD NOT BE MEASURED, and is therefore an author's choice: `scale`. The
  * cover is clipped on three sides for most of the entrance, so there is no
  * vertical extent to read, and any scale can be traded against rotationY for
- * the same width. It is a smooth recede from 1.02 to the settled 0.746, chosen
- * to keep the angular rate smooth through the crossing. If the entrance ever
- * looks the wrong size, this is the number to move — and the picture, not a
- * number, is what will say so.
+ * the same width. It is a smooth recede from 1.02 to the settled 0.740, chosen
+ * to keep the angular rate smooth through the crossing.
+ *
+ * ⚠️ THE LAST TWO KEYS ARE MEASURED NOW (2026-09-19), and the note above is why
+ * it took this long: nothing could read a size off a cover with no visible top
+ * or bottom. The edge fit can, from 5.60 on, where the cover is finally whole
+ * in frame — and it and clip-fit agree, independently, that the entrance is too
+ * BIG there: 0.751 against our 0.78 at 5.60 on the edges, +2.7 % at 5.75 on the
+ * registration with two windows agreeing to one pixel. Key 5's 0.79 goes to
+ * 0.765, which puts 5.75 inside a per cent. Keys 0-4 stay an author's choice:
+ * before 5.60 the cover is clipped and both instruments refuse (scores 0.24-0.35
+ * against 0.52-0.61 after it).
  *
  * Keys are ABSOLUTE seconds from `start`, so a key's second is the clip's
  * second minus 3.9333 and can be checked frame by frame against the table in
@@ -152,6 +160,40 @@ flyInFromFloor.PARAM_SCHEMA = {
  * JOURNAL_PATH, because the path is nested at 6.0 and takes the journal from
  * here — see the head-row note in scripts/journal-path.mjs. Move one, move both.
  *
+ * `cy` IS MEASURED SINCE 2026-09-19, AND IT WAS THE 104 PIXELS THE OWNER
+ * PHOTOGRAPHED. It was the one column here that never had been: keys 0-4 sat on
+ * the canvas centre and the last two walked down to the storyboard's settled
+ * 48.7, which nothing had ever checked against the clip. The clip does not hold
+ * the cover level through the landing — it slides it DOWN by some 85 px over the
+ * last second of the entrance, and our entrance held it still:
+ *
+ *     t      5.00    5.50    5.75    6.00
+ *     clip   49.7    52.9    53.5    54.1
+ *     ours   50.0    49.2    48.9    48.7
+ *
+ * 5.75 is the firm one — two windows of different size and content agreeing to
+ * ONE pixel, 0.434 against a rival of 0.204 — and 6.00 is the anchor's own
+ * median over eleven seconds of the slide, whose cy spread is zero. 5.50 is two
+ * windows agreeing to 8 px on this axis while disagreeing on the other, so only
+ * cy is taken from it. 5.00 is a refusal (the score sits below its own rival,
+ * the cover being yawed 36 deg and keystoned there), and keys 0-4 are therefore
+ * left exactly where they were.
+ *
+ * The check that this is one curve and not three numbers: the spline through
+ * 52.9 at 5.50 and 54.1 at 6.00 passes 5.75 at 53.5, which is the firm reading
+ * to a tenth of a per cent. It was not fitted to it.
+ *
+ * `cx` AND `scale` MOVE ONLY ON THE LAST KEY, and only because the handover
+ * demands they equal ANCHOR[7]: +9 px and -0.8 %. At 5.75 our cx is already the
+ * clip's to one pixel, so nothing there is asking to move.
+ *
+ * ⚠️ `rotationZ` IS NOT TOUCHED AND IS THE OPEN QUESTION. The registration is
+ * confident at every second of the landing that the clip's cover sits near 19
+ * deg and stays there, not on the climbing line the stems read. The two readings
+ * and why neither was taken are written out next to HANDOVER_ROT in
+ * scripts/journal-path.mjs — the position was moved because nothing contradicts
+ * it, and the angle was left because something does.
+ *
  * THE KEYS ARE READ THROUGH THE SPLINE, NOT TWEENED ONE SEGMENT AT A TIME
  * (2026-09-06). They used to be six chained `.to()`s, each carrying
  * `power2.inOut` — an ease whose speed is zero at BOTH ends of every segment.
@@ -182,6 +224,51 @@ flyInFromFloor.PARAM_SCHEMA = {
  */
 export const HANDOVER_YAW = -4
 
+/**
+ * THE ROLL THE ENTRANCE LANDS ON, and the four degrees it was short by.
+ *
+ * It is the last key's rotationZ below, and like HANDOVER_YAW it is named
+ * because a second reader needs it: JOURNAL_PATH's first row must carry the
+ * same angle or the handover at 6.0 tears. `journal-path.mjs` reads this value
+ * out of this file rather than repeating it, so the two cannot drift apart.
+ *
+ * ⚠️ IT WAS 10.04 UNTIL 2026-09-19, AND THAT NUMBER CAME FROM THE ONE
+ * INSTRUMENT OF THREE THAT IS WRONG HERE. The note further down still describes
+ * how it was read — the angle of the STEMS of the type printed on the cover,
+ * eleven frames from 4.60 to 6.00 lying on a straight line at 4.644 deg/s with
+ * an rms of 0.081 — and that reading is as careful as it sounds. It is also
+ * four degrees under what two independent instruments say the clip is doing:
+ *
+ *     t      stems   registration            page edges
+ *     5.50    7.85   18.35  (0.987/0.908)        --
+ *     5.75    8.81   19.31  (0.991/0.884)        --
+ *     6.00   10.04   19.23  (11 seconds, spread 0.06 deg)
+ *     6.97   14.84   18.57  (2 windows to 3 px)   18.81
+ *
+ * The edge fit shares nothing with the registration — it throws the picture
+ * away and keeps four page edges, where the registration keeps the gradient
+ * field of the whole face — and at 6.97, where the clip's cover is nearly
+ * face-on so no yaw can be contaminating anything, the two agree to a quarter
+ * of a degree and the stems sit four degrees below both.
+ *
+ * WHAT CONFIRMS IT IS THE SHAPE, not the single number. Move only this anchor
+ * and leave the measured drift alone, and our roll lands on the edge fit's own
+ * curve across the whole cover to under half a degree — 18.5/18.81, 17.9/17.79,
+ * 16.7/16.59, 15.6/15.36, 14.2/14.51, 13.5/13.89, 14.1/14.44, 15.2/15.44. A
+ * four-degree offset is exactly what a wrong anchor with a right drift looks
+ * like, and nothing else fits that pattern.
+ *
+ * ⚠️ THE ENTRANCE'S EARLIER KEYS ARE SCALED, NOT MEASURED, and they are the
+ * weakest thing in this file. Nothing reads the clip's roll before 5.50: the
+ * cover is yawed 36 degrees at 5.00 and the roll probe refuses it outright
+ * ("flat, no angle to read"). So keys 2-4 keep the SHAPE the stems measured —
+ * a straight climb, which is the part of that reading nothing contradicts — and
+ * are scaled by 2.43 so the climb arrives at 18.35, the first second anything
+ * can actually see. If the entrance ever reads as rolling too fast, this is the
+ * number to move, and a picture rather than a gate will say so.
+ */
+export const HANDOVER_ROT = 19.23
+
 export function swingOpen(t, params) {
   const p = P(
     {
@@ -189,11 +276,11 @@ export function swingOpen(t, params) {
         // [t from start, rotationY, rotationZ, scale, cx, cy]   clip frame
         [0.0, -104, 0.5, 1.02, 54.5, 50.0], //   118  appears, back cover to camera
         [0.15, -90, 0.5, 0.97, 57.2, 50.0], //   122.5 exactly edge-on
-        [0.4, -76.3, 1.6, 0.92, 65.3, 50.0], //  130  front cover swinging into view
-        [0.6667, -59.6, 2.0, 0.885, 67.1, 50.0], // 138  fills the canvas
-        [1.0667, -36.5, 5.0, 0.845, 66.6, 50.0], // 150
-        [1.5667, -15.5, 7.85, 0.79, 61.6, 49.2], // 165
-        [2.0667, HANDOVER_YAW, 10.04, 0.746, 57.7, 48.7], // 180  handover: JOURNAL_PATH's first row
+        [0.4, -76.3, 3.17, 0.92, 65.3, 50.0], //  130  front cover swinging into view
+        [0.6667, -59.6, 4.14, 0.885, 67.1, 50.0], // 138  fills the canvas
+        [1.0667, -36.5, 11.43, 0.845, 66.6, 50.0], // 150
+        [1.5667, -15.5, 18.35, 0.765, 61.6, 52.9], // 165
+        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.74, 58.56, 54.1], // 180  handover: JOURNAL_PATH's first row
       ],
       // The row the PATH reaches one second after the handover, in this
       // preset's own seconds and without a yaw column — see `next` above.
@@ -288,6 +375,56 @@ export function journalPath(t, keys) {
 journalPath.PARAM_SCHEMA = {}
 
 /**
+ * THE LEAN, THROUGH THE SLIDE — the two depth channels `journalPath` does not
+ * touch and the page turn only lands.
+ *
+ * WHY IT IS A SEPARATE PRESET FROM `journalPath` even though both read a
+ * measured polyline the same way. The pose path is ONE curve from the settled
+ * cover to the dissolve and is nested once; the lean exists only on the slides
+ * where the clip's page actually leans, so it is nested once PER SLIDE, between
+ * that slide's turn and the next. Two tables, two lifetimes, two instruments —
+ * clip-fit measured the pose, tiltprobe the lean.
+ *
+ * WHAT IT WRITES AND WHO ELSE WRITES IT. `rotationX` and `rotationY` on
+ * `.journal-box`. `pageTurn` writes both too, and the two never overlap: the
+ * turn runs from the cut to `flip.out + flip.back` and this starts at the
+ * slide's first measured instant, which is later. Where they meet they agree by
+ * construction — the turn lands on this table's first row (see SLIDE_LEAN_PATH).
+ *
+ * ⚠️ NOTHING NEEDS TO PUT rotationX BACK. A slide without measured rows never
+ * gets one of these, and its turn carries rotationX to zero absolutely on the
+ * way in, the same way it has always carried rotationY. So the channel cannot
+ * leak from a leaning slide into a flat one, and an arbitrary backwards seek
+ * (ADR-0008) lands on the same numbers as playing forwards to it: everything
+ * here is a pure function of the clock, `set` and `fromTo` only, no `+=`.
+ *
+ * ⚠️ AND NO INVENTED WOBBLE UNDERNEATH IT. AT-1's plan said to damp
+ * `HOVER_AMP.rotX/.rotY` on measured slides so a synthetic sine would not argue
+ * with a measured curve. That is already true and for a better reason: the story
+ * stopped building `hover` at all when the pose became a path (see `hover`
+ * below). There is nothing to damp.
+ */
+export function journalLean(t, rows) {
+  const at = splineReader(rows)
+  const t0 = rows[0][0]
+  const t1 = rows[rows.length - 1][0]
+  const head = { t: t0 }
+  const s = tl()
+  s.to(head, {
+    t: t1,
+    duration: t1 - t0,
+    ease: 'none',
+    onUpdate() {
+      const time = head.t
+      gsap.set(t.box, { rotationX: at(time, 1), rotationY: at(time, 2) })
+    },
+  })
+  return s
+}
+/** The times live IN the rows; a slider cannot move a measurement. */
+journalLean.PARAM_SCHEMA = {}
+
+/**
  * THE PAGE TURN, on its own.
  *
  * It used to be a flag on `rePose`, because a re-pose and a turn happened at the
@@ -316,18 +453,44 @@ journalPath.PARAM_SCHEMA = {}
  *
  * The measurement behind `peak`, `out` and `back` is in TIMING.flip.
  */
+/**
+ * `fromX` AND `toX` ARE THE SAME CONTRACT ON THE OTHER DEPTH AXIS, and they are
+ * new in session AT-2. Until then `rotationX` was written exactly once in the
+ * whole story — `swingOpen`'s head `set`, at zero — so a turn had nothing to
+ * hand over and nothing to reset. Now that a slide can lean in depth
+ * (SLIDE_LEAN_PATH), the turn has to do for `rotationX` precisely what it
+ * already does for `rotationY`: begin at the value the previous slide left,
+ * carry it across the swing, and land ABSOLUTELY on the value the incoming
+ * slide starts from — which is zero for every slide that does not lean, and is
+ * what keeps the channel from leaking out of the three slides that do.
+ *
+ * It rides the BACK leg, not the whole turn. The out leg is 0.14 s of the page
+ * swinging to edge-on; depth on a page seen edge-on is invisible, and starting
+ * the carry there would only spend it where no one can see it.
+ */
 export function pageTurn(t, params) {
   const p = P(
-    { ...TIMING.flip, from: 0, to: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack },
+    { ...TIMING.flip, from: 0, to: 0, fromX: 0, toX: 0, easeOut: EASE.flipOut, easeBack: EASE.flipBack }, // prettier-ignore
     params,
   )
   const s = tl()
-  s.set(t.box, { rotationY: p.from }, 0)
+  s.set(t.box, { rotationY: p.from, rotationX: p.fromX }, 0)
   yawTurn(s, t, p)
+  // Kept out of `yawTurn` deliberately: that helper is shared with `rePose`,
+  // which the lab drives with its own rotationX slider, and it is the YAW both
+  // callers have to agree on. One extra leg here is cheaper than a shared
+  // helper that quietly zeroes a channel the lab is steering by hand.
+  s.fromTo(
+    t.box,
+    { rotationX: p.fromX },
+    { rotationX: p.toX, duration: p.back, ease: p.easeBack, immediateRender: false },
+    p.out,
+  )
   return s
 }
 pageTurn.PARAM_SCHEMA = {
   to: { min: -30, max: 30, step: 1 },
+  toX: { min: -30, max: 30, step: 1 },
   peak: { min: 0, max: 180, step: 1 },
   out: { min: 0.02, max: 0.6, step: 0.01 },
   back: { min: 0.05, max: 1.5, step: 0.01 },

@@ -164,6 +164,10 @@ const INSTALL = `(() => {
         // The projected quad's bounding box, design px, measured from the canvas.
         x: (br.left - sr.left) / u, y: (br.top - sr.top) / u,
         w: br.width / u, h: br.height / u,
+        // rotX is sampled since session AT-2, when SLIDE_LEAN_PATH gave it a
+        // measured curve to follow. Before that it was a constant zero for the
+        // whole story, and a channel nothing writes cannot jerk.
+        rotX: num(box, 'rotationX'),
         rotY: num(box, 'rotationY'), rotZ: num(box, 'rotationZ'), sc: num(box, 'scaleX'),
         cx: num(pos, 'xPercent'), cy: num(pos, 'yPercent'),
         op: Number(pcs.opacity), vis: pcs.visibility === 'visible',

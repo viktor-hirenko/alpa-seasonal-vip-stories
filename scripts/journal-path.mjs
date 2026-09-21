@@ -186,16 +186,51 @@ const SLIDES = [
 const ANCHOR = {
   // MEASURED OFF THE CLIP 2026-09-07 where the row says so, storyboard where it
   // does not. `rot` is the clip's on every row and has been since 05.09.
-  7: { rot: 15.23, scale: 0.746, cx: 57.7, cy: 48.7 }, // storyboard — the handover
-  8: { rot: -10.94, scale: 0.6871, cx: 53.0, cy: 53.24 }, // clip: position and size
-  9: { rot: 13.96, scale: 0.6505, cx: 53.01, cy: 49.02 }, // clip: position and size
-  10: { rot: -7.59, scale: 0.6673, cx: 48.1, cy: 50.17 }, // clip: position and size
-  11: { rot: -0.25, scale: 0.6206, cx: 60.89, cy: 52.27 }, // clip: position and size
-  12: { rot: -4.72, scale: 0.6551, cx: 58.11, cy: 48.51 }, // clip: position and size
-  13: { rot: 13.2, scale: 0.6631, cx: 50.94, cy: 54.51 }, // clip: position and size
-  14: { rot: -8.43, scale: 0.6985, cx: 50.17, cy: 53.65 }, // clip: position and size
-  15: { rot: 10.28, scale: 0.6498, cx: 51.37, cy: 48.01 }, // clip: position and size
-  16: { rot: -21.89, scale: 0.6016, cx: 54.96, cy: 51.61 }, // clip: position and size
+  7: { rot: 19.23, scale: 0.74, cx: 58.56, cy: 54.1 }, // clip 19.09 night: pos, size and rot, all three off the clip. Position and size came from 11 seconds of the slide (spread cy 0px cx 2px size 0.3%) and were the 104 px the owner photographed three times — every reading put cy at 53.98-54.22 where we held 48.70. `rot` was the last column here that was still the storyboard's, and it is four degrees: see HANDOVER_ROT in src/journal3d/presets.js, which this row must equal and which this script now READS rather than repeats. The entrance was re-measured with all three rather than after them, so the handover at 6.0 does not tear.
+  8: { rot: -11.92, scale: 0.6552, cx: 50.83, cy: 49.38 }, // clip 19.09 night: the PAGE EDGES at 12.04 (`journal-measure --slide 8 --as-motion`), and the whole slide's drift with it
+  // ⚠️ THIS SLIDE WAS NEVER THE INSTRUMENT'S TO MEASURE THE OLD WAY. Both
+  // instruments that had been pointed at it register CONTENT — `--motion` a
+  // clip frame against a clip frame over the journal's region, `clip-fit` our
+  // render against the clip — and on frame 8 the clip's page reads "LET'S TAKE
+  // A LOOK" where ours reads "READY TO TAKE A LOOK?". There is no shared type
+  // to lock onto, so both of them found the room, which is identical on either
+  // side, and reported its stillness as the journal's. That is why 07.09 wrote
+  // a pose 62 px off the clip, why the 19.09 re-read moved it to 122 px while
+  // reporting a 4 px spread, and why `--anchor` on it today spreads 9.5 % in
+  // SIZE ALONE across one slide — a journal does not change size by a tenth
+  // and back in five seconds.
+  //
+  // The edge fit shares no content with our page by construction: nothing
+  // inside the quad enters its arithmetic. Its readings across this slide walk
+  // a smooth arc in all five channels and its backward pass moved two of eleven
+  // seconds by 0.05 deg and 0.001 in size, i.e. the chain is self-consistent.
+  // Its control is frame 10, where the shipped table is independently verified
+  // against the clip to 1 px: there it reads the size to 0.02-0.6 %.
+  9: { rot: 5.71, scale: 0.635, cx: 52.0, cy: 52.8 }, // clip 19.09 night: the PAGE EDGES at 18.07 — the cleanest read of the session
+  // ⚠️ THE "+147 PX" THIS SLIDE HAS BEEN CARRYING IS THE INSTRUMENT, NOT THE
+  // JOURNAL. `clip-fit` picks its primary window by score, and on this slide
+  // that is planets-4.webp, which answers -20.6 % and +153 px while reporting
+  // NO TWO WINDOWS AGREE — its `face` window says +1.9 % and -53 px in the other
+  // direction. The edge fit settles it: eight seconds, scores 0.661-0.754 (the
+  // highest anywhere in the story) and a backward pass that moved NONE of them,
+  // and it puts the shipped anchor right to 0.0003 in size, 13 px in cx and 7 px
+  // in cy. The slide was never out. The numbers here are the edge fit's, which
+  // is a refinement of a few pixels rather than a fix.
+  10: { rot: -1.43, scale: 0.68, cx: 43.4, cy: 49.82 }, // clip 19.09: pos rot (spread cx 2px rot 1.51deg)
+  11: { rot: -1.25, scale: 0.6416, cx: 48.26, cy: 50.28 }, // clip 19.09: pos rot (spread cx 3px rot 0.5deg)
+  12: { rot: -2.05, scale: 0.6708, cx: 58.17, cy: 47.8 }, // clip 19.09: pos rot (spread cx 2px rot 0.5deg)
+  13: { rot: 2.45, scale: 0.6791, cx: 48.22, cy: 52.19 }, // clip 19.09 rot, pos+size 19.09 night (8 seconds, spread cx 19px cy 18px size 2.3% rot 0.5deg)
+  // ⚠️ THE 247 PX SPREAD THAT REJECTED THIS SLIDE EARLIER WAS THE TABLE, NOT THE
+  // SLIDE. `--anchor` reads each second of a slide and carries it back through
+  // the measured drift, which means it renders OUR journal at every one of those
+  // seconds — so while JOURNAL_PATH held 55 rows instead of 123 (see the note on
+  // decimate below), our render sat somewhere the table did not think it was and
+  // the eight readings scattered by 247 px. With the table rebuilt the same eight
+  // readings land inside 19 px and the rot they carry matches the type's angle,
+  // already shipped, to 0.01 deg. Fixing the table fixed the instrument here.
+  14: { rot: -8.68, scale: 0.6472, cx: 43.5, cy: 52.9 }, // clip 19.09: pos rot (spread cx 5px rot 0.76deg)
+  15: { rot: 18.78, scale: 0.6255, cx: 58.71, cy: 51.41 }, // clip 19.09: pos rot (spread cx 10px rot 1.16deg)
+  16: { rot: -14.64, scale: 0.7, cx: 54.0, cy: 52.6 }, // clip 19.09: pos rot (spread cx 5px rot 1deg)
   // `cy` RE-READ 2026-09-09 (session V): the page sat too low, and two
   // independent flights on this very slide say so in mirror image — the
   // basketball rides ABOVE the page's top edge and our page covered LESS of it
@@ -234,9 +269,9 @@ const ANCHOR = {
   //
   // `scale` and `cx` are NOT touched: -3.4 % and +8 px are each inside the
   // spread of those same readings, so neither is a measurement of anything.
-  17: { rot: 15.07, scale: 0.6561, cx: 59.68, cy: 48.85 }, // clip: position and size
-  18: { rot: -11.58, scale: 0.6602, cx: 54.36, cy: 59.02 }, // clip: position and size
-  19: { rot: 8.36, scale: 0.6885, cx: 46.08, cy: 54.33 }, // clip: position and size
+  17: { rot: 22.06, scale: 0.637, cx: 61.0, cy: 52.89 }, // clip 19.09: pos rot (spread cx 13px rot 2.19deg)
+  18: { rot: -2.75, scale: 0.642, cx: 48.9, cy: 54.3 }, // clip 19.09: pos rot (spread cx 8px rot 1.76deg)
+  19: { rot: 18.11, scale: 0.6485, cx: 46.57, cy: 54.32 }, // clip 19.09: pos rot (spread cx 5px rot 0.37deg)
   // `cx` RE-READ 2026-09-09 (session U): 52.84 was the odd one out. Four
   // window runs — session Q's two on 07.09 and session U's two today, each ten
   // seconds of the slide carried back to 68.037 and filtered by the 1.0 deg
@@ -249,10 +284,70 @@ const ANCHOR = {
   // T-2's page box). `scale` and `cy` are NOT touched: both windows answer
   // 0.7060 and 46.9-47.0 against the shipped 0.7083 and 47.0, which is inside
   // their own spread and so is not a measurement of anything.
-  20: { rot: -24.28, scale: 0.7083, cx: 54.0, cy: 47.0 }, // clip: position and size
-  21: { rot: 11.03, scale: 0.6677, cx: 51.41, cy: 52.21 }, // clip: position and size
-  22: { rot: -18.22, scale: 0.681, cx: 52.0, cy: 47.3 }, // storyboard — the two windows disagreed
-  23: { rot: 13.21, scale: 0.681, cx: 52.0, cy: 50.2 }, // storyboard — the outro, out of scope
+  20: { rot: -12.58, scale: 0.7083, cx: 53.9, cy: 48.3 }, // clip: size 07.09, ROLL from the page edges 19.09 night, and `cy` re-read 19.09 night
+  // `cy` MOVED 25 PX DOWN, and two instruments asked for it together. With the
+  // roll corrected, clip-fit's four windows agreed to 17 px that the page sat
+  // +2/-25 — high — and the edge fit, seeded from the corrected pose, put the
+  // clip at cy 48.6 against our 47.0 at the same second. The owner had just
+  // photographed 68.7 s. The slide's MOTION is the edge fit's now as well
+  // (`--keep-anchor`, so only the drift moved and this anchor stayed the judge).
+  // ⚠️ THE ROLL HERE WAS TEN DEGREES OUT AND THREE INSTRUMENTS NOW SAY SO. The
+  // shipped -24.28 came from the registration on 07.09; today `clip-fit`'s own
+  // dedicated roll probe puts the clip at -14.96 (0.986 against 0.924 three
+  // degrees away, 0.820 at no rotation) and the edge fit walks -12.6 to -15.2
+  // across the slide. Ten degrees is what the owner was looking at when he
+  // photographed 70.1 s: the page's two copies were the same size and in the
+  // same place, and turned against each other.
+  //
+  // ⚠️ ONLY THE ROLL IS TAKEN FROM THE EDGES HERE, AND THAT IS NOT CAUTION, IT
+  // IS A MEASUREMENT. The edge fit is at its noisiest on this slide — scores
+  // 0.37-0.55 against frame 8's 0.50-0.61, and its backward pass moved six of
+  // ten seconds rather than two of eleven — and its position and size were
+  // tried and REJECTED the same evening: with them in place all four of
+  // clip-fit's windows agreed, to 13 px, that the page had gone 106 px low and
+  // 12 % small. Four windows agreeing is the strongest verdict this project
+  // has. So frame 20 keeps the position and size measured on 07.09, which that
+  // same test scores at -7/-18 px, and takes from the edges only the one
+  // channel three instruments agree the old measurement had wrong.
+  //
+  // THE DRIFT IS THE 07.09 REGISTRATION'S TOO, for the same reason: it is what
+  // the kept position was measured with. The edge run's drift is out of
+  // motion.json; only its anchor roll survives, here.
+  21: { rot: 3.53, scale: 0.6662, cx: 51.41, cy: 48.13 }, // clip 19.09: pos rot (spread cx 3px rot 0.8deg)
+  22: { rot: -14.97, scale: 0.6289, cx: 55.21, cy: 50.96 }, // clip 19.09 night: the PAGE EDGES at 79.04 — the instrument this slide has been waiting for since 07.09
+  // THE NOTE THIS REPLACES SAID "not waiting for a better run; it needs a
+  // different instrument", and that was exactly right. The clip's `gift` page is
+  // a different EDITION of ours — "ENJOY A SPECIAL REWARD FOR YOUR NEXT
+  // CHAPTER." over a gold heart tag against our "YOU TURNED THIS VIP JOURNEY..."
+  // over the helmet — so no registration that compares CONTENT can work here,
+  // and none did: two windows 26/47 px apart, `clip:selftest` reporting no
+  // confident peak on this slide and no other, and today's full run scoring
+  // 0.467 against a rival of 0.353 with all four windows disagreeing.
+  // The edge fit never looks inside the quad, so a different edition of the page
+  // costs it nothing. Its eight seconds here walk a smooth arc and its backward
+  // pass moved one of them by 0.001 in size.
+  23: { rot: 20.61, scale: 0.64, cx: 53.4, cy: 47.35 }, // clip 19.09 night: the PAGE EDGES at 84.03, chained across the outro
+  // ⚠️ THE OUTRO IS MEASURED WITH `--chain` AND STOPS AT 87.53, and both halves
+  // of that sentence are load-bearing.
+  //
+  // UNCHAINED, every second of the outro is seeded from OUR table, which here
+  // was the storyboard's and out by 13 % in size, so each second set off from
+  // the same wrong place: the angle came back 20.6 / 0.1 / 7.6 / 5.6 / 13.6 /
+  // 11.8 / -0.7 / 3.0 and the yaw swung +14 / 0 / -16 / -15.5 / +14 / +15. That
+  // is a search bouncing between basins, and taking it would have made the
+  // journal jitter twenty degrees at the end of the story. Seeded from its
+  // neighbour the same eight seconds walk one arc, 20.6 down to 10.8, at scores
+  // of 0.65-0.79 — the highest this instrument reaches anywhere in the story.
+  //
+  // 88.03 IS LEFT OUT because the journal is dissolving by then — TIMING.exit
+  // fades `.journal-pos` and the clip's own page goes semi-transparent — so
+  // there are no edges left to read. It alone refused to chain and came back
+  // 8 deg and 22 deg of yaw away from its neighbour, on a worse score.
+  //
+  // AND THE SIZE ERROR HERE IS 6 %, NOT THE 25 % clip-fit reports. That number
+  // is the type: our final page reads "TO BE CONTINUED... KEEP YOUR COURSE."
+  // against the clip's own wording, and a registration that aligns CONTENT
+  // charges the difference to the journal. The edge fit never looks inside.
 }
 
 /** The storyboard's own `rot`, kept so the two can be printed side by side. */
@@ -373,9 +468,19 @@ function worstError(kept, all) {
 function decimate(all) {
   if (all.length <= 2) return all.slice()
   let kept = [all[0], all[all.length - 1]]
+  const held = new Set(kept)
   for (;;) {
     const w = worstError(kept, all)
-    if (w.e <= 1 || kept.length >= all.length) break
+    // A ROW ALREADY KEPT CANNOT BE KEPT AGAIN, and this guard is not
+    // theoretical. Two rows at the SAME t carrying different values are a
+    // contradiction no spline can satisfy, so the worst row stays the worst
+    // however many times it is added. Without the guard the greedy loop spent
+    // its entire budget re-adding one instant — 95 copies of t=6.00 — and
+    // stopped on `kept.length >= all.length` before it had looked at any other
+    // slide. That is how 19.09 shipped a path with 55 real rows where it had
+    // 123, and every slide in the story lost the rows that shape it.
+    if (w.e <= 1 || !w.row || held.has(w.row) || kept.length >= all.length) break
+    held.add(w.row)
     kept.push(w.row)
     kept.sort((a, b) => a.t - b.t)
   }
@@ -399,7 +504,32 @@ for (const s of SLIDES) {
   const samples = byFrame.get(s.frame)
   if (!samples) continue
   samples.sort((a, b) => a.t - b.t)
-  const full = keysOf(s.frame, samples)
+  /**
+   * ⚠️ INSIDE A TURN, ONE ROW. THE REST IS THE INSTRUMENT SHAKING (2026-09-19).
+   *
+   * The seconds before a slide's anchor are the ones measured INSIDE its page
+   * turn, and they were measured at 0.07 s because that is a turn's whole
+   * timescale. At that spacing the edge fit's own scatter is bigger than the
+   * motion: on frame 16 it reads cx 55.11 / 58.35 / 57.98 / 54.19 across 0.2 s,
+   * which is 35 px out and 41 px back, and a journal does not do that in six
+   * frames. Shipped whole, the spline drew every one of those wobbles — measured
+   * on the rendered story the horizontal speed at 50.03 ran 2.05 % of the stage
+   * per frame and stepped by 1.39 between two frames. The owner saw it with the
+   * clip switched off: «сначала в одной позе, потом резко переходит в другое».
+   *
+   * What those rows are FOR is the arrival: without one the path does not reach
+   * the slide's pose until 0.97 s after the cut, a quarter second after the page
+   * is already face-on, and the journal spends that gap catching up. The FIRST
+   * of them buys that entirely — it is the earliest second the clip can be read
+   * at, and the segment from there to the anchor is two close values a spline
+   * crosses smoothly. The ones between buy nothing and carry the scatter.
+   *
+   * So: the earliest in-turn row is kept and the rest are dropped. The anchor
+   * and everything after it are untouched.
+   */
+  const zero = samples.findIndex(x => x.dx === 0 && x.dy === 0 && x.size === 1 && x.rot === 0)
+  const kept = zero > 1 ? [samples[0], ...samples.slice(zero)] : samples
+  const full = keysOf(s.frame, kept)
   /**
    * HOLD THE POSE UNTIL THE PAGE FOLDS, and this row is why the measured roll
    * can be shipped at all.
@@ -464,10 +594,32 @@ for (const s of SLIDES) {
    * its THIRTY-degree turn early, and it does not — this carries the slide's own
    * drift of a degree or two, not the fold.
    */
-  if (folds && full.length) {
+  /**
+   * THE LAST SLIDE HAS NO FOLD TO CARRY INTO, IT HAS THE DISSOLVE (2026-09-19).
+   *
+   * There is no `next` after the outro, so `folds` is false and the path simply
+   * stopped at its last measured second — and since 19.09 that second is 87.53
+   * rather than 88.03, the dissolving frame having no edges left to read. The
+   * spline holds past its last row, so the journal would stand perfectly still
+   * for the 0.57 s between there and `TIMING.exit.at` at 88.1: the same dead
+   * stop the note above was written about, put back at the very end of the
+   * story where it is least excusable.
+   *
+   * So the outro gets the same tail row every other slide gets, carried to the
+   * instant the exit takes over instead of to the next slide's cut.
+   *
+   * ⚠️ "LAST" IS NOT "HAS NO NEXT ROW IN SLIDES". The outro's samples are all
+   * filed under frame 23, and SLIDES does carry a frame 24 after it — not a page
+   * change but the marker the retired `recede` hung its pose on. So the test is
+   * whether any LATER slide shows a different page, which is what a fold is.
+   */
+  const EXIT_AT = 88.1
+  const lastPage = !SLIDES.some(x => x.at > s.at + 1e-6 && x.page !== s.page)
+  const carryTo = folds ? +(next.at - 0.02).toFixed(2) : lastPage ? EXIT_AT : null
+  if (carryTo != null && full.length) {
     const last = full[full.length - 1]
     const prev = full.length > 1 ? full[full.length - 2] : null
-    const t = +(next.at - 0.02).toFixed(2)
+    const t = carryTo
     if (prev && last.t > prev.t) {
       const k = (t - last.t) / (last.t - prev.t)
       full.push({
@@ -489,7 +641,7 @@ for (const s of SLIDES) {
   report.push({
     frame: s.frame,
     page: s.page,
-    samples: samples.length,
+    samples: kept.length,
     keys: 0,
     rotFrom: 0,
     rotTo: samples[samples.length - 1].rot,
@@ -518,11 +670,51 @@ for (const s of SLIDES) {
  * 10.04 and 10.03. Window displaced +/-100 px in both axes and re-cropped from
  * 80 to 220: worst change 0.14 deg.
  */
-const HANDOVER_ROT = 10.04
+const HANDOVER_ROT = Number(
+  readFileSync(`${ROOT}src/journal3d/presets.js`, 'utf8').match(
+    /export const HANDOVER_ROT = ([\d.-]+)/,
+  )[1],
+)
 
-// The head and tail rows join the pool BEFORE thinning, so the curve the
-// decimation judges is the curve the runtime draws, ends included.
-allFull.unshift({ t: 6.0, ...ANCHOR[7], rot: HANDOVER_ROT })
+/**
+ * ⚠️ THE COVER'S ROLL: TWO INSTRUMENTS, TEN DEGREES APART, AND NEITHER IS SLOPPY.
+ *
+ * The value above and the whole entrance ramp under it come from the TYPE'S
+ * STEMS (`journal-measure --roll`), which read the clip at 2.40 / 4.27 / 5.00 /
+ * 5.85 / 6.34 / 7.21 / 7.85 / 8.59 / 9.03 / 9.58 / 10.04 over 4.60..6.00 — a
+ * straight line at 4.644 deg/s with an rms of 0.081. That is not a noisy fit.
+ *
+ * The REGISTRATION says the clip's cover is at about 19 deg and stays there,
+ * and it says so four times, confidently, at four different seconds:
+ *
+ *     5.50   clip 18.35   roll probe +10.50   0.987 / 0.908 / 0.727
+ *     5.75   clip 19.56   roll probe +10.25   0.991 / 0.884 / 0.706   2 of 2 windows to 1 px
+ *     6.00   clip 19.23   --anchor, 11 seconds, spread 0.06 deg
+ *     6.95   clip 18.57   roll probe  +4.00   0.991 / 0.853 / 0.797   2 of 2 windows to 3 px
+ *
+ * Flat at ~19 against a line climbing to 10. They cannot both be the clip.
+ *
+ * NOTHING IS DECIDED HERE, on purpose. Taking 19 means re-measuring the whole
+ * entrance ramp behind it, and 19.09 already recorded that taking the OTHER
+ * side (anchor 10.04) measured worse on the clip. The position and size above
+ * are taken because no instrument contradicts them; this column waits for the
+ * one test that settles it, which is the owner's own: render the cover at each
+ * angle and look at the blend. See _context/90-next-session.md.
+ */
+
+// The head row joins the pool BEFORE thinning, so the curve the decimation
+// judges is the curve the runtime draws, ends included.
+//
+// ⚠️ IT IS THE HEAD ROW, NOT AN EXTRA ONE. Since the cover's drift was measured
+// from 6.0 (19.09) the motion run already puts a sample there, and unshifting a
+// second one left the pool holding two rows at the same instant with different
+// rolls — this 10.04 and the anchor's 15.23. Where the run reaches 6.0 the
+// handover therefore overrides the ROLL of the row that is already there, that
+// being the one column the handover constrains: the entrance lands on
+// HANDOVER_ROT and the path has to leave from the same angle or the two tear.
+const head = allFull.find(r => Math.abs(r.t - 6.0) < 1e-6)
+if (head) head.rot = HANDOVER_ROT
+else allFull.unshift({ t: 6.0, ...ANCHOR[7], rot: HANDOVER_ROT })
 allFull.sort((a, b) => a.t - b.t)
 const keptAll = decimate(allFull)
 for (const r of report)
