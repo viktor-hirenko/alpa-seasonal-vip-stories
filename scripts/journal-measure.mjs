@@ -551,9 +551,24 @@ export function solvePose(fld, seed, face = 'page', opt = {}) {
     return out
   }
   const yawRange = step =>
-    yawFrom === null
-      ? seq(-YAW_MAX, YAW_MAX, step)
-      : seq(Math.max(-YAW_MAX, yawFrom - YAW_SPAN), Math.min(YAW_MAX, yawFrom + YAW_SPAN), step)
+    // ⚠️ `pinYaw` IS THE TURN'S ENTRY, and it is the mirror of `pinPitch` above.
+    // Inside a page turn the yaw runs to 90 deg and moves 30 deg in a frame, so
+    // the bounds below (16 deg, 5 deg a step) exclude it by construction — they
+    // are a SETTLED slide's bounds and say so in their own note. Widening them
+    // to cover a turn makes the coarse grid eight times bigger and the answer
+    // WORSE, because near edge-on the quad is a sliver and a bigger search just
+    // finds more ways to be wrong.
+    //
+    // So the yaw is not searched here at all. `scripts/flip-scan.mjs` already
+    // measures it, and by a method that does not degenerate: the page's
+    // on-screen width over its flat width is |cos(yaw)|, read off a difference
+    // mask that needs no quad. That number is handed in, held, and everything
+    // else — pitch, keystone, size, position — is solved around it.
+    opt.pinYaw !== undefined
+      ? [opt.pinYaw]
+      : yawFrom === null
+        ? seq(-YAW_MAX, YAW_MAX, step)
+        : seq(Math.max(-YAW_MAX, yawFrom - YAW_SPAN), Math.min(YAW_MAX, yawFrom + YAW_SPAN), step)
   const pitchRange = step =>
     // ⚠️ `pinPitch` HOLDS THE PITCH AT ONE VALUE AND SOLVES EVERYTHING ELSE
     // AROUND IT. It is how the pitch earns its place rather than being asserted:
@@ -585,7 +600,9 @@ export function solvePose(fld, seed, face = 'page', opt = {}) {
     ]) {
       const c = gridRound(
         r.p,
-        near(r.p.rotY, half, step, -YAW_MAX, YAW_MAX, yawFrom, YAW_SPAN),
+        opt.pinYaw !== undefined
+          ? [opt.pinYaw]
+          : near(r.p.rotY, half, step, -YAW_MAX, YAW_MAX, yawFrom, YAW_SPAN),
         opt.pinPitch !== undefined
           ? [opt.pinPitch]
           : near(r.p.rotX, half, step, -PITCH_MAX, PITCH_MAX, pitchFrom, PITCH_SPAN),
@@ -670,7 +687,12 @@ const YAW_MAX = 16
  *  tipping towards edge-on, which is the page turn's business. The step bound
  *  is the yaw's: the shot's own geometry, moving slowly or not at all. */
 const PITCH_SPAN = 5
-const PITCH_MAX = 24
+/** ⚠️ 24 IS A SETTLED SLIDE'S CEILING and stays one. `--pitch-max` raises it for
+ *  a turn run only, where the page is tipping as well as turning and nothing
+ *  measured so far bounds it. Every existing table was solved under 24. */
+const PITCH_MAX = Number(
+  (process.argv.includes('--pitch-max') && process.argv[process.argv.indexOf('--pitch-max') + 1]) || 24,
+)
 
 /** Below this a nudge costs nothing and the axis is not measured at all. */
 export const SOFT = 0.02
@@ -1998,10 +2020,28 @@ const fldOf = t => {
   return fldCache.fld
 }
 
+/**
+ * ⚠️ THE YAW A TURN IS SOLVED UNDER COMES FROM OUTSIDE, one value per second,
+ * as `--pin-yaw` alongside `--t`. See `pinYaw` in the sweep for why it is handed
+ * in rather than searched. Empty for every ordinary run, so nothing changes for
+ * the settled slides every existing table was measured on.
+ */
+const PIN_YAW = new Map()
+
 const times = []
 if (has('--t')) {
   for (let i = argv.indexOf('--t') + 1; i < argv.length && !argv[i].startsWith('--'); i++)
     times.push(Number(argv[i]))
+  // `--pin-yaw a,b,c` — one yaw per `--t`, held instead of searched. This is how
+  // a page turn is measured at all; see `pinYaw` in the sweep.
+  if (has('--pin-yaw')) {
+    const ys = String(val('--pin-yaw')).split(',').map(Number)
+    if (ys.length !== times.length) {
+      console.error(`--pin-yaw has ${ys.length} values for ${times.length} times`)
+      process.exit(1)
+    }
+    times.forEach((t, i) => PIN_YAW.set(+t.toFixed(3), ys[i]))
+  }
 } else if (has('--slide') || has('--all')) {
   const step = Number(val('--step') || 0.4)
   const want = has('--all')
@@ -2046,6 +2086,7 @@ const rowAt = (t, seed, how, opt = {}) => {
     ...(how === 'table'
       ? { span: KEEP_SPAN }
       : { span: CHAIN_SPAN, keep, yawNear: seed.rotY, pitchNear: seed.rotX }),
+    ...(PIN_YAW.has(+t.toFixed(3)) ? { pinYaw: PIN_YAW.get(+t.toFixed(3)) } : {}),
     ...opt,
   })
   return {
