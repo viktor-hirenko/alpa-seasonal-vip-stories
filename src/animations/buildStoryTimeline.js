@@ -1,7 +1,7 @@
 import { gsap } from 'gsap'
 import { SLIDE_LEAN } from '@/story/slides.js'
 import { FACE } from '@/story/journalGeometry.js'
-import { snap } from '@/story/timing.js'
+import { snap, TIMING, SLIDE_FLIP_BACK } from '@/story/timing.js'
 import {
   swingOpen,
   journalPath,
@@ -207,9 +207,23 @@ export function buildStoryTimeline(targets, ctx) {
       const prev = arr[i - 1]
       const left = i === 0 ? { y: HANDOVER_YAW, x: 0 } : leavesAt(prev.frame)
       const lands = landsAt(slide.frame)
+      // ⚠️ EVERY SLIDE TURNS AT ITS OWN MEASURED SPEED (SLIDE_FLIP_BACK, 20.09).
+      // The clip's spread is threefold and a single number is right on average
+      // and wrong on every page; the table's own note carries the measurement.
+      //
+      // AND THE CAP IS HERE, NOT IN THE TABLE, so the table stays what the clip
+      // does and this stays what the story can currently play. The turn and the
+      // lean both write rotationY and are allowed to meet but never to overlap
+      // — the preset's contract is that the turn LANDS on the lean's first row.
+      // Frames 11 and 18 measure longer than the gap to that row, so they are
+      // held one frame short of it. Everything else plays its measurement.
+      const rows = rowsFor(slide.frame)
+      const measured = SLIDE_FLIP_BACK[slide.frame] ?? TIMING.flip.back
+      const room = rows ? rows[0][0] - 1 / 30 - snap(slide.at) - TIMING.flip.out : Infinity
+      const back = Math.max(0.05, Math.min(measured, room))
       nest(
         tl,
-        pageTurn(targets, { from: left.y, to: lands.y, fromX: left.x, toX: lands.x }),
+        pageTurn(targets, { from: left.y, to: lands.y, fromX: left.x, toX: lands.x, back }),
         snap(slide.at),
       )
     })

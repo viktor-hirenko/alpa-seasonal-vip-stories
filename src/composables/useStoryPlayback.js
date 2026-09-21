@@ -2,7 +2,7 @@ import { gsap } from 'gsap'
 import { openArt } from '@/composables/useArtGate.js'
 import { EASE } from '@/story/easing.js'
 import { STORY_SEGMENTS } from '@/story/slides.js'
-import { FPS, TIMING } from '@/story/timing.js'
+import { FPS, TIMING, SLIDE_FLIP_BACK } from '@/story/timing.js'
 
 /**
  * Playback + navigation. Ported from Thor's useStoryPlayback.js, which is ~490
@@ -1329,7 +1329,14 @@ export function useStoryPlayback(ctx) {
    * showing the page being left with no turn to follow, so a paused jump keeps
    * landing past the whole turn where the page reads as fully formed.
    */
-  const SETTLE_LEAD = TIMING.flip.out + TIMING.flip.back
+  // ⚠️ THE LONGEST TURN, NOT THE NOMINAL ONE (20.09). Since SLIDE_FLIP_BACK gave
+  // every slide its own measured back-leg, `TIMING.flip.back` is a mean and four
+  // slides run past it — frame 18 by a quarter of a second. A paused landing
+  // computed from the mean puts those four down INSIDE their own turn, which is
+  // the one pose a freeze cannot hide (see the note above). Clearing the slowest
+  // turn clears all of them, and on a fast slide the extra is spent on a page
+  // that has already settled.
+  const SETTLE_LEAD = TIMING.flip.out + Math.max(TIMING.flip.back, ...Object.values(SLIDE_FLIP_BACK))
 
   const landingTime = seg => {
     const v = videoPlayer.value
