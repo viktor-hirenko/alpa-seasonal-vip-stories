@@ -279,36 +279,43 @@ export const HANDOVER_YAW = 0
  * number to move, and a picture rather than a gate will say so.
  */
 /**
- * ⚠️ THE LANDING MOVED ONTO THE MOCK, AND IT NOW OVERSHOOTS (2026-09-25,
- * DP-15822, ADR-0012). It was 19.23 — the clip's own roll at 6.00, and the
- * first row of the clip-measured path. The mock puts frame 7's cover at 3.10
- * (21770:4716) and asks for the journal to "sit" onto that pose with a light
- * overshoot and no hard stop (21770:4967), so the entrance arrives 2 degrees
- * PAST it and JOURNAL_PATH eases back over the next 0.55 s.
+ * ⚠️ THE LANDING IS THE MOCK'S FRAME 7, AND IT DOES NOT OVERSHOOT (2026-09-25).
+ * It was 19.23 — the clip's own roll at 6.00 — and then, for a few hours, 1.05,
+ * two degrees PAST the mock so the cover could settle back onto it the way the
+ * storyboard's plate asks («легкий overshoot із поверненням», 21770:4967).
  *
- * Everything above about the clip's roll is kept because it is what the number
- * used to be and why; none of it is the reference any more.
+ * THE OVERSHOOT WAS WRONG IN PRACTICE AND THE OWNER SAW IT IMMEDIATELY: «при
+ * плавном появлении он одним углом делает резкий кивок». Measured frame by
+ * frame, the roll fell 1.5 deg per 0.1 s for two seconds and then REVERSED and
+ * climbed 2 deg back — and a reversal at the end of a long move does not read
+ * as settling, it reads as a twitch. The plate describes a feeling; on this
+ * object, at this size, the thing that delivers the feeling is a decelerating
+ * approach and nothing after it. Every channel of the entrance is monotone now.
  */
-export const HANDOVER_ROT = 1.05
+export const HANDOVER_ROT = 3.11
 
 export function swingOpen(t, params) {
   const p = P(
     {
       keys: [
         // [t from start, rotationY, rotationZ, scale, cx, cy]   clip frame
-        [0.0, -104, 0.5, 1.02, 54.5, 50.0], //   118  appears, back cover to camera
-        [0.15, -90, 0.5, 0.97, 57.2, 50.0], //   122.5 exactly edge-on
-        [0.4, -76.3, 3.17, 0.92, 65.3, 50.0], //  130  front cover swinging into view
-        [0.6667, -59.6, 4.14, 0.885, 67.1, 50.0], // 138  fills the canvas
-        [1.0667, -36.5, 11.43, 0.845, 66.6, 50.0], // 150
-        // ⚠️ THE LAST TWO KEYS ARE AIMED AT THE MOCK, NOT AT THE CLIP. Their
-        // yaw is still the measured swing — Figma cannot draw a yaw, and the
-        // mock's own note ("flies into the centre, aligns frontally") needs one
-        // — but roll, size and centre now approach frame 7's pose and slightly
-        // overshoot it, so the cover decelerates INTO its place and settles back
-        // onto it instead of stopping dead on arrival.
-        [1.5667, -15.5, 7.5, 0.762, 59.8, 50.4], //  165
-        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.7508, 56.9, 47.95], // 180  handover: JOURNAL_PATH's first row
+        // ⚠️ THE ROLL COLUMN IS THE CLIP'S OWN CURVE SCALED BY 3.11/19.23, not a
+        // new invention: the shape — a straight climb — is the part of the
+        // measurement nothing contradicted, and only its destination moved, from
+        // the clip's 19.23 deg to the mock's 3.11. Scaling keeps it MONOTONE,
+        // which is the whole point: any peak on the way in is a nod.
+        [0.0, -104, 0.08, 1.02, 54.5, 50.0], //   118  appears, back cover to camera
+        [0.15, -90, 0.08, 0.97, 57.2, 50.0], //   122.5 exactly edge-on
+        [0.4, -76.3, 0.51, 0.92, 65.3, 50.0], //  130  front cover swinging into view
+        [0.6667, -59.6, 0.67, 0.885, 67.1, 50.0], // 138  fills the canvas
+        [1.0667, -36.5, 1.85, 0.845, 66.6, 50.0], // 150
+        // The last two keys are aimed at the mock. The yaw is still the measured
+        // swing — Figma cannot draw a yaw, and the mock's own note ("flies into
+        // the centre, aligns frontally") needs one — and roll, size and centre
+        // arrive at frame 7's pose and STOP there. Nothing passes it and comes
+        // back; see HANDOVER_ROT for the nod that cost.
+        [1.5667, -15.5, 2.97, 0.762, 61.0, 49.2], //  165
+        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.7461, 57.75, 48.67], // 180  handover: JOURNAL_PATH's first row
       ],
       // The row the PATH reaches one second after the handover, in this
       // preset's own seconds and without a yaw column — see `next` above.

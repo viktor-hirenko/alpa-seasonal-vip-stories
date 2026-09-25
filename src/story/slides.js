@@ -74,103 +74,94 @@ const RAW = [
 export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
 
 /**
- * THE JOURNAL'S PATH — one anchor pose per storyboard frame, read as a curve.
+ * THE JOURNAL'S PATH — the mock's pose per slide, HELD through the slide.
  *
- * ⚠️ THIS TABLE CHANGED ITS SOURCE ON 2026-09-25 (DP-15822, ADR-0012). Until
- * then it was 232 rows measured off the reference clip half a second at a time,
- * and the journal replayed that clip frame for frame. The owner's decision
- * retires the clip as the motion reference: the poses now come from the
- * STORYBOARD (21770:4582, tabulated in _context/32-poses.md) and everything
- * between them is the curve through them plus the levitation on `.journal-hover`.
+ * ⚠️ TWO CORRECTIONS ON 2026-09-25, BOTH FROM THE OWNER LOOKING AT IT.
  *
- * WHY THE CLIP HAD TO GO, in numbers rather than taste. Six of the sixteen folds
- * carried no measured row across them, so the spline crossed a whole page turn
- * in one 0.58 s interval: +38.6 degrees of roll after frame 22 (66.5 deg/s),
- * +32.3 after frame 14, and `cx` moving at 28.7 % of the stage per second after
- * frame 11. Those six intervals were the fastest motion in the whole story and
- * none of them was asked for by anything — they were the gaps between two
- * measuring runs. A table of anchors has no gaps to fall into.
+ * 1. THE NUMBERS THIS TABLE WAS BUILT FROM WERE WRONG. `_context/32-poses.md`
+ *    disagrees with the mock on five frames, and always in the direction that
+ *    throws the journal off screen: frame 10 cx 64.3 against 54.45, frame 11 cy
+ *    63.1 against 54.88, frame 12 cx 75.8 against 57.20, frame 13 cy 63.1
+ *    against 54.35, frame 16 cx 46.9 against 48.17. Their roll was wrong too —
+ *    up to 12.9 degrees where the mock draws 2.4. Verified by drawing the box
+ *    on the rendered mock frame: the Figma bounds hug the journal, the table's
+ *    box is 107 to 201 design px off. With those five fixed the journal's whole
+ *    horizontal range across the story is 48.2..57.8 % instead of 46.9..75.8.
+ *
+ * 2. THE POSE NOW HOLDS. Each anchor is repeated at the next slide's fold, so
+ *    the journal SETTLES after its page turn and stays there; the move to the
+ *    next pose happens inside the next turn. The previous edition drifted
+ *    continuously from one anchor to the next, which travelled up to 243 design
+ *    px across a slide — the owner's «траектории очень большие… он уходит
+ *    сильно вправо». A floating object does not travel: in weightlessness the
+ *    centre of mass cannot move without an outside force, which is exactly what
+ *    both of the ticket's own references show (the cucumber "slowly rotating,
+ *    drift minimal to none"). The living motion is the levitation on
+ *    `.journal-hover`, and it is rotation-led on purpose.
+ *
+ * hermite.js zeroes both tangents of a flat segment, so a hold is exact and the
+ * journal leaves it from rest and arrives at the next pose at rest — the move
+ * is an S-curve occupying one page turn, and nothing snaps at either end.
  *
  *   [t, rot, scale, cx, cy]
  *     t      absolute video seconds, the same clock as the film
  *     rot    rotationZ in CSS degrees, from the mock
- *     scale  from the mock; every data page is 0.681-0.683, so the journal's
- *            size does not change once the cover is gone
+ *     scale  from the mock; every data page is 0.681-0.683
  *     cx/cy  the pose's centre as a percent of the 1080x1920 canvas
  *
- * WHERE EACH ANCHOR SITS: `slide.at + TIMING.flip.out + SLIDE_FLIP_BACK[frame]`,
- * i.e. the instant the page turn has finished and the new spread is flat to the
- * camera. That is the instant the mock draws. Between two anchors the journal
- * drifts from one to the other across the whole slide, which is what the mock's
- * own note asks for — its frames are samples of a journal hanging in
- * weightlessness, not stations it stops at.
+ * WHERE AN ANCHOR SITS: `slide.at + TIMING.flip.out + SLIDE_FLIP_BACK[frame]`,
+ * the instant the turn has finished and the spread is flat to the camera. That
+ * is the instant the mock draws.
  *
- * ⚠️ FRAMES 17/18, 14/15, 20/21 AND 22/23 SHARE CHANNELS, and that is the mock,
- * not a copy-paste. Where two neighbouring rows carry the same value hermite.js
- * zeroes both tangents, so those channels hold exactly still and the levitation
- * is the only thing moving them. A hold is a hold.
- *
- * THE FIRST TWO ROWS ARE THE LANDING'S OVERSHOOT. The mock's frame 7 says the
- * journal "sits" onto its place with a light overshoot and no hard stop
- * (21770:4967), so the entrance arrives just past the pose at 6.00 — 2 degrees
- * of roll, 0.8 % of the stage, half a per cent of size — and eases back onto it
- * by 6.55. swingOpen's last key IS the 6.00 row; the two are quoted from each
- * other rather than retyped.
- *
- * THE LAST FOUR ROWS ARE THE RECEDE (21770:4988): "the journal shrinks, flies
- * off into the depth as if pulled into an event horizon; the motion accelerates
- * towards the end — slowly at first." So the rows thin out in value and thicken
- * in speed: 0.02 of scale in the first 1.2 s, 0.09 in the next 1.2, then 0.08
- * and 0.046 over one second each. It lands on the mock's own frame-24 pose at
- * 88.03, which is where `journalDissolve` picks the scale up from.
+ * ⚠️ FRAME 24 IS MEASURED OFF THE PICTURE, NOT OFF THE METADATA. Figma reports
+ * that instance's box 223 design px too low — it is the only frame rotated far
+ * enough (20.4 deg) for the discrepancy to show, and the drawn frame puts the
+ * journal's centre at 51.9 % where the metadata says 64.5 %. The old table
+ * carried the metadata's number, which is why the journal used to sink out of
+ * the bottom of the frame as it receded instead of shrinking away near the
+ * centre. The last four rows thin in value and thicken in speed — "спершу
+ * повільно" (21770:4988) — and land on the measured pose at 88.03, which is
+ * where `journalDissolve` picks the scale up from.
  */
-/**
- * ⚠️ THE MEASURED LEAN IS GONE (2026-09-25, DP-15822, ADR-0012).
- *
- * `SLIDE_LEAN` — one `rotationY` per slide — and `SLIDE_LEAN_PATH` — fifteen
- * slides of six to eleven rows of `[t, rotX, rotY]` through the slide — both
- * came off the reference clip, and both went out with it.
- *
- * WHAT THEY COST WHILE THEY WERE HERE is worth recording, because it is the
- * second half of why this session exists. Between the turn's back-leg ending at
- * rest and the lean table's first row, and again between its last row and the
- * next turn, NOTHING wrote the two depth channels: 0.19 to 0.70 s of frozen
- * depth at each end of every slide — measured 0.30/0.06 on frame 8, 0.27/0.50
- * on 9, 0.26/0.66 on 14, 0.19/0.70 on 16, 0.50/0.50 on 19. "Hold still, then
- * move" twice a slide, bracketed by a curve arriving at zero velocity and one
- * leaving at a spline's tangent, which is exactly what a smoothness gate
- * nominates as a STALL followed by a KINK.
- *
- * The depth now comes from the levitation on `.journal-hover`, which is a
- * continuous function of the clock and so has no ends to stall at. The measured
- * numbers, the runs behind them and the seven rejected attempts at the roll
- * reversal on the page's edge are in _context/32-poses.md and the git history.
- */
-
 // prettier-ignore
 export const JOURNAL_PATH = [
-  [6.00, 1.05, 0.7508, 56.90, 47.95], // frame 7 cover — the overshoot the entrance carries in
-  [6.55, 3.10, 0.7460, 57.70, 48.70], // frame 7 cover — settled onto the mock (21770:4716)
-  [11.74, 3.10, 0.6830, 57.40, 47.80], // frame 8 editors_note
-  [17.80, 4.15, 0.6820, 49.40, 54.90], // frame 9 days_in_spotlight
-  [22.85, 7.10, 0.6820, 64.30, 50.80], // frame 10 seasonal_power
-  [27.10, 12.90, 0.6820, 49.50, 63.10], // frame 11 vip_status
-  [30.91, 12.75, 0.6820, 75.80, 50.80], // frame 12 money_talks
-  [34.87, 7.05, 0.6810, 49.50, 63.10], // frame 13 headline_win
-  [39.61, 2.75, 0.6810, 54.80, 50.00], // frame 14 multiplier_moment
-  [44.58, 2.75, 0.6810, 54.80, 56.50], // frame 15 players_pick
-  [49.88, 6.30, 0.6810, 46.90, 53.90], // frame 16 bonus_report
-  [53.97, 4.35, 0.6810, 56.30, 51.00], // frame 17 sports_desk
-  [58.10, 4.35, 0.6810, 56.30, 51.00], // frame 18 top_sport_signal
-  [61.57, 4.37, 0.6810, 56.31, 52.48], // frame 19 sponsor
-  [67.61, 3.53, 0.6810, 50.25, 53.48], // frame 20 space_milk
-  [73.96, 3.53, 0.6810, 50.25, 51.66], // frame 21 joke
-  [79.04, 1.65, 0.6810, 52.00, 47.30], // frame 22 gift
-  [83.60, 1.65, 0.6810, 52.00, 50.20], // frame 23 final
-  [84.80, 3.50, 0.6600, 51.50, 51.50], // frame 24 — «спершу повільно»
-  [86.00, 9.00, 0.5700, 50.30, 56.00], // frame 24 — picking up
-  [87.00, 15.00, 0.4900, 49.30, 61.00], // frame 24 — faster
-  [88.03, 20.40, 0.4440, 48.60, 64.50], // frame 24 — the mock pose, reached at the end
+  [6.00, 3.11, 0.7461, 57.75, 48.67], // frame 7 cover — settles here
+  [11.07, 3.11, 0.7461, 57.75, 48.67], //   ...and holds until the next fold
+  [11.74, 3.11, 0.6826, 57.43, 47.77], // frame 8 editors_note — settles here
+  [17.10, 3.11, 0.6826, 57.43, 47.77], //   ...and holds until the next fold
+  [17.80, 4.13, 0.6825, 49.39, 54.85], // frame 9 days_in_spotlight — settles here
+  [22.07, 4.13, 0.6825, 49.39, 54.85], //   ...and holds until the next fold
+  [22.85, 2.40, 0.6826, 54.45, 50.84], // frame 10 seasonal_power — settles here
+  [26.07, 2.40, 0.6826, 54.45, 50.84], //   ...and holds until the next fold
+  [27.10, 4.33, 0.6812, 49.45, 54.88], // frame 11 vip_status — settles here
+  [30.10, 4.33, 0.6812, 49.45, 54.88], //   ...and holds until the next fold
+  [30.91, 3.86, 0.6811, 57.20, 50.85], // frame 12 money_talks — settles here
+  [34.07, 3.86, 0.6811, 57.20, 50.85], //   ...and holds until the next fold
+  [34.87, 2.19, 0.6810, 50.31, 54.35], // frame 13 headline_win — settles here
+  [39.07, 2.19, 0.6810, 50.31, 54.35], //   ...and holds until the next fold
+  [39.61, 2.73, 0.6810, 54.82, 50.02], // frame 14 multiplier_moment — settles here
+  [44.03, 2.73, 0.6810, 54.82, 50.02], //   ...and holds until the next fold
+  [44.58, 2.73, 0.6810, 54.82, 56.48], // frame 15 players_pick — settles here
+  [49.10, 2.73, 0.6810, 54.82, 56.48], //   ...and holds until the next fold
+  [49.88, 2.44, 0.6810, 48.17, 52.19], // frame 16 bonus_report — settles here
+  [53.27, 2.44, 0.6810, 48.17, 52.19], //   ...and holds until the next fold
+  [53.97, 4.38, 0.6811, 56.32, 51.02], // frame 17 sports_desk — settles here
+  [57.07, 4.38, 0.6811, 56.32, 51.02], //   ...and holds until the next fold
+  [58.10, 4.37, 0.6812, 56.31, 51.02], // frame 18 top_sport_signal — settles here
+  [61.10, 4.37, 0.6812, 56.31, 51.02], //   ...and holds until the next fold
+  [61.57, 4.37, 0.6812, 56.31, 52.48], // frame 19 sponsor — settles here
+  [67.07, 4.37, 0.6812, 56.31, 52.48], //   ...and holds until the next fold
+  [67.61, 3.53, 0.6811, 50.25, 53.48], // frame 20 space_milk — settles here
+  [73.07, 3.53, 0.6811, 50.25, 53.48], //   ...and holds until the next fold
+  [73.96, 3.53, 0.6811, 50.25, 51.66], // frame 21 joke — settles here
+  [78.07, 3.53, 0.6811, 50.25, 51.66], //   ...and holds until the next fold
+  [79.04, 1.63, 0.6810, 52.03, 47.27], // frame 22 gift — settles here
+  [83.03, 1.63, 0.6810, 52.03, 47.27], //   ...and holds until the next fold
+  [83.60, 1.63, 0.6810, 52.03, 50.21], // frame 23 final — settles here
+  [84.80, 1.63, 0.6810, 52.03, 50.21], //   ...and holds until the next fold
+  [86.00, 8.00, 0.6000, 50.80, 50.80], // frame 24 — picking up
+  [87.00, 14.50, 0.5150, 49.60, 51.40], // frame 24 — faster
+  [88.03, 20.38, 0.4441, 48.64, 51.90], // frame 24 — the measured mock pose
 ]
 
 /** Where the last PAGE segment ends for the progress bar: the second the outro

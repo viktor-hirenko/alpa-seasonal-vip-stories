@@ -394,13 +394,18 @@ export const TIMING = {
  * the same thing the storyboard asks for in words: «власна траєкторія, швидкість
  * і фаза, без синхрону» (21770:4964).
  *
- * WHY THE DEPTH CHANNELS ARE THE BIG ONES. `rotY` reaches 8 degrees and `rotX`
- * 4.5, an order above the roll — because under the stage's 1800 perspective a
- * few degrees of yaw is what makes the page read as a solid object in a room
- * rather than a sticker. The owner asked for exactly this on 2026-09-18 («на
- * видео видно, как перспектива тоже меняется на слайде»); until DP-15822 it was
- * answered with rows measured off the clip, which stalled at both ends of every
- * slide. A continuous function has no ends to stall at.
+ * ⚠️ THE AMPLITUDES CAME DOWN ON 2026-09-25, and the shape changed with them.
+ * The first edition drifted the centre 17 px up and down and 6 px across on top
+ * of a pose that was itself travelling; the owner read the whole thing as
+ * «слишком искусственно». Both of the ticket's references say the same thing and
+ * so does the physics: in weightlessness the centre of mass cannot move without
+ * an outside force, so a free object ROTATES and stays put. The centre is now
+ * the quiet part and the three angles are the loud one.
+ *
+ * The depth angles are still the biggest of the six — the owner asked for the
+ * perspective to change through a slide on 2026-09-18 («на видео видно, как
+ * перспектива тоже меняется на слайде») — but they are 6 and 3.5 degrees now,
+ * not 8 and 4.5.
  *
  * WHERE IT IS WRITTEN: `.journal-hover`, which exists for this and nothing else
  * (ADR-0002). Its `transform-origin` is 0 0 and `.journal-box` is centred on
@@ -414,10 +419,24 @@ export const TIMING = {
  *   phase   radians, spread so no two channels cross zero together
  */
 export const HOVER_DRIFT = {
-  rotZ: { amp: [0.7, 0.35], period: [9.1, 21.0], phase: 0.0 },
-  rotY: { amp: [5.5, 2.5], period: [8.9, 20.4], phase: 1.31 },
-  rotX: { amp: [3.0, 1.5], period: [6.7, 15.4], phase: 2.62 },
-  y: { amp: [0.6, 0.3], period: [7.3, 16.9], phase: 3.93 },
-  x: { amp: [0.35, 0.18], period: [11.7, 27.1], phase: 5.24 },
-  scale: { amp: [0.007, 0.004], period: [13.1, 30.2], phase: 0.65 },
+  // ROTATION IS THE MOTION. rotY reaches 6.1 degrees and rotX 3.55 — an order
+  // above the roll — because under the stage's 1800 perspective a few degrees of
+  // yaw is what makes the page read as a solid object hanging in a room.
+  rotZ: { amp: [0.75, 0.4], period: [9.1, 21.0], phase: 0.0 },
+  rotY: { amp: [4.2, 1.9], period: [8.9, 20.4], phase: 1.31 },
+  rotX: { amp: [2.4, 1.15], period: [6.7, 15.4], phase: 2.62 },
+  // THE CENTRE BARELY MOVES: 10 design px up and down, 3 across. Sideways is the
+  // tightest channel of the six because the journal is 1065 design px wide in a
+  // 1080 canvas — every pixel it drifts sideways is a pixel of type that leaves
+  // the screen on a phone.
+  y: { amp: [0.36, 0.18], period: [7.3, 16.9], phase: 3.93 },
+  x: { amp: [0.2, 0.1], period: [11.7, 27.1], phase: 5.24 },
+  // THE DEPTH BREATH, +-2 %. The owner asked for the journal to "drift back into
+  // the depth and get smaller that way", and this is that — expressed as scale
+  // rather than as a real `z`, which is the same picture for a hundredth of the
+  // trouble: z would have to be written in CSS px while every other number here
+  // is a design px, and `--u` is a declared token that does not resolve to a
+  // length. Against a perspective of 1800, z = -45 design px produces a scale of
+  // 0.9756; the 2 % here spans that and a little more.
+  scale: { amp: [0.013, 0.007], period: [13.1, 30.2], phase: 0.65 },
 }
