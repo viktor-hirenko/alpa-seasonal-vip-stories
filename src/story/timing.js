@@ -418,6 +418,19 @@ export const TIMING = {
  *   period  [first, second] in seconds; pairwise non-integer ratios
  *   phase   radians, spread so no two channels cross zero together
  */
+/**
+ * ⚠️ WHERE THE LEVITATION'S CYCLE STARTS, and it is not zero because of what
+ * that cost. The entrance lands at 6.0 s and stops; from there the drift is the
+ * only motion, and at `epoch: 0` the drift is at its SLOWEST exactly then —
+ * 2.21 deg/s of combined rotation against 3.85 one second later. The owner read
+ * that as «остановка, а потом левитация» (25.09). Shifting the whole cycle
+ * forward hands the journal over to a drift already moving: 3.96 deg/s at the
+ * worst second of 6.0..7.0 instead of 2.21, the same curve, same amplitudes,
+ * same periods — only a different place in it. Chosen by maximising the WORST
+ * second of that window over 0..20 s in 0.1 steps.
+ */
+export const DRIFT_EPOCH = 14.1
+
 export const HOVER_DRIFT = {
   // ⚠️ THIS IS NOW THE ONLY THING THAT MOVES between 6 s and 84.8 s, so it is a
   // touch wider than the edition before it. Rotation still carries the motion:

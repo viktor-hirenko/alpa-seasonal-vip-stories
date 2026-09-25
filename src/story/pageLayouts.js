@@ -154,10 +154,14 @@ export const PAGE_LAYOUTS = {
     // Both halves of the sentence are single 84-tall nodes (78 px type, not the
     // usual 96) in every language.
     headline: { lines: 1 },
-    // 1054 / — / 1398 / 1156. German is 1398 wide at x=22, i.e. it uses almost
-    // the whole 1443 body and overflows the slot's 1383 default — so it gets
-    // the mock's own number rather than being shrunk by 1 %.
-    footer: { maxWidth: 1398, lines: 1 },
+    // ⚠️ 25.09: THE FOOTER IS TWO LINES NOW, IN ALL FOUR VARIANTS. The redraw
+    // broke the sentence — "in bonuses / this season.", "en bonus / cette
+    // saison.", "diese Saison / an Boni gesichert!", "in bonus / questa
+    // stagione." (renders of 21770:3715, 3726, 3763, 3800). It used to be one
+    // 84-tall node per language, and German's single line needed the mock's own
+    // 1398 to avoid a 1 % shrink; split in two, the longest line is far inside
+    // the slot's 1383 default, so the cap goes away with it.
+    footer: { lines: 2 },
   },
 
   sports_desk: {

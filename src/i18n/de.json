@@ -62,7 +62,7 @@
     "bonus_report": {
       "chip": "Bonusbericht",
       "headline": "Du hast",
-      "footer": "diese Saison an Boni gesichert!"
+      "footer": ["diese Saison", "an Boni gesichert!"]
     },
     "sports_desk": {
       "chip": "Sport-Ressort",

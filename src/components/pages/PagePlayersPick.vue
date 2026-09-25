@@ -1,5 +1,12 @@
 <template>
-  <PageChrome :spine-fade-to="'rgba(0, 10, 18, 0.8)'">
+  <!-- ⚠️ THE COLOUR WASH IS NEW HERE AND ITS ABSENCE WAS INVISIBLE TO THE
+       OVERLAY. 23126:3061 lays `rgba(255,0,181,0.62)` over the backdrop with
+       `mix-blend-mode: color`; the starfield file is monochrome, so without it
+       this page rendered GREY where the mock is magenta. mock-overlay.py
+       compares in GREYSCALE and `color` blending changes hue and saturation
+       only — the page measured 1.4 % while plainly wrong on screen, and the
+       owner caught it by eye on 25.09. -->
+  <PageChrome :spine-fade-to="'rgba(0, 10, 18, 0.8)'" :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
       <!-- 25.09: galaxy and planets are gone; the starburst (23126:3060) sits
            HIGHER here than on the other pages — top 150.14, not 278.82 — and

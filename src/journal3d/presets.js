@@ -1,6 +1,6 @@
 import { gsap } from 'gsap'
 import { EASE } from '@/story/easing.js'
-import { TIMING, HOVER_DRIFT } from '@/story/timing.js'
+import { TIMING, HOVER_DRIFT, DRIFT_EPOCH } from '@/story/timing.js'
 import { DEPTH } from '@/story/journalGeometry.js'
 import { posVars, boxVars } from './poseTween.js'
 import { splineReader } from './hermite.js'
@@ -591,7 +591,7 @@ function yawTurn(s, t, p) {
  * progress bar with it. It spans the film explicitly instead.
  */
 export function journalDrift(t, params) {
-  const p = P({ drift: HOVER_DRIFT, from: 0, to: TIMING.duration }, params)
+  const p = P({ drift: HOVER_DRIFT, epoch: DRIFT_EPOCH, from: 0, to: TIMING.duration }, params)
   const wave = (c, time) =>
     c.amp[0] * Math.sin((2 * Math.PI * time) / c.period[0] + c.phase) +
     // The second harmonic's phase is offset again, by an irrational-ish factor,
@@ -605,7 +605,9 @@ export function journalDrift(t, params) {
     duration: p.to - p.from,
     ease: 'none',
     onUpdate() {
-      const time = head.t
+      // The epoch is why the entrance hands over to a drift that is already
+      // moving rather than to one at a turning point — see DRIFT_EPOCH.
+      const time = head.t + p.epoch
       const d = p.drift
       gsap.set(t.hover, {
         rotationZ: wave(d.rotZ, time),

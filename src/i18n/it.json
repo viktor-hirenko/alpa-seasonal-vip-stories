@@ -62,7 +62,7 @@
     "bonus_report": {
       "chip": "Bonus Report",
       "headline": "Avete richiesto",
-      "footer": "in bonus questa stagione."
+      "footer": ["in bonus", "questa stagione."]
     },
     "sports_desk": {
       "chip": "Sports Desk",

@@ -76,17 +76,20 @@ import toneA from '@/assets/pages/bg-starburst-a.webp'
 import toneB from '@/assets/pages/bg-starburst-b.webp'
 import toneC from '@/assets/pages/bg-starburst-c.webp'
 import toneD from '@/assets/pages/bg-starburst-d.webp'
+import toneE from '@/assets/pages/bg-starburst-e.webp'
 import planetsSrc from '@/assets/pages/planets-4.webp'
 
 /** The three exposures the designer set, keyed as Figma names the export. */
-const TONES = { a: toneA, b: toneB, c: toneC, d: toneD }
+const TONES = { a: toneA, b: toneB, c: toneC, d: toneD, e: toneE }
 
 const props = defineProps({
   planets: { type: Boolean, default: true },
   /**
    * Which exposure of the starfield this page draws — see the note above.
    * 'a' = ae97a (Gift, Seasonal Power), 'b' = b654d (Sports Desk, Money Talks),
-   * 'c' = 419b5 (Top Sport Signal, Space Milk), 'd' = 96949 (VIP Status).
+   * 'c' = 419b5 (Top Sport Signal, Space Milk), 'd' = 96949 (VIP Status),
+   * 'e' = a7cd0 (Days in the Spotlight — that node also carries `opacity: .2`,
+   * already baked into the export's alpha, 24.9 against the others' 125.9).
    */
   tone: { type: String, default: 'b' },
   /** Starburst box, design px relative to the page body (23126:3279). */

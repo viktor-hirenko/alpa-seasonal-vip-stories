@@ -62,7 +62,7 @@
     "bonus_report": {
       "chip": "Rapport des bonus",
       "headline": "Vous avez récupéré",
-      "footer": "en bonus cette saison."
+      "footer": ["en bonus", "cette saison."]
     },
     "sports_desk": {
       "chip": "Page Sports",
