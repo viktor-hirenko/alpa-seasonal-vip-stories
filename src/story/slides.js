@@ -109,55 +109,29 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  *            on screen. Every spread's content is centred inside it, so the
  *            symmetric crop is the one that costs the least type.
  *
- *            ⚠️ THE COVER IS THE EXCEPTION, and since 25.09 it is 0.64 / 50.14
- *            rather than the recorded 0.7461 / 57.75.
- *
- *            WHY IT MOVED. The vertical «JOURNAL» down the cover's right edge
- *            is drawn in the mock and was never once on screen — not at rest,
- *            not at any point of the levitation. Measured: it sat 105..149
- *            design px PAST the right edge of what a phone shows. Two separate
- *            reasons, and both had to go.
- *            (1) THE RECORDED POSE IS 86 px OFF THE DRAWN FRAME. Laid our
- *            render over storyboard frame 7 and measured the same landmarks:
- *            the vertical distance «VIP CLUB» -> player name agrees to 0.35 %
- *            (846 against 849 design px), so the SIZE was right, but our cover
- *            stood 86 px to the RIGHT of the drawn one. Same class of error as
- *            the five rows 32-poses.md already flags.
- *            (2) A PHONE IS NOT THE MOCK'S CANVAS. The mock composes on 9:16;
- *            a 19.5:9 phone crops 97 design px off each side, and the cover's
- *            type spans 0.897 of its own face — 980 px against the 886 a phone
- *            shows. So even at the drawn position the lettering stayed out.
- *            THE CHOICE, measured across the levitation's own swing (roll
- *            +-1.5 deg, scale +-2.5 %, x +-0.55 %), with «VIP CLUB» never
- *            crossing the left edge on any of 430x932, 393x852, 360x800:
- *              scale 0.616 -> the lettering is whole at every instant
- *              scale 0.629 -> whole at rest, never under 75 %
- *              scale 0.640 -> 96 % at rest, 47 % at the swing's worst   <- here
- *              scale 0.670 -> 20 % at rest, nothing at the worst
- *              scale 0.681 -> 1 %, i.e. the corner only
- *            0.64 is one number away from any other row of that table. Its type is LEFT-ALIGNED and it is the wider
+ *            ⚠️ THE COVER IS THE EXCEPTION and keeps the mock's own frame-7
+ *            pose, 57.75 / 48.67. Its type is LEFT-ALIGNED and it is the wider
  *            face (1093 design px against the spread's 1065), so centring it
- *            eats the beginning of every line — tried, and "VIP CLUB" lost a
- *            third of its V. The mock puts it right of centre for exactly that
- *            reason. This is the ONE pose change in the story, and it happens on
- *            the same frame as the face swap, where the journal is edge-on and
- *            its front face is a hairline — the object genuinely becomes a
- *            different object there, and its size already changes with it.
- *   rot      3.00 deg — the middle of what the mock draws across its frames
- *            (1.63 to 4.38). The levitation swings +-1.5 around it, so the
- *            journal breathes through the whole range the storyboard uses.
- *   scale    the mock's own, unchanged: 0.7461 while the cover is showing and
- *            0.6810 once it is a spread. Those are different FACES (1465x1868
- *            against 1564x1911), so the two numbers put 1093 and 1065 design px
- *            on screen — a 2.6 % step, and it is taken at the edge-on instant of
- *            the first fold where the front face is a hairline.
+ *            eats the beginning of every line.
  *
- * ⚠️ WHAT THIS COSTS, so nobody rediscovers it as a bug: the journal no longer
- * stands where the designer put it on each individual frame. Those frames differ
- * from one another by up to 10 % of the canvas width. The owner was told and
- * agreed (2026-09-25): «давай попробуем, просто чтобы начальная позиция не была
- * смешной какой-то».
- *
+ *            ⚠️ AND THE VERTICAL «JOURNAL» DOWN ITS RIGHT EDGE CANNOT BE SHOWN
+ *            AT THIS SIZE. Measured on rendered frames, not modelled: the
+ *            type spans 1308 of the 1465 face, which is 976 design px on screen
+ *            against the 886 a 19.5:9 phone shows, and the 3.11 deg roll adds
+ *            64 more because the top and bottom lines are 1000 px apart. At
+ *            57.75 the left type just clears the crop and the lettering sits
+ *            105..149 px outside; slide left until the lettering appears and
+ *            «FEATURING» loses 84 px while the lettering is still 50 px out.
+ *            The only lever is scale, and it is steep — with the levitation's
+ *            own swing counted and the left type never crossing the edge on
+ *            430x932, 393x852 or 360x800:
+ *              0.7461 (here) -> the lettering never appears
+ *              0.670         -> 20 % of it at rest, nothing at the swing's worst
+ *              0.640         -> 96 % at rest, 47 % at the worst
+ *              0.616         -> whole at every instant
+ *            Taking any of those makes the cover visibly smaller than the
+ *            spreads that follow (0.681), which is why it is the owner's call
+ *            and not a session's.
  *   [t, rot, scale, cx, cy] — t in absolute video seconds, rot in CSS degrees,
  *   cx/cy the centre as a percent of the 1080x1920 canvas.
  *
@@ -170,8 +144,8 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  */
 // prettier-ignore
 export const JOURNAL_PATH = [
-  [6.00, 3.11, 0.64, 50.14, 48.67], // the cover's pose — see the note above
-  [11.19, 3.11, 0.64, 50.14, 48.67], //   ...and nothing moves until the first fold
+  [6.00, 3.11, 0.7461, 57.75, 48.67], // the cover's pose — see the note above
+  [11.19, 3.11, 0.7461, 57.75, 48.67], //   ...and nothing moves until the first fold
   [11.23, 3.00, 0.6810, 50.00, 50.00], // the object becomes a spread: centred, edge-on, invisible
   [84.80, 3.00, 0.6810, 50.00, 50.00], //   ...and nothing moves for the next 73 seconds
   [86.00, 8.00, 0.6000, 49.80, 50.60], // the recede — «спершу повільно»

@@ -304,28 +304,50 @@ export function swingOpen(t, params) {
         // measurement nothing contradicted, and only its destination moved, from
         // the clip's 19.23 deg to the mock's 3.11. Scaling keeps it MONOTONE,
         // which is the whole point: any peak on the way in is a nod.
-        // ⚠️ THE TIMES ARE DERIVED, NOT MEASURED, AND THAT IS THE FIX FOR THE
-        // JERK (25.09). The poses are the measured swing; the clip's own frame
-        // numbers as key TIMES made every channel's speed non-monotone — yaw
-        // ran 93 -> 55 -> 63 -> 58 -> 42 deg/s and scale 0.33 -> 0.20 -> 0.13
-        // -> 0.10 -> 0.17 -> 0.03, i.e. the journal slowed, sped up again and
-        // pulled back while turning. The owner saw it as «влетает рывками».
-        // Now the times come from ONE monotone deceleration of the yaw — the
-        // channel that carries the entrance — as t = D·(1 − (1−p)^(1/1.4))
-        // where p is the yaw's own progress. Roll and the vertical ride the
-        // same p linearly (the header above always called the roll «a straight
-        // climb»; the measured column was not one), and the scale follows a
-        // smooth curve through the first, third, fifth and last keys — its
-        // 0.762 at key six was 0.036 below that trend and was the pull-back.
-        // Only `cx` still rises and falls, because the swing itself goes out to
-        // 60.9 and comes back; the spline renders it smoothly.
-        [0.0, -104, 0.08, 0.8749, 46.89, 50.0],
-        [0.2028, -90, 0.488, 0.8243, 49.59, 49.821],
-        [0.4102, -76.3, 0.887, 0.7892, 57.69, 49.646],
-        [0.6781, -59.6, 1.374, 0.7589, 59.49, 49.432],
-        [1.0884, -36.5, 2.047, 0.7248, 58.99, 49.137],
-        [1.5361, -15.5, 2.658, 0.685, 53.39, 48.868],
-        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.64, 50.14, 48.67], // handover: JOURNAL_PATH's first row
+        // ⚠️ THE ENTRANCE IS THE STORYBOARD'S, NOT THE CLIP'S (25.09, second
+        // pass). What stood here was the clip's swing: the journal appeared
+        // BACK-cover to camera at yaw -104, turned through edge-on, threw its
+        // centre out to cx 67 and came back to 57.75. Two of those are visible
+        // direction reversals, and the owner read the whole thing as steps —
+        // «идет один участок, поворачивается, потом меняет траекторию, как бы
+        // задерживается, потом снова меняет».
+        //
+        // The mock draws something far simpler, and it is what frames 4-7 show:
+        // the cover RISES from below, straightening out of a tilt and growing.
+        // Measured on the drawn frames — «VIP CLUB» bbox against its own tilt —
+        // the roll runs 24.5 -> 8.8 -> 4.0 deg and the size 0.75 -> 0.94 -> 1.0
+        // of the settled pose, while the centre climbs and barely moves
+        // sideways. No edge-on instant anywhere. Figma's own note on frame 7
+        // asks for exactly that: «вилітає в центр кадру, вирівнюється
+        // фронтально. Рух гаситься плавно… без різкої зупинки».
+        //
+        // So every channel is now one decelerating curve to the landing pose,
+        // final + (start − final)·(1 − u)^k, sampled at nine keys: k = 1.9 for
+        // roll, size and cx, 2.4 for the rise so the journal is at its height
+        // before it finishes straightening, as the storyboard has it. There is
+        // no yaw at all. Measured in the DOM over 4.2..5.9 s, frames where a
+        // channel ACCELERATED instead of decelerating: roll 22 -> 0, centre
+        // 20 -> 0, size 13 -> 1.
+        //
+        // ⚠️ THE COVER KEEPS ITS SIZE, and that is a constraint, not a choice.
+        // Its type spans 1308 design px of a 1465 face; at 0.7461 that is 976
+        // on screen against the 886 a 19.5:9 phone shows, and the 3.11 deg roll
+        // adds another 64 because «VIP CLUB» at the top and «FEATURING» at the
+        // bottom are 1000 px apart vertically. 57.75 is the position where the
+        // left-hand type just clears the crop; move it left far enough for the
+        // vertical «JOURNAL» to appear on the right and «FEATURING» is cut by
+        // 84 px while the lettering is STILL 50 px outside. Measured on the
+        // rendered frames, not modelled. The only lever is size — see the table
+        // in slides.js.
+        [0.0, 0, 26.0, 0.52, 55.6, 104.0],
+        [0.2583, 0, 20.871, 0.5707, 56.082, 88.829],
+        [0.5167, 0, 16.361, 0.6152, 56.505, 76.41],
+        [0.775, 0, 12.482, 0.6535, 56.87, 66.579],
+        [1.0333, 0, 9.243, 0.6855, 57.174, 59.153],
+        [1.2917, 0, 6.661, 0.711, 57.416, 53.926],
+        [1.55, 0, 4.753, 0.7299, 57.596, 50.656],
+        [1.8084, 0, 3.55, 0.7418, 57.709, 49.046],
+        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.7461, 57.75, 48.67], // handover: JOURNAL_PATH's first row
       ],
       // The row the PATH reaches one second after the handover, in this
       // preset's own seconds and without a yaw column — see `next` above.
