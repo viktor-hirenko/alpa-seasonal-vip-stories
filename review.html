@@ -18,12 +18,13 @@
       walk it a frame at a time with the arrow keys.
 
       Two things to know before believing what you see:
-        - our dev backdrop is `ref-clean.mp4`, the reference room WITH the flying
-          objects baked in and WITHOUT the journal. So an object you see in our
-          panel may be the reference's own. Hit `o` to hide OUR objects and see
-          which is which.
-        - the idle drift (hover) never stops, and it moves the journal by up to
-          2.5 deg. Hit `d` to freeze it before judging a pose.
+        - our dev backdrop is `ref-clean.mp4`, the reference room WITHOUT the
+          journal. Since DP-15822 there are no DOM objects at all: the levitating
+          objects belong to the background film.
+        - the levitation never stops, and it swings the journal by up to 8 deg of
+          yaw and 4.5 of pitch. Hit `d` to freeze it before judging a pose — park
+          the playhead first, because while the story plays the drift is rewritten
+          every frame and will paint over the freeze.
 
       Dev only: it drives `window.__story`, which installStoryDebugHook installs
       under `import.meta.env.DEV`, and it is deliberately not a build input.
@@ -139,7 +140,6 @@
         <span class="hint">clip</span>
         <input id="op" type="range" min="0" max="1" step="0.01" value="0.5" />
         <button id="src">preview</button>
-        <button id="objs">our objects</button>
         <button id="drift">drift</button>
         <select id="lang">
           <option value="en">en</option>
@@ -150,7 +150,7 @@
       </div>
       <div class="row hint">
         &larr;/&rarr; one frame &nbsp;·&nbsp; shift = 10 &nbsp;·&nbsp; space play &nbsp;·&nbsp;
-        <code>o</code> our objects &nbsp;·&nbsp; <code>d</code> drift
+        <code>d</code> freeze the levitation
       </div>
     </div>
 
@@ -294,15 +294,6 @@
         e.target.textContent = preview ? 'clean bg' : 'preview'
       }
 
-      document.getElementById('objs').onclick = e => {
-        const fl = doc()?.querySelector('.fly-layer')
-        if (!fl) return
-        const off = fl.style.visibility === 'hidden'
-        fl.style.visibility = off ? '' : 'hidden'
-        e.target.classList.toggle('on', !off)
-        e.target.textContent = off ? 'our objects' : 'our objects OFF'
-      }
-
       document.getElementById('drift').onclick = e => {
         const hv = doc()?.querySelector('.journal-hover')
         if (!hv || !story) return
@@ -331,8 +322,7 @@
         } else if (e.key === ' ') {
           document.getElementById('play').click()
           e.preventDefault()
-        } else if (e.key === 'o') document.getElementById('objs').click()
-        else if (e.key === 'd') document.getElementById('drift').click()
+        } else if (e.key === 'd') document.getElementById('drift').click()
       })
 
       addEventListener('resize', fit)
