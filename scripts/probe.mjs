@@ -352,19 +352,20 @@ if (fitMode) {
    * left the gate permanently and meaninglessly red — 190 samples out of
    * tolerance on a build nobody had broken.
    *
-   * WHAT IT ASSERTS NOW: that the journal is WHERE THE MOCK SAYS at the instant
-   * the mock draws — `slide.at + flip.out + SLIDE_FLIP_BACK[frame]`, the moment
-   * the page turn has finished. Both sides are real: the left is the rendered
-   * bounding box of `.journal-box` in design px, measured in the PLAYER rather
-   * than the lab so that what is measured is what ships; the right is the AABB
-   * predicted from the storyboard's own pose by the same projection
-   * _context/32-poses.md solved those poses with.
+   * WHAT IT ASSERTS NOW, since the journal has ONE pose for the whole story:
+   * that it is in that pose on every slide and that NOTHING MOVES IT. Both
+   * sides are real — the left is the rendered box of `.journal-box` in design
+   * px, measured in the PLAYER so that what is measured is what ships; the
+   * right is the box predicted from JOURNAL_PATH by the same projection the
+   * storyboard's own poses were solved with. A transform chain of four nested
+   * elements, a perspective, a face-size swap and a spline sits between them,
+   * and any of those can drift while the table is right.
    *
-   * ⚠️ IT IS NOT GREEN BY CONSTRUCTION, which is the trap the old comment here
-   * warned about. The predicted box comes from the MOCK's four numbers; the
-   * measured one comes from a transform chain of four nested elements, a
-   * perspective, a face-size swap and a spline. Any of those can be wrong while
-   * the table is right — that is exactly the class of bug it catches.
+   * IT ALSO PRINTS HOW FAR THAT ONE POSE IS FROM EACH FRAME'S OWN MOCK POSE.
+   * That column is INFORMATION, NOT A GATE: the storyboard's frames are 27
+   * separate drawings and the journal deliberately no longer visits them one by
+   * one (see JOURNAL_PATH). The column exists so the size of that trade stays
+   * visible instead of being forgotten.
    *
    * ⚠️ THE LEVITATION IS SWITCHED OFF FOR THE READING. It lives on
    * `.journal-hover` and reaches 8 degrees of yaw and 4.5 of pitch, which moves
@@ -413,16 +414,26 @@ if (fitMode) {
   // allowed on position; the size and angle columns fall out of w/h, so one
   // tolerance in px covers all three.
   const TOL = { pos: 9, size: 9 }
-  console.log("The journal's POSE against the storyboard's, at the instant the mock draws.")
-  console.log('Left: the rendered box of .journal-box in design px, in the player, with the')
-  console.log('levitation switched off. Right: the box the mock pose predicts.\n')
-  console.log('frame page                     t    our cx/cy       mock cx/cy      dpos    dsize')
+  // The mock's own per-frame centres, re-derived from Figma on 2026-09-25 (frame
+  // 24 measured off the drawn frame). Printed for the last column only.
+  const MOCK = { 7: [57.75, 48.67], 8: [57.43, 47.77], 9: [49.39, 54.85], 10: [54.45, 50.84],
+    11: [49.45, 54.88], 12: [57.2, 50.85], 13: [50.31, 54.35], 14: [54.82, 50.02],
+    15: [54.82, 56.48], 16: [48.17, 52.19], 17: [56.32, 51.02], 18: [56.31, 51.02],
+    19: [56.31, 52.48], 20: [50.25, 53.48], 21: [50.25, 51.66], 22: [52.03, 47.27],
+    23: [52.03, 50.21] } // prettier-ignore
+  console.log("The journal's pose on every slide, in the player, levitation switched off.")
+  console.log('Left: the rendered box of .journal-box. Right: the box JOURNAL_PATH predicts.')
+  console.log("Last column: how far the one pose sits from THAT frame's mock pose — a")
+  console.log('reported trade, not a failure.\n')
+  console.log(
+    'frame page                     t    our cx/cy       ours predicted  dpos    dsize   vs mock',
+  )
   let fails = 0,
     worstPos = 0,
     worstSize = 0
   const anchors = SLIDES.filter(s => s.frame >= 7 && s.frame <= 23)
   for (const s of anchors) {
-    const t = +(s.frame === 7 ? JOURNAL_PATH[1][0] : s.at + TIMING.flip.out + (SLIDE_FLIP_BACK[s.frame] ?? TIMING.flip.back)).toFixed(3) // prettier-ignore
+    const t = +(s.frame === 7 ? 8.0 : s.at + TIMING.flip.out + (SLIDE_FLIP_BACK[s.frame] ?? TIMING.flip.back)).toFixed(3) // prettier-ignore
     const m = await cdp.eval(PARK(t))
     const want = predict(poseAt(t), m.jw, m.jh)
     const dPos = Math.hypot(m.cx - want.cx, m.cy - want.cy)
@@ -437,6 +448,8 @@ if (fitMode) {
       worstPos = Math.max(worstPos, dPos)
       worstSize = Math.max(worstSize, dSize)
     }
+    const mk = MOCK[s.frame]
+    const dMock = mk ? Math.hypot(m.cx - (mk[0] / 100) * 1080, m.cy - (mk[1] / 100) * 1920) : null
     console.log(
       String(s.frame).padStart(5) +
         '  ' +
@@ -444,8 +457,9 @@ if (fitMode) {
         t.toFixed(2).padStart(7) +
         `${fmt(m.cx)}/${fmt(m.cy)}`.padStart(16) +
         `${fmt(want.cx)}/${fmt(want.cy)}`.padStart(16) +
-        dPos.toFixed(1).padStart(9) +
+        dPos.toFixed(1).padStart(8) +
         dSize.toFixed(1).padStart(8) +
+        (dMock == null ? '       -' : `${dMock.toFixed(0)} px`.padStart(9)) +
         (!num ? '  NOT MEASURED' : bad ? '  OUT' : ''),
     )
   }

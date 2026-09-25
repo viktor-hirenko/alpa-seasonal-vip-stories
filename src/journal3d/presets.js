@@ -312,8 +312,11 @@ export function swingOpen(t, params) {
         // The last two keys are aimed at the mock. The yaw is still the measured
         // swing — Figma cannot draw a yaw, and the mock's own note ("flies into
         // the centre, aligns frontally") needs one — and roll, size and centre
-        // arrive at frame 7's pose and STOP there. Nothing passes it and comes
-        // back; see HANDOVER_ROT for the nod that cost.
+        // arrive at THE one pose and stop there. Nothing passes it and comes
+        // back; see HANDOVER_ROT for the nod that cost. `cy` is a flat 50 the
+        // whole way in, so the cover enters at mid height and never bobs on the
+        // way — the only vertical movement it has is the levitation it is
+        // joining, which is already running when it arrives.
         [1.5667, -15.5, 2.97, 0.762, 61.0, 49.2], //  165
         [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.7461, 57.75, 48.67], // 180  handover: JOURNAL_PATH's first row
       ],

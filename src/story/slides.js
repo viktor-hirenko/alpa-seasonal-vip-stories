@@ -74,94 +74,84 @@ const RAW = [
 export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
 
 /**
- * THE JOURNAL'S PATH — the mock's pose per slide, HELD through the slide.
+ * THE JOURNAL'S POSE — ONE POSE, FOR THE WHOLE STORY.
  *
- * ⚠️ TWO CORRECTIONS ON 2026-09-25, BOTH FROM THE OWNER LOOKING AT IT.
+ * ⚠️ THE PER-SLIDE POSES ARE GONE (2026-09-25, third edition). Two editions
+ * before this one tried to make the journal visit the mock's pose on every
+ * slide: the first drifted between them across the whole slide, the second held
+ * each one and moved between them inside the page turn. The owner rejected both,
+ * and the second harder than the first — «он в одной позиции, потом
+ * перевертывается и резко начинает двигаться в какую-то позицию, потом
+ * замирает». Measured: while holding, the pose moved at 4 design px per second;
+ * across a turn it moved at up to 130. A thirty-threefold step is not a motion,
+ * it is a jump between stations.
  *
- * 1. THE NUMBERS THIS TABLE WAS BUILT FROM WERE WRONG. `_context/32-poses.md`
- *    disagrees with the mock on five frames, and always in the direction that
- *    throws the journal off screen: frame 10 cx 64.3 against 54.45, frame 11 cy
- *    63.1 against 54.88, frame 12 cx 75.8 against 57.20, frame 13 cy 63.1
- *    against 54.35, frame 16 cx 46.9 against 48.17. Their roll was wrong too —
- *    up to 12.9 degrees where the mock draws 2.4. Verified by drawing the box
- *    on the rendered mock frame: the Figma bounds hug the journal, the table's
- *    box is 107 to 201 design px off. With those five fixed the journal's whole
- *    horizontal range across the story is 48.2..57.8 % instead of 46.9..75.8.
+ * WHY NO EDITION OF THAT IDEA COULD HAVE WORKED. The storyboard is 27 SEPARATE
+ * DRAWINGS. Each frame was composed on its own — on this page the journal looked
+ * better to the right, on that one lower — and there is no path between them,
+ * because a path was never drawn. Chaining independently composed stills into a
+ * trajectory can only produce stations and dashes between them, whatever easing
+ * is put on top. That was a mistake of thinking, not of tuning.
  *
- * 2. THE POSE NOW HOLDS. Each anchor is repeated at the next slide's fold, so
- *    the journal SETTLES after its page turn and stays there; the move to the
- *    next pose happens inside the next turn. The previous edition drifted
- *    continuously from one anchor to the next, which travelled up to 243 design
- *    px across a slide — the owner's «траектории очень большие… он уходит
- *    сильно вправо». A floating object does not travel: in weightlessness the
- *    centre of mass cannot move without an outside force, which is exactly what
- *    both of the ticket's own references show (the cucumber "slowly rotating,
- *    drift minimal to none"). The living motion is the levitation on
- *    `.journal-hover`, and it is rotation-led on purpose.
+ * SO THE STORY HAS EXACTLY THREE MOVEMENTS: the cover flies in and joins the
+ * drift; the journal hangs, for seventy-three seconds, moved by nothing but the
+ * levitation; and at the end it shrinks away into the depth. The page turn
+ * changes the PAGE, not the place — after it the journal is exactly where it
+ * was. That is how the ticket's own reference behaves (the cucumber: one object,
+ * one continuous motion, no drift of the centre) and it is what weightlessness
+ * actually does.
  *
- * hermite.js zeroes both tangents of a flat segment, so a hold is exact and the
- * journal leaves it from rest and arrives at the next pose at rest — the move
- * is an S-curve occupying one page turn, and nothing snaps at either end.
+ * WHERE THE ONE POSE COMES FROM:
+ *   cx, cy   50 / 50 for the SPREAD. Dead centre is the only choice that cannot
+ *            look silly on a page — the crop on a 19.5:9 phone is then 89 design
+ *            px on each side, symmetric, and that is the minimum possible: the
+ *            journal is 1065 design px wide and only 886 of the 1080 canvas are
+ *            on screen. Every spread's content is centred inside it, so the
+ *            symmetric crop is the one that costs the least type.
  *
- *   [t, rot, scale, cx, cy]
- *     t      absolute video seconds, the same clock as the film
- *     rot    rotationZ in CSS degrees, from the mock
- *     scale  from the mock; every data page is 0.681-0.683
- *     cx/cy  the pose's centre as a percent of the 1080x1920 canvas
+ *            ⚠️ THE COVER IS THE EXCEPTION and keeps the mock's own frame-7
+ *            pose, 57.75 / 48.67. Its type is LEFT-ALIGNED and it is the wider
+ *            face (1093 design px against the spread's 1065), so centring it
+ *            eats the beginning of every line — tried, and "VIP CLUB" lost a
+ *            third of its V. The mock puts it right of centre for exactly that
+ *            reason. This is the ONE pose change in the story, and it happens on
+ *            the same frame as the face swap, where the journal is edge-on and
+ *            its front face is a hairline — the object genuinely becomes a
+ *            different object there, and its size already changes with it.
+ *   rot      3.00 deg — the middle of what the mock draws across its frames
+ *            (1.63 to 4.38). The levitation swings +-1.5 around it, so the
+ *            journal breathes through the whole range the storyboard uses.
+ *   scale    the mock's own, unchanged: 0.7461 while the cover is showing and
+ *            0.6810 once it is a spread. Those are different FACES (1465x1868
+ *            against 1564x1911), so the two numbers put 1093 and 1065 design px
+ *            on screen — a 2.6 % step, and it is taken at the edge-on instant of
+ *            the first fold where the front face is a hairline.
  *
- * WHERE AN ANCHOR SITS: `slide.at + TIMING.flip.out + SLIDE_FLIP_BACK[frame]`,
- * the instant the turn has finished and the spread is flat to the camera. That
- * is the instant the mock draws.
+ * ⚠️ WHAT THIS COSTS, so nobody rediscovers it as a bug: the journal no longer
+ * stands where the designer put it on each individual frame. Those frames differ
+ * from one another by up to 10 % of the canvas width. The owner was told and
+ * agreed (2026-09-25): «давай попробуем, просто чтобы начальная позиция не была
+ * смешной какой-то».
  *
- * ⚠️ FRAME 24 IS MEASURED OFF THE PICTURE, NOT OFF THE METADATA. Figma reports
- * that instance's box 223 design px too low — it is the only frame rotated far
- * enough (20.4 deg) for the discrepancy to show, and the drawn frame puts the
- * journal's centre at 51.9 % where the metadata says 64.5 %. The old table
- * carried the metadata's number, which is why the journal used to sink out of
- * the bottom of the frame as it receded instead of shrinking away near the
- * centre. The last four rows thin in value and thicken in speed — "спершу
- * повільно" (21770:4988) — and land on the measured pose at 88.03, which is
- * where `journalDissolve` picks the scale up from.
+ *   [t, rot, scale, cx, cy] — t in absolute video seconds, rot in CSS degrees,
+ *   cx/cy the centre as a percent of the 1080x1920 canvas.
+ *
+ * THE LAST FOUR ROWS ARE THE RECEDE (21770:4988): "the journal shrinks and flies
+ * off into the depth; the motion accelerates towards the end — slowly at first".
+ * It leaves from rest, because hermite.js zeroes both tangents of the flat run
+ * before it, and lands on the mock's frame-24 pose — measured off the drawn
+ * frame at 51.9 % rather than taken from that frame's metadata, which is 223
+ * design px out. See the header of _context/32-poses.md.
  */
 // prettier-ignore
 export const JOURNAL_PATH = [
-  [6.00, 3.11, 0.7461, 57.75, 48.67], // frame 7 cover — settles here
-  [11.07, 3.11, 0.7461, 57.75, 48.67], //   ...and holds until the next fold
-  [11.74, 3.11, 0.6826, 57.43, 47.77], // frame 8 editors_note — settles here
-  [17.10, 3.11, 0.6826, 57.43, 47.77], //   ...and holds until the next fold
-  [17.80, 4.13, 0.6825, 49.39, 54.85], // frame 9 days_in_spotlight — settles here
-  [22.07, 4.13, 0.6825, 49.39, 54.85], //   ...and holds until the next fold
-  [22.85, 2.40, 0.6826, 54.45, 50.84], // frame 10 seasonal_power — settles here
-  [26.07, 2.40, 0.6826, 54.45, 50.84], //   ...and holds until the next fold
-  [27.10, 4.33, 0.6812, 49.45, 54.88], // frame 11 vip_status — settles here
-  [30.10, 4.33, 0.6812, 49.45, 54.88], //   ...and holds until the next fold
-  [30.91, 3.86, 0.6811, 57.20, 50.85], // frame 12 money_talks — settles here
-  [34.07, 3.86, 0.6811, 57.20, 50.85], //   ...and holds until the next fold
-  [34.87, 2.19, 0.6810, 50.31, 54.35], // frame 13 headline_win — settles here
-  [39.07, 2.19, 0.6810, 50.31, 54.35], //   ...and holds until the next fold
-  [39.61, 2.73, 0.6810, 54.82, 50.02], // frame 14 multiplier_moment — settles here
-  [44.03, 2.73, 0.6810, 54.82, 50.02], //   ...and holds until the next fold
-  [44.58, 2.73, 0.6810, 54.82, 56.48], // frame 15 players_pick — settles here
-  [49.10, 2.73, 0.6810, 54.82, 56.48], //   ...and holds until the next fold
-  [49.88, 2.44, 0.6810, 48.17, 52.19], // frame 16 bonus_report — settles here
-  [53.27, 2.44, 0.6810, 48.17, 52.19], //   ...and holds until the next fold
-  [53.97, 4.38, 0.6811, 56.32, 51.02], // frame 17 sports_desk — settles here
-  [57.07, 4.38, 0.6811, 56.32, 51.02], //   ...and holds until the next fold
-  [58.10, 4.37, 0.6812, 56.31, 51.02], // frame 18 top_sport_signal — settles here
-  [61.10, 4.37, 0.6812, 56.31, 51.02], //   ...and holds until the next fold
-  [61.57, 4.37, 0.6812, 56.31, 52.48], // frame 19 sponsor — settles here
-  [67.07, 4.37, 0.6812, 56.31, 52.48], //   ...and holds until the next fold
-  [67.61, 3.53, 0.6811, 50.25, 53.48], // frame 20 space_milk — settles here
-  [73.07, 3.53, 0.6811, 50.25, 53.48], //   ...and holds until the next fold
-  [73.96, 3.53, 0.6811, 50.25, 51.66], // frame 21 joke — settles here
-  [78.07, 3.53, 0.6811, 50.25, 51.66], //   ...and holds until the next fold
-  [79.04, 1.63, 0.6810, 52.03, 47.27], // frame 22 gift — settles here
-  [83.03, 1.63, 0.6810, 52.03, 47.27], //   ...and holds until the next fold
-  [83.60, 1.63, 0.6810, 52.03, 50.21], // frame 23 final — settles here
-  [84.80, 1.63, 0.6810, 52.03, 50.21], //   ...and holds until the next fold
-  [86.00, 8.00, 0.6000, 50.80, 50.80], // frame 24 — picking up
-  [87.00, 14.50, 0.5150, 49.60, 51.40], // frame 24 — faster
-  [88.03, 20.38, 0.4441, 48.64, 51.90], // frame 24 — the measured mock pose
+  [6.00, 3.11, 0.7461, 57.75, 48.67], // the cover's own pose, from the mock
+  [11.19, 3.11, 0.7461, 57.75, 48.67], //   ...and nothing moves until the first fold
+  [11.23, 3.00, 0.6810, 50.00, 50.00], // the object becomes a spread: centred, edge-on, invisible
+  [84.80, 3.00, 0.6810, 50.00, 50.00], //   ...and nothing moves for the next 73 seconds
+  [86.00, 8.00, 0.6000, 49.80, 50.60], // the recede — «спершу повільно»
+  [87.00, 14.50, 0.5150, 49.20, 51.30], //   ...picking up
+  [88.03, 20.38, 0.4441, 48.64, 51.90], //   ...and the measured frame-24 pose at the end
 ]
 
 /** Where the last PAGE segment ends for the progress bar: the second the outro

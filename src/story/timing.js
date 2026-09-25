@@ -419,24 +419,20 @@ export const TIMING = {
  *   phase   radians, spread so no two channels cross zero together
  */
 export const HOVER_DRIFT = {
-  // ROTATION IS THE MOTION. rotY reaches 6.1 degrees and rotX 3.55 — an order
-  // above the roll — because under the stage's 1800 perspective a few degrees of
-  // yaw is what makes the page read as a solid object hanging in a room.
-  rotZ: { amp: [0.75, 0.4], period: [9.1, 21.0], phase: 0.0 },
-  rotY: { amp: [4.2, 1.9], period: [8.9, 20.4], phase: 1.31 },
-  rotX: { amp: [2.4, 1.15], period: [6.7, 15.4], phase: 2.62 },
-  // THE CENTRE BARELY MOVES: 10 design px up and down, 3 across. Sideways is the
-  // tightest channel of the six because the journal is 1065 design px wide in a
-  // 1080 canvas — every pixel it drifts sideways is a pixel of type that leaves
-  // the screen on a phone.
-  y: { amp: [0.36, 0.18], period: [7.3, 16.9], phase: 3.93 },
-  x: { amp: [0.2, 0.1], period: [11.7, 27.1], phase: 5.24 },
-  // THE DEPTH BREATH, +-2 %. The owner asked for the journal to "drift back into
-  // the depth and get smaller that way", and this is that — expressed as scale
-  // rather than as a real `z`, which is the same picture for a hundredth of the
-  // trouble: z would have to be written in CSS px while every other number here
-  // is a design px, and `--u` is a declared token that does not resolve to a
-  // length. Against a perspective of 1800, z = -45 design px produces a scale of
-  // 0.9756; the 2 % here spans that and a little more.
-  scale: { amp: [0.013, 0.007], period: [13.1, 30.2], phase: 0.65 },
+  // ⚠️ THIS IS NOW THE ONLY THING THAT MOVES between 6 s and 84.8 s, so it is a
+  // touch wider than the edition before it. Rotation still carries the motion:
+  // in weightlessness a free object turns and its centre stays, which is what
+  // both of the ticket's references show.
+  rotZ: { amp: [1.0, 0.5], period: [9.1, 21.0], phase: 0.0 },
+  rotY: { amp: [4.8, 2.2], period: [8.9, 20.4], phase: 1.31 },
+  rotX: { amp: [2.7, 1.3], period: [6.7, 15.4], phase: 2.62 },
+  // 16 design px of bob, 6 of sway. Sideways stays the tightest channel: the
+  // journal is 1065 design px wide against 886 visible on a phone, so every
+  // pixel it drifts across is a pixel of type leaving the screen.
+  y: { amp: [0.55, 0.28], period: [7.3, 16.9], phase: 3.93 },
+  x: { amp: [0.36, 0.19], period: [11.7, 27.1], phase: 5.24 },
+  // The depth breath, +-2.5 %: the journal drifting back and returning. Written
+  // as scale rather than a real `z` — the same picture, and `z` would have to be
+  // in CSS px while everything else here is design px.
+  scale: { amp: [0.016, 0.009], period: [13.1, 30.2], phase: 0.65 },
 }
