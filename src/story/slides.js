@@ -77,7 +77,7 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  * THE JOURNAL'S PATH — its pose, half a second at a time, measured off the clip.
  *
  *   [t, rot, scale, cx, cy]
- *     t      absolute video seconds, the same clock as flyObjects.js
+ *     t      absolute video seconds, the same clock as the film
  *     rot    in-plane angle, CSS `rotate()` terms (positive = clockwise)
  *     scale  uniform scale of the journal box
  *     cx/cy  the journal's CENTRE as a percentage of the stage

@@ -28,17 +28,21 @@ import { TIMING, snap } from './timing.js'
  * that happens to land two pages further on.
  *
  * WHY THE VIDEO MAY BE JUMPED AT ALL. The delivered background is a room with
- * light and particles and nothing else — the flying objects came out of it on
- * 2026-09-12. Sampled at all ten cut points, consecutive frames differ by 0.4
- * to 3.2 out of 255, i.e. the room is all but still, so a jump inside it has
- * nothing to show. This is the fact the whole mechanism rests on; re-measure it
- * if the background is ever replaced by something that moves.
+ * light and particles and nothing else. Sampled at all ten cut points,
+ * consecutive frames differ by 0.4 to 3.2 out of 255, i.e. the room is all but
+ * still, so a jump inside it has nothing to show. This is the fact the whole
+ * mechanism rests on.
+ *
+ * ⚠️ RE-MEASURE IT WHEN THE NEW BACKGROUND LANDS (DP-15822). The replacement
+ * carries the levitating objects baked in, so the room stops being still: an
+ * object crossing a cut point WILL show the jump. Sample the new clip at the
+ * ten cut points before trusting a word of the paragraph above.
  *
  * ⚠️ WITH A COMPLETE LINK THIS FILE IS AN IDENTITY. No page is dropped, no
  * window is removed, `toStory` returns its argument, and every table comes back
- * the object it went in as. That is what keeps `pose:check` and `fly:check`
- * comparable with the numbers in _context/90-next-session.md — they measure the
- * full story, and the full story must not have moved by a millisecond.
+ * the object it went in as. That is what keeps `pose:check` comparable with the
+ * numbers in _context/90-next-session.md — it measures the full story, and the
+ * full story must not have moved by a millisecond.
  */
 
 /** Where a page's content swaps: the turn's edge-on instant (ADR-0008). */
@@ -84,13 +88,8 @@ const shiftTiming = (timing, toStory) => ({
  * @param {Record<string, boolean>} [skip] `skip` out of useStoryData: true where
  *   the link carried nothing for that page. An absent or empty record means a
  *   complete link and returns the identity plan.
- * @param {{ flights?: any[] }} [opts] `flights` is FLIGHTS from flyAssets.js.
- *   Passed in rather than imported so this file stays pure data-in/data-out and
- *   can be exercised by a script: flyAssets resolves its art with a Vite glob,
- *   which does not exist outside a build.
  */
-export function buildStoryPlan(skip = {}, opts = {}) {
-  const FLIGHTS = opts.flights ?? []
+export function buildStoryPlan(skip = {}) {
   const dropped = new Set(SLIDES.filter(s => s.skip && skip[s.skip]).map(s => s.frame))
 
   // ⚠️ THE FIRST AND LAST PAGES ARE NEVER DROPPED, and the ten that can be are
@@ -98,7 +97,7 @@ export function buildStoryPlan(skip = {}, opts = {}) {
   // cover, the editor's note and the whole tail from the sponsor to the final
   // page keep their own seconds whatever the link carries, and only the middle
   // gets shorter. Nothing here has to reason about the ends.
-  if (!dropped.size) return identityPlan(FLIGHTS)
+  if (!dropped.size) return identityPlan()
 
   const kept = SLIDES.filter(s => !dropped.has(s.frame))
 
@@ -188,44 +187,6 @@ export function buildStoryPlan(skip = {}, opts = {}) {
       .map(([frame, rows]) => [frame, rows.map(row => [toStory(row[0]), row[1], row[2]])]),
   )
 
-  // A flight belongs to the page it was measured on, so a dropped page takes
-  // its objects with it. The `frame` field is what says which page that is.
-  //
-  // ⚠️ A FLIGHT IS SHIFTED WHOLE, NEVER SQUEEZED — and that is the fix for the
-  // bug the owner found on 2026-09-20: with `packs` absent the Space Milk page
-  // goes, a 5.4 s hole opens right after the sponsor slide, and the planet cow
-  // "went out like a light instead of flying off behind the journal".
-  //
-  // WHY. Eighteen of the twenty-four flights OUTLIVE their own page — they are
-  // measured that way because the clip throws an object across the cut and lets
-  // it leave over the next page. `toStory` is the PATH's map and it compresses:
-  // every instant inside a hole lands on the hole's near edge. Applied to a
-  // flight's keys it collapsed the tail — 1.33 s of the planet's flight became
-  // one instant — so the object stopped dead at the seam and vanished. All
-  // eighteen do it; the planet is simply the one nobody can miss, because it is
-  // the largest object that flies in FRONT of the journal, where the turning
-  // page cannot hide it.
-  //
-  // A flight is a rigid body in time: its shape and its speed are the
-  // measurement. So it keeps its own duration and moves as one — by however
-  // much was removed BEFORE it started — and finishes over whatever page now
-  // follows, exactly as it finishes over the next page when nothing is dropped.
-  // A flight that starts inside a hole has no page left to belong to and is
-  // filtered out above.
-  const flights = FLIGHTS.filter(
-    f => !dropped.has(f.frame) && !gaps.some(g => f.t0 >= g.from && f.t0 < g.to),
-  ).map(f => {
-    const shift = removedBefore(f.t0)
-    const move = v => +(v - shift).toFixed(4)
-    return {
-      ...f,
-      keys: f.keys.map(k => [move(k[0]), ...k.slice(1)]),
-      t0: move(f.t0),
-      t1: move(f.t1),
-      zFlip: f.zFlip == null ? f.zFlip : move(f.zFlip),
-    }
-  })
-
   const pageOrder = PAGE_ORDER.filter(p => slides.some(s => s.page === p))
   const storyEnd = toStory(STORY_END)
   const segments = buildSegments(slides, pageOrder, storyCut, removed, storyEnd)
@@ -238,7 +199,6 @@ export function buildStoryPlan(skip = {}, opts = {}) {
     segments,
     path,
     lean,
-    flights,
     timing: shiftTiming(TIMING, toStory),
     storyEnd,
     gaps,
@@ -279,7 +239,7 @@ function buildSegments(slides, pageOrder, storyCut, removed, storyEnd) {
  * already imports, and the two maps are the identity. Returned by reference on
  * purpose — a copy here would be a second source of truth for measured numbers.
  */
-function identityPlan(FLIGHTS) {
+function identityPlan() {
   const same = t => t
   return {
     identity: true,
@@ -289,7 +249,6 @@ function identityPlan(FLIGHTS) {
     segments: STORY_SEGMENTS,
     path: JOURNAL_PATH,
     lean: SLIDE_LEAN_PATH,
-    flights: FLIGHTS,
     timing: TIMING,
     storyEnd: STORY_END,
     gaps: [],

@@ -82,17 +82,6 @@ export const EASE = {
   outroOut: 'expo.in',
 
   /**
-   * FLYING OBJECTS. One ease, and it is `none` on purpose.
-   *
-   * Each flight in flyObjects.js is a polyline of rows measured off the clip,
-   * and flyingObject.js reads them through a Hermite spline whose velocity is
-   * continuous. The playhead therefore has to advance at a CONSTANT rate — the
-   * shape of the motion lives in the rows and in the curve through them, and an
-   * ease on top would re-time the clip's own acceleration into something else.
-   */
-  flyPath: 'none',
-
-  /**
    * THE CTA'S RISE, and the overshoot is the whole point of choosing `back`.
    *
    * The button travels 1.4 of its own heights, which is a long way, and a plain

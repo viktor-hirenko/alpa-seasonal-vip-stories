@@ -210,7 +210,7 @@ flyInFromFloor.PARAM_SCHEMA = {
  * a playhead that advances at a constant rate. It passes exactly through all
  * seven keys, so nothing measured moves, and its velocity is continuous, so
  * nothing stalls between them. `ease` is gone from the params for the same
- * reason `EASE.flyPath` is `none`: the shape of the motion lives in the rows,
+ * reason the flight table's ease was `none`: the shape of the motion lives in the rows,
  * and an ease on top would re-time the clip's own acceleration into something
  * else.
  */
@@ -757,22 +757,6 @@ export function journalDissolve(t, params) {
 }
 journalDissolve.PARAM_SCHEMA = { dur: { min: 0.1, max: 2, step: 0.05 } }
 journalDissolve.PARAM_DEFAULTS = { dur: TIMING.exit.dur }
-
-/** Hyperspace burst: the `Speed` overlay scales 1080 -> 2338 px. */
-export function hyperspaceBurst(t, params) {
-  const p = P({ dur: TIMING.speed.dur, scale: TIMING.speed.scale, ease: EASE.zoom }, params)
-  const s = tl()
-  if (!t.speed) return s
-  s.set(t.speed, { opacity: 0, scale: 1 })
-  s.to(t.speed, { opacity: 1, duration: p.dur * 0.3 }, 0)
-  s.to(t.speed, { scale: p.scale, duration: p.dur, ease: p.ease }, 0)
-  s.to(t.speed, { opacity: 0, duration: p.dur * 0.4 }, p.dur * 0.6)
-  return s
-}
-hyperspaceBurst.PARAM_SCHEMA = {
-  dur: { min: 0.3, max: 3, step: 0.05 },
-  scale: { min: 1, max: 4, step: 0.05 },
-}
 
 /**
  * THE OUTRO TEXT (21770:4871). It arrives oversized over the dark room, shrinks

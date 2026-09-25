@@ -18,11 +18,6 @@
 ///   .journal-hover  >> GSAP owns rotationX/Y/Z, yPercent, scale (idle drift) <<
 ///   .journal-box    >> GSAP owns rotationX/Y/Z, scale, z (pose) <<
 ///   .jface--* .jedge--*   CSS static; GSAP may touch `opacity` only
-///   .fly-obj        CSS owns `transform`; GSAP owns --fo-x / --fo-y ONLY
-///   .fly-obj__box   >> GSAP owns rotationZ and scale <<
-///                   NEVER rotationX/rotationY here: the objects are flat
-///                   billboards and a 3D tilt foreshortens them, which is the
-///                   "squashed" the first pass shipped. See _fly.scss.
 ///
 /// 3D-FLATTENING CHECKLIST — none of these may appear on an element BETWEEN
 /// .stage-3d and a face, or the browser flattens the scene and the side faces
@@ -59,20 +54,18 @@
   // COVER fit onto the 1080x1920 design canvas, and the SAME fit the backdrop
   // video uses. This is a registration requirement, not a taste one.
   //
-  // THE FLYING OBJECTS ARE MEASURED IN THE VIDEO'S OWN FRAME. Every anchor in
-  // flyObjects.js is a percentage of the 1080x1920 clip, read off the clip. So
-  // the scene and the video have to be laid out at the same scale on the same
-  // centre, or every object slides away from the room it is flying through:
-  //
-  //   viewport                     object drift, scene `min` vs video `cover`
-  //   430x932 iPhone 14/15 Pro Max     up to 47 px
-  //   393x852 iPhone 15 Pro            up to 43 px
-  //   360x800 Android                  up to 45 px
+  // THE SCENE IS MEASURED IN THE VIDEO'S OWN FRAME. Every journal pose in
+  // slides.js is a percentage of the 1080x1920 clip, so the scene and the video
+  // have to be laid out at the same scale on the same centre, or the journal
+  // slides away from the room it is floating in — up to 47 px of drift at
+  // 430x932 between scene `min` and video `cover`.
   //
   // I shipped `min` here once, reasoning that `clean bg` contains neither the
   // journal nor the objects so there is nothing to register against. That was
-  // wrong: the ROOM is in it, and the objects fly through the room. A coin has
-  // to pass the porthole where the clip passes it.
+  // wrong: the ROOM is in it, and the journal hangs in the middle of that room.
+  // ⚠️ From DP-15822 the background also carries the levitating OBJECTS, so an
+  // object has to pass the porthole where the clip passes it — the registration
+  // got stricter, not looser.
   //
   // The other half of the problem — `cover` enlarges and crops the composition
   // on any shape that is not 9:16 — is solved where it belongs, by making the
@@ -99,7 +92,7 @@
     // Frame the story as a rounded card, as Thor does — but at EXACTLY 9:16,
     // which Thor's 58.2vh is not. The card's shape is the one thing here we
     // control, and making it the canvas's own aspect is what lets the scene
-    // keep the video's `cover` fit (which the flying objects require) while
+    // keep the video's `cover` fit (which registration requires) while
     // nothing gets cropped or enlarged: at 9:16, cover and contain are the same
     // scale. Thor's wider card cost 15 % of enlargement and a crop top and
     // bottom.
@@ -139,7 +132,7 @@
 ///
 /// This element exists so that A PERCENTAGE MEANS A PERCENTAGE OF THE FRAME.
 /// Everything below it is `width: 100%; height: 100%` and positions itself in
-/// percentages — journal poses, flying-object anchors, the lot. While this box
+/// percentages — journal poses and everything under them. While this box
 /// was `inset: 0` those percentages were percentages OF THE VIEWPORT, so the
 /// scene stretched and squashed with the window instead of staying a fixed
 /// 9:16 composition. Keep the box; only the fit changed.
@@ -219,41 +212,13 @@
   // the reference turned out not to have at all.)
 }
 
-///
-/// Flying objects share the journal's 3D context, so the browser depth-sorts
-/// them against it for free: an object nearer the camera passes in FRONT of the
-/// journal, a farther one behind. No z-index bookkeeping, correct under any
-/// seek. See ADR-0006.
-///
-/// NOTHING here may create a stacking context — not `z-index`, not `opacity`,
-/// not `isolation`. The layer is a plain sibling of `.journal-pos` and must
-/// stay one: give either of them a z-index and the browser stops sorting them
-/// against each other by depth and starts sorting them by paint order, which
-/// is precisely the bookkeeping ADR-0006 exists to avoid.
-///
-.fly-layer {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  transform-origin: 0 0;
-  transform-style: preserve-3d;
-  pointer-events: none;
-}
-
 /// Overlays sit ABOVE the 3D scene and are deliberately outside it.
 ///
 /// `.stage__flash` used to sit here, a white div the exit drove to full opacity.
-/// It is gone: the reference has no flash (TIMING.exit).
-.stage__speed {
-  position: absolute;
-  inset: 0;
-  z-index: 6;
-  opacity: 0;
-  pointer-events: none;
-}
-
+/// It is gone: the reference has no flash (TIMING.exit). `.stage__speed` used to
+/// sit here too and went the same way in DP-15822 — it painted nothing at all
+/// (no background, no children) while a preset faded and scaled it; the
+/// hyperspace burst it was supposed to stand for is baked into the film.
 .stage__ui {
   position: absolute;
   inset: 0;

@@ -1336,7 +1336,8 @@ export function useStoryPlayback(ctx) {
   // the one pose a freeze cannot hide (see the note above). Clearing the slowest
   // turn clears all of them, and on a fast slide the extra is spent on a page
   // that has already settled.
-  const SETTLE_LEAD = TIMING.flip.out + Math.max(TIMING.flip.back, ...Object.values(SLIDE_FLIP_BACK))
+  const SETTLE_LEAD =
+    TIMING.flip.out + Math.max(TIMING.flip.back, ...Object.values(SLIDE_FLIP_BACK))
 
   const landingTime = seg => {
     const v = videoPlayer.value

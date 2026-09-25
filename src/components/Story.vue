@@ -66,11 +66,7 @@
             />
           </div>
         </JournalStage>
-
-        <FlyLayer />
       </div>
-
-      <div class="stage__speed" />
 
       <div class="stage__ui">
         <!-- THE VIDEO IS THE CLOCK, so if it never arrives there is no story to
@@ -144,7 +140,6 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import JournalStage from '@/components/Journal/JournalStage.vue'
-import FlyLayer from '@/components/Journal/FlyLayer.vue'
 import StoryHeader from '@/components/UI/StoryHeader.vue'
 import StoryArrow from '@/components/UI/StoryArrow.vue'
 import TapZones from '@/components/UI/TapZones.vue'
@@ -161,7 +156,6 @@ import { armArtGate, openArt } from '@/composables/useArtGate.js'
 import { useJournalFit } from '@/composables/useJournalFit.js'
 import { provideStoryData } from '@/composables/useStoryData.js'
 import { buildStoryPlan } from '@/story/storyPlan.js'
-import { FLIGHTS } from '@/story/flyAssets.js'
 
 // Dev serves the low-res proxy of the reference clip, which is only ever built
 // as mp4; production ships both encodes. See scripts/encode-video.sh.
@@ -227,7 +221,7 @@ endLink.value = story.data.finalLink
 // renders, because the page stack, the steps bar and the timeline all have to
 // agree on which pages exist. With a complete link this is the identity and
 // every table below is the one the project has always used.
-const plan = buildStoryPlan(story.skip, { flights: FLIGHTS })
+const plan = buildStoryPlan(story.skip)
 const segments = plan.segments
 const TIMING = plan.timing
 if (import.meta.env.DEV && plan.droppedPages.length) {

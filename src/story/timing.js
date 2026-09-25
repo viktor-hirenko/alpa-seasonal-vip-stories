@@ -1,7 +1,7 @@
 /**
  * Every duration, offset and epsilon in the project. No preset may contain a
  * bare numeric duration (ADR-0009) — when the motion designer re-times the
- * video, this file plus slides.js and flyObjects.js are the only edits.
+ * video, this file plus slides.js are the only edits.
  */
 
 export const FPS = 30

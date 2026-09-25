@@ -100,7 +100,8 @@ function journalWidth(a, b) {
     return x
   }
   const union = (x, y) => {
-    x = find(x); y = find(y) // prettier-ignore
+    x = find(x)
+    y = find(y) // prettier-ignore
     if (x !== y) parent[y] = x
   }
   let next = 1

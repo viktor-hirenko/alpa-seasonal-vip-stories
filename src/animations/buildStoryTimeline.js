@@ -8,13 +8,10 @@ import {
   journalLean,
   pageTurn,
   journalDissolve,
-  hyperspaceBurst,
   outroText,
   HANDOVER_YAW,
 } from '@/journal3d/presets.js'
 import { setPose } from '@/journal3d/poseTween.js'
-import { buildFlyLayer } from '@/journal3d/flyLayer.js'
-import { FLIGHTS } from '@/story/flyAssets.js'
 import { buildStoryPlan } from '@/story/storyPlan.js'
 
 /**
@@ -43,16 +40,10 @@ export function buildStoryTimeline(targets, ctx) {
   // missing data drops those pages and closes the hole (storyPlan.js); with a
   // complete link the plan hands back the very objects imported above, so
   // everything below is byte-identical to what it was before skipping existed.
-  const plan = ctx.plan ?? buildStoryPlan({}, { flights: FLIGHTS })
+  const plan = ctx.plan ?? buildStoryPlan({})
   const slides = plan.slides
   const path = plan.path
   const timing = plan.timing
-
-  // The 30 flights of flyObjects.js, already positioned at absolute timecodes.
-  // Their visibility is a pure function of the clock and is applied from this
-  // timeline's onUpdate, which fires on every render including a seek — see
-  // flyLayer.js for why it cannot live on the timeline itself.
-  const fly = buildFlyLayer(targets.flyLayer, plan.flights, slides)
 
   // ⚠️ 800 ms, NOT GSAP'S 500 AND NOT ZERO. BOTH EXTREMES WERE TRIED TODAY.
   //
@@ -84,7 +75,6 @@ export function buildStoryTimeline(targets, ctx) {
   const tl = gsap.timeline({
     paused: true,
     onUpdate: () => {
-      fly.applyAt(tl.time())
       onUpdate?.()
     },
   })
@@ -245,9 +235,6 @@ export function buildStoryTimeline(targets, ctx) {
       nest(tl, journalLean(targets, rows), rows[0][0])
     })
 
-  // Nested at 0 because the flight timeline is already in absolute video time.
-  nest(tl, fly.tl, 0)
-
   // NO RECEDE. The outro used to be a five-second tween from the path's last row
   // to one storyboard pose, hard-`set` at 83.03 — a tenth of a second BEFORE the
   // final page folds, so the pose it started from had to stay the storyboard's
@@ -260,7 +247,6 @@ export function buildStoryTimeline(targets, ctx) {
   // `from` is the scale the path leaves behind, so the shrink starts from
   // exactly where the pose stopped rather than from a number repeated here.
   nest(tl, journalDissolve(targets, { from: path[path.length - 1][2] }), snap(timing.exit.at))
-  nest(tl, hyperspaceBurst(targets), snap(timing.speed.at))
   // Nested at 88.10, the second the title's own first pixels appear — what the
   // old code called the flash was this arrival (TIMING.outro). Its exit leads
   // the burst by 0.23 s and lives inside the same child, so there is one nest
@@ -277,5 +263,5 @@ export function buildStoryTimeline(targets, ctx) {
   // synthetic drift on top would double the motion and put it out of step with
   // the reference. `hover` stays a library preset and the lab still has a button
   // for it; the story does not build one. Every consumer of `hoverTl` guards it.
-  return { tl, hoverTl: null, fly, setFace, plan }
+  return { tl, hoverTl: null, setFace, plan }
 }

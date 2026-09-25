@@ -40,10 +40,7 @@
                 />
               </div>
             </JournalStage>
-            <FlyLayer />
           </div>
-
-          <div class="stage__speed" />
         </div>
       </div>
     </div>
@@ -84,13 +81,6 @@
           @click="toggleJournal"
         >
           journal {{ journalVisible ? 'on' : 'off' }}
-        </button>
-        <button
-          class="lab__btn"
-          :class="{ 'lab__btn--on': !objectsVisible }"
-          @click="toggleObjects"
-        >
-          objects {{ objectsVisible ? 'on' : 'off' }}
         </button>
       </div>
 
@@ -177,10 +167,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { gsap } from 'gsap'
 import JournalStage from '@/components/Journal/JournalStage.vue'
-import FlyLayer from '@/components/Journal/FlyLayer.vue'
 import { resolvePage } from '@/components/pages/index.js'
-import { buildFlyLayer, resolveTargets, setPose } from '@/journal3d'
-import { FLIGHTS } from '@/story/flyAssets.js'
+import { resolveTargets, setPose } from '@/journal3d'
 import { useJournalFit } from '@/composables/useJournalFit.js'
 import { provideStoryData } from '@/composables/useStoryData.js'
 import * as presets from '@/journal3d/presets.js'
@@ -194,7 +182,7 @@ const BG_OPTIONS = [
   { id: 'preview', label: 'preview' },
 ]
 
-/** Presets worth a button. `hover` and `flyingObject` are driven separately. */
+/** Presets worth a button. `hover` is driven separately. */
 const PRESET_NAMES = [
   'rePose',
   'edgeOnPose',
@@ -206,7 +194,6 @@ const PRESET_NAMES = [
   'orbit',
   'recede',
   'journalDissolve',
-  'hyperspaceBurst',
 ]
 
 const POSE_ROWS = [
@@ -259,13 +246,10 @@ const journalVisible = ref(qStr('journal', '1') !== '0')
 // The reference clips have the objects BAKED IN, so with a video underlay they
 // double: one baked, one from the DOM. That is the point — a correct flight
 // reads as one object, an error as two — but the toggle is needed to read the
-// baked ones on their own. `?objects=0` for that.
-const objectsVisible = ref(qStr('objects', '1') !== '0')
 /**
  * Park everything at an ABSOLUTE video second, overriding the slide/lead pair.
  * The slide parking is the right tool for a pose (it knows where the cut is);
- * a flight is not tied to a cut, so `?t=14` is the addressable unit for one.
- * `fly:check` drives this: it is the only parameter it needs.
+ * `?t=14` addresses any other instant.
  */
 const AT_TIME = Q.has('t') ? qNum('t', 0) : null
 const activePreset = ref('')
@@ -274,9 +258,7 @@ const params = reactive({})
  * WITH `?t=` THE POSE COMES FROM THE PATH AT THAT SECOND, not from the slide's
  * settled pose. It has to: the journal no longer holds a pose for the length of
  * a slide, it drifts through it, so "frame 12's pose" is only true for one
- * instant of frame 12. `fly:check` compares an object against the page edge that
- * covers it, and posing the journal where it is 2 s later would be measuring the
- * occlusion against a page that is not there.
+ * instant of frame 12.
  */
 const seedPose = AT_TIME != null ? poseAt(AT_TIME) : poseFor(seedSlide.frame)
 const pose = reactive({
@@ -298,8 +280,6 @@ const bgSrc = computed(() =>
 let targets = null
 let current = null
 let hoverTl = null
-let fly = null
-let flyFrame = null
 
 const readout = computed(() => {
   const u = targets ? getComputedStyle(targets.stage).getPropertyValue('--u').trim() : '?'
@@ -349,10 +329,7 @@ function resetPose() {
     cx: slide.value ? poseFor(slide.value.frame).cx : 50,
     cy: slide.value ? poseFor(slide.value.frame).cy : 50,
   })
-  if (targets)
-    gsap.set([targets.pos, targets.speed].filter(Boolean), {
-      clearProps: 'opacity,visibility',
-    })
+  if (targets) gsap.set(targets.pos, { clearProps: 'opacity,visibility' })
   applyManualPose()
 }
 
@@ -438,39 +415,6 @@ function gotoSlide(s) {
 function toggleJournal() {
   journalVisible.value = !journalVisible.value
   if (targets) gsap.set(targets.pos, { autoAlpha: journalVisible.value ? 1 : 0 })
-}
-
-function toggleObjects() {
-  objectsVisible.value = !objectsVisible.value
-  if (targets?.flyLayer) targets.flyLayer.style.display = objectsVisible.value ? '' : 'none'
-}
-
-/**
- * FLYING OBJECTS, driven straight off the backdrop's clock.
- *
- * The lab has no master timeline, so the flight timeline is seeked directly to
- * `video.currentTime` every frame. That makes `?bg=clean&play=1` the fidelity
- * check for MOTION: the clean-bg clip has the objects baked in and no journal,
- * so a correct flight and its baked twin read as one object and any error shows
- * up as a doubled silhouette, the same way `bg=preview` reads a pose.
- *
- * With `play=0` (the default) the video is parked at `slide.at + lead` and so is
- * the flight timeline, which is what makes a probe screenshot reproducible.
- */
-function syncFly() {
-  if (!fly) return
-  const t = AT_TIME ?? videoRef.value?.currentTime ?? (slide.value?.at ?? 0) + SEEK_LEAD
-  fly.tl.time(t)
-  fly.applyAt(t)
-}
-
-function startFlySync() {
-  if (flyFrame != null) return
-  const loop = () => {
-    syncFly()
-    flyFrame = requestAnimationFrame(loop)
-  }
-  flyFrame = requestAnimationFrame(loop)
 }
 
 /**
@@ -575,11 +519,6 @@ onMounted(() => {
   if (!journalVisible.value) gsap.set(targets.pos, { autoAlpha: 0 })
   if (bg.value !== 'grid') setBg(bg.value)
 
-  fly = buildFlyLayer(targets.flyLayer, FLIGHTS)
-  if (!objectsVisible.value) targets.flyLayer.style.display = 'none'
-  syncFly()
-  startFlySync()
-
   // Debug hook — DEV only, same shape as the story's own.
   if (import.meta.env.DEV) {
     window.__lab = {
@@ -599,8 +538,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   killCurrent()
   if (hoverTl) hoverTl.kill()
-  if (flyFrame != null) cancelAnimationFrame(flyFrame)
-  fly?.tl.kill()
   if (window.__lab) delete window.__lab
 })
 </script>

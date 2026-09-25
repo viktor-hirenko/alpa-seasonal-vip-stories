@@ -1,10 +1,12 @@
 /**
  * ONE WAY TO READ A MEASURED POLYLINE, shared by everything that has one.
  *
- * Two tables in this project are measurements rather than choreography — the
- * flight table in `flyObjects.js` and the journal's own path in `slides.js` —
- * and both are read through here so that "the same shape, read the same way" is
- * a fact about the code rather than a promise in a comment.
+ * The journal's own path and its lean rows in `slides.js` are read through
+ * here, so that "the same shape, read the same way" is a fact about the code
+ * rather than a promise in a comment. Until DP-15822 the flight table of
+ * `flyObjects.js` was the other reader, and the measurements quoted below come
+ * from it; the flights moved into the background film, the arithmetic did not
+ * change.
  *
  * WHY A SPLINE AND NOT A TWEEN PER SEGMENT. Straight segments between rows give
  * a path that is continuous but a SPEED that is not: velocity is constant along

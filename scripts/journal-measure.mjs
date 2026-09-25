@@ -691,7 +691,8 @@ const PITCH_SPAN = 5
  *  a turn run only, where the page is tipping as well as turning and nothing
  *  measured so far bounds it. Every existing table was solved under 24. */
 const PITCH_MAX = Number(
-  (process.argv.includes('--pitch-max') && process.argv[process.argv.indexOf('--pitch-max') + 1]) || 24,
+  (process.argv.includes('--pitch-max') && process.argv[process.argv.indexOf('--pitch-max') + 1]) ||
+    24,
 )
 
 /** Below this a nudge costs nothing and the axis is not measured at all. */
