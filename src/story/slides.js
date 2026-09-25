@@ -109,8 +109,33 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  *            on screen. Every spread's content is centred inside it, so the
  *            symmetric crop is the one that costs the least type.
  *
- *            ⚠️ THE COVER IS THE EXCEPTION and keeps the mock's own frame-7
- *            pose, 57.75 / 48.67. Its type is LEFT-ALIGNED and it is the wider
+ *            ⚠️ THE COVER IS THE EXCEPTION, and since 25.09 it is 0.64 / 50.14
+ *            rather than the recorded 0.7461 / 57.75.
+ *
+ *            WHY IT MOVED. The vertical «JOURNAL» down the cover's right edge
+ *            is drawn in the mock and was never once on screen — not at rest,
+ *            not at any point of the levitation. Measured: it sat 105..149
+ *            design px PAST the right edge of what a phone shows. Two separate
+ *            reasons, and both had to go.
+ *            (1) THE RECORDED POSE IS 86 px OFF THE DRAWN FRAME. Laid our
+ *            render over storyboard frame 7 and measured the same landmarks:
+ *            the vertical distance «VIP CLUB» -> player name agrees to 0.35 %
+ *            (846 against 849 design px), so the SIZE was right, but our cover
+ *            stood 86 px to the RIGHT of the drawn one. Same class of error as
+ *            the five rows 32-poses.md already flags.
+ *            (2) A PHONE IS NOT THE MOCK'S CANVAS. The mock composes on 9:16;
+ *            a 19.5:9 phone crops 97 design px off each side, and the cover's
+ *            type spans 0.897 of its own face — 980 px against the 886 a phone
+ *            shows. So even at the drawn position the lettering stayed out.
+ *            THE CHOICE, measured across the levitation's own swing (roll
+ *            +-1.5 deg, scale +-2.5 %, x +-0.55 %), with «VIP CLUB» never
+ *            crossing the left edge on any of 430x932, 393x852, 360x800:
+ *              scale 0.616 -> the lettering is whole at every instant
+ *              scale 0.629 -> whole at rest, never under 75 %
+ *              scale 0.640 -> 96 % at rest, 47 % at the swing's worst   <- here
+ *              scale 0.670 -> 20 % at rest, nothing at the worst
+ *              scale 0.681 -> 1 %, i.e. the corner only
+ *            0.64 is one number away from any other row of that table. Its type is LEFT-ALIGNED and it is the wider
  *            face (1093 design px against the spread's 1065), so centring it
  *            eats the beginning of every line — tried, and "VIP CLUB" lost a
  *            third of its V. The mock puts it right of centre for exactly that
@@ -145,8 +170,8 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  */
 // prettier-ignore
 export const JOURNAL_PATH = [
-  [6.00, 3.11, 0.7461, 57.75, 48.67], // the cover's own pose, from the mock
-  [11.19, 3.11, 0.7461, 57.75, 48.67], //   ...and nothing moves until the first fold
+  [6.00, 3.11, 0.64, 50.14, 48.67], // the cover's pose — see the note above
+  [11.19, 3.11, 0.64, 50.14, 48.67], //   ...and nothing moves until the first fold
   [11.23, 3.00, 0.6810, 50.00, 50.00], // the object becomes a spread: centred, edge-on, invisible
   [84.80, 3.00, 0.6810, 50.00, 50.00], //   ...and nothing moves for the next 73 seconds
   [86.00, 8.00, 0.6000, 49.80, 50.60], // the recede — «спершу повільно»

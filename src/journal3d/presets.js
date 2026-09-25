@@ -304,21 +304,28 @@ export function swingOpen(t, params) {
         // measurement nothing contradicted, and only its destination moved, from
         // the clip's 19.23 deg to the mock's 3.11. Scaling keeps it MONOTONE,
         // which is the whole point: any peak on the way in is a nod.
-        [0.0, -104, 0.08, 1.02, 54.5, 50.0], //   118  appears, back cover to camera
-        [0.15, -90, 0.08, 0.97, 57.2, 50.0], //   122.5 exactly edge-on
-        [0.4, -76.3, 0.51, 0.92, 65.3, 50.0], //  130  front cover swinging into view
-        [0.6667, -59.6, 0.67, 0.885, 67.1, 50.0], // 138  fills the canvas
-        [1.0667, -36.5, 1.85, 0.845, 66.6, 50.0], // 150
-        // The last two keys are aimed at the mock. The yaw is still the measured
-        // swing — Figma cannot draw a yaw, and the mock's own note ("flies into
-        // the centre, aligns frontally") needs one — and roll, size and centre
-        // arrive at THE one pose and stop there. Nothing passes it and comes
-        // back; see HANDOVER_ROT for the nod that cost. `cy` is a flat 50 the
-        // whole way in, so the cover enters at mid height and never bobs on the
-        // way — the only vertical movement it has is the levitation it is
-        // joining, which is already running when it arrives.
-        [1.5667, -15.5, 2.97, 0.762, 61.0, 49.2], //  165
-        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.7461, 57.75, 48.67], // 180  handover: JOURNAL_PATH's first row
+        // ⚠️ THE TIMES ARE DERIVED, NOT MEASURED, AND THAT IS THE FIX FOR THE
+        // JERK (25.09). The poses are the measured swing; the clip's own frame
+        // numbers as key TIMES made every channel's speed non-monotone — yaw
+        // ran 93 -> 55 -> 63 -> 58 -> 42 deg/s and scale 0.33 -> 0.20 -> 0.13
+        // -> 0.10 -> 0.17 -> 0.03, i.e. the journal slowed, sped up again and
+        // pulled back while turning. The owner saw it as «влетает рывками».
+        // Now the times come from ONE monotone deceleration of the yaw — the
+        // channel that carries the entrance — as t = D·(1 − (1−p)^(1/1.4))
+        // where p is the yaw's own progress. Roll and the vertical ride the
+        // same p linearly (the header above always called the roll «a straight
+        // climb»; the measured column was not one), and the scale follows a
+        // smooth curve through the first, third, fifth and last keys — its
+        // 0.762 at key six was 0.036 below that trend and was the pull-back.
+        // Only `cx` still rises and falls, because the swing itself goes out to
+        // 60.9 and comes back; the spline renders it smoothly.
+        [0.0, -104, 0.08, 0.8749, 46.89, 50.0],
+        [0.2028, -90, 0.488, 0.8243, 49.59, 49.821],
+        [0.4102, -76.3, 0.887, 0.7892, 57.69, 49.646],
+        [0.6781, -59.6, 1.374, 0.7589, 59.49, 49.432],
+        [1.0884, -36.5, 2.047, 0.7248, 58.99, 49.137],
+        [1.5361, -15.5, 2.658, 0.685, 53.39, 48.868],
+        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.64, 50.14, 48.67], // handover: JOURNAL_PATH's first row
       ],
       // The row the PATH reaches one second after the handover, in this
       // preset's own seconds and without a yaw column — see `next` above.

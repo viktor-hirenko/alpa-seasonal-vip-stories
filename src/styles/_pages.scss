@@ -711,15 +711,17 @@
   top: 0;
   width: du(569.223);
   height: du(1868);
+  // 25.09: magenta, like the full-size edge — the designer recoloured the whole
+  // family (21770:3839). Bronze here was the last yellow strip left on screen.
   background: linear-gradient(
     270deg,
-    #b26c3b 0%,
-    #2c2c2c 0.577%,
-    #b26c3b 1.2906%,
-    #2c2c2c 2.1141%,
-    #b26c3b 2.9926%,
-    #2c2c2c 3.871%,
-    #562c26 5.573%
+    #b630a4 0%,
+    #301037 0.577%,
+    #b630a4 1.2906%,
+    #301037 2.1141%,
+    #b630a4 2.9926%,
+    #301037 3.871%,
+    #561749 5.573%
   );
   pointer-events: none;
 }
@@ -1051,15 +1053,17 @@
   top: 0;
   width: du(216.359);
   height: du(707.665);
+  // 25.09: magenta, like the full-size edge — the designer recoloured the whole
+  // family (21770:3839). Bronze here was the last yellow strip left on screen.
   background: linear-gradient(
     270deg,
-    #b26c3b 0%,
-    #2c2c2c 0.577%,
-    #b26c3b 1.2906%,
-    #2c2c2c 2.1141%,
-    #b26c3b 2.9926%,
-    #2c2c2c 3.871%,
-    #562c26 5.573%
+    #b630a4 0%,
+    #301037 0.577%,
+    #b630a4 1.2906%,
+    #301037 2.1141%,
+    #b630a4 2.9926%,
+    #301037 3.871%,
+    #561749 5.573%
   );
 }
 
