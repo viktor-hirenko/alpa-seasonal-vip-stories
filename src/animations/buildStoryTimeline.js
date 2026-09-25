@@ -1,11 +1,10 @@
 import { gsap } from 'gsap'
-import { SLIDE_LEAN } from '@/story/slides.js'
 import { FACE } from '@/story/journalGeometry.js'
 import { snap, TIMING, SLIDE_FLIP_BACK } from '@/story/timing.js'
 import {
   swingOpen,
   journalPath,
-  journalLean,
+  journalDrift,
   pageTurn,
   journalDissolve,
   outroText,
@@ -152,6 +151,21 @@ export function buildStoryTimeline(targets, ctx) {
   // clip does, and what the old one-pose-per-slide model could not express.
   nest(tl, journalPath(targets, path), path[0][0])
 
+  // THE LEVITATION, one child across the whole film, on `.journal-hover`.
+  //
+  // It is nested at 0 rather than at the journal's entrance because the mock
+  // asks for the cover to come IN already weightless — «журнал: починає заходити
+  // в кадр … у тому ж режимі невагомості» (21770:4964) — and because a drift
+  // that starts mid-story has a seam where it starts. Before the journal is
+  // visible it writes to an element nobody can see, which costs one `gsap.set`
+  // a frame and buys a continuous curve.
+  //
+  // ⚠️ NOT returned as `hoverTl`. The consumers of that handle call `play(0)`
+  // and `pause()` on it, which is right for a standalone looping drift and
+  // wrong for a child of the master clock — `play(0)` would throw the story's
+  // own second away. It rides the master like every other child instead.
+  nest(tl, journalDrift(targets, { to: timing.duration }), 0)
+
   // The page turn is now only the yaw. Frames 4-7 are the entrance, owned by
   // swingOpen; every cut from 8 to 23 turns the journal out to edge-on and back.
   // Measured at five separate cuts, including the cover -> page handover at
@@ -166,22 +180,14 @@ export function buildStoryTimeline(targets, ctx) {
   // neighbouring frames were moving under 2.5. Every later turn already begins
   // at zero, so they pass 0 and nothing changes for them.
   //
-  // WHERE A TURN LANDS AND WHERE THE NEXT ONE STARTS, on both depth axes.
-  // A slide that has measured lean rows hands the turn its FIRST row to land on
-  // and its LAST row for the next turn to start from; a slide without rows keeps
-  // the single constant in SLIDE_LEAN and rotationX zero. Reading the head and
-  // tail from the rows rather than repeating them as constants is what stops the
-  // two tables drifting apart — the same reason swingOpen's last key is quoted
-  // from JOURNAL_PATH[0] instead of retyped.
-  const rowsFor = frame => plan.lean?.[frame] ?? null
-  const landsAt = frame => {
-    const rows = rowsFor(frame)
-    return rows ? { y: rows[0][2], x: rows[0][1] } : { y: SLIDE_LEAN[frame] ?? 0, x: 0 }
-  }
-  const leavesAt = frame => {
-    const rows = rowsFor(frame)
-    return rows ? { y: rows[rows.length - 1][2], x: rows[rows.length - 1][1] } : { y: SLIDE_LEAN[frame] ?? 0, x: 0 } // prettier-ignore
-  }
+  // WHERE A TURN LANDS AND WHERE THE NEXT ONE STARTS, on both depth axes: SQUARE
+  // ON, every time (DP-15822). Until this session each slide landed on a lean
+  // measured off the clip, and the two depth channels then held that angle until
+  // the next turn — frozen for whole seconds at a stretch. The depth is the
+  // levitation's now, and the levitation lives on `.journal-hover`, a different
+  // element in the same 3D chain, so the turn hands over a clean zero and the
+  // drift rides on top of it without either one arguing with the other.
+  const SQUARE = { y: 0, x: 0 }
 
   slides
     .filter(s => s.frame >= 8 && s.frame <= 23)
@@ -194,45 +200,23 @@ export function buildStoryTimeline(targets, ctx) {
       // while `to` is a lean would throw the lean away in one frame at the head of
       // the next turn - the same twitch the HANDOVER_YAW note below describes,
       // only on every slide that leans.
-      const prev = arr[i - 1]
-      const left = i === 0 ? { y: HANDOVER_YAW, x: 0 } : leavesAt(prev.frame)
-      const lands = landsAt(slide.frame)
+      const left = i === 0 ? { y: HANDOVER_YAW, x: 0 } : SQUARE
+      const lands = SQUARE
       // ⚠️ EVERY SLIDE TURNS AT ITS OWN MEASURED SPEED (SLIDE_FLIP_BACK, 20.09).
       // The clip's spread is threefold and a single number is right on average
       // and wrong on every page; the table's own note carries the measurement.
       //
-      // AND THE CAP IS HERE, NOT IN THE TABLE, so the table stays what the clip
-      // does and this stays what the story can currently play. The turn and the
-      // lean both write rotationY and are allowed to meet but never to overlap
-      // — the preset's contract is that the turn LANDS on the lean's first row.
-      // Frames 11 and 18 measure longer than the gap to that row, so they are
-      // held one frame short of it. Everything else plays its measurement.
-      const rows = rowsFor(slide.frame)
-      const measured = SLIDE_FLIP_BACK[slide.frame] ?? TIMING.flip.back
-      const room = rows ? rows[0][0] - 1 / 30 - snap(slide.at) - TIMING.flip.out : Infinity
-      const back = Math.max(0.05, Math.min(measured, room))
+      // ⚠️ AND THE CAP THAT USED TO BE HERE IS GONE WITH THE LEAN TABLE. It
+      // clipped a turn that ran past the first lean row — four slides were
+      // clipped, not the two the old comment named. With nothing else writing
+      // rotationY between the turns, every slide now plays its own measurement
+      // in full. The anchor in JOURNAL_PATH sits at exactly where it ends.
+      const back = SLIDE_FLIP_BACK[slide.frame] ?? TIMING.flip.back
       nest(
         tl,
         pageTurn(targets, { from: left.y, to: lands.y, fromX: left.x, toX: lands.x, back }),
         snap(slide.at),
       )
-    })
-
-  // THE LEAN, ONE CHILD PER SLIDE THAT HAS ONE. Nested at its own first measured
-  // instant, which is past the turn that lands on it — between the turn's end
-  // and that instant (under two frames at 30 fps) nothing writes the two depth
-  // channels, so they hold exactly where the turn left them, which is this
-  // table's first row. Same handover the entrance already has with the path:
-  // swingOpen lands at HANDOVER_YAW and nothing drives yaw for five seconds.
-  //
-  // Nested AFTER the turns so that at the single instant where a turn's end and
-  // a lean's start could both render, the measurement is what lands. They agree
-  // there by construction, so this is belt and braces rather than a fix.
-  slides
-    .filter(s => rowsFor(s.frame))
-    .forEach(slide => {
-      const rows = rowsFor(slide.frame)
-      nest(tl, journalLean(targets, rows), rows[0][0])
     })
 
   // NO RECEDE. The outro used to be a five-second tween from the path's last row
@@ -257,11 +241,10 @@ export function buildStoryTimeline(targets, ctx) {
   // reflect the video, not just the last tween.
   tl.set({}, {}, timing.duration)
 
-  // NO IDLE DRIFT. It was invented rather than measured, and it existed only to
-  // keep a journal alive that the pose table had parked. The path moves the
-  // journal the way the clip moves it, all the way through every slide, so a
-  // synthetic drift on top would double the motion and put it out of step with
-  // the reference. `hover` stays a library preset and the lab still has a button
-  // for it; the story does not build one. Every consumer of `hoverTl` guards it.
+  // `hoverTl` STAYS NULL, and that is not the same as "no drift" any more. The
+  // levitation is nested above as an ordinary child of the master clock; this
+  // handle exists for a standalone looping timeline that the story no longer
+  // has, and every consumer of it is guarded. Handing them the drift would let
+  // `play(0)` reset the story's own playhead.
   return { tl, hoverTl: null, setFace, plan }
 }

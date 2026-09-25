@@ -135,7 +135,27 @@ export function useStoryPlayback(ctx) {
   //     apart, something moved the playhead, and easing towards it over a
   //     second would be the bug rather than the fix.
   const SYNC_SNAP = 0.5 // s — beyond this it is a jump, not drift
-  const SYNC_GAIN = 2 // how hard the playback rate leans on the error
+  /**
+   * ⚠️ THE GAIN IS 0.5, NOT 2, AND THAT IS THE DIFFERENCE BETWEEN A REGULATOR
+   * AND A SWITCH (DP-15822).
+   *
+   * At a gain of 2 the correction was saturated the instant it existed: the
+   * dead band is 3/30 = 0.1 s, so the smallest error the loop ever acts on
+   * already asks for 1 + 0.2 and is clamped straight to the 12 % ceiling.
+   * Between "no correction" and "the maximum correction" there was nothing —
+   * the loop was bang-bang at +-12 %, softened only by RATE_SLEW taking six
+   * frames to get there. And a 12 % change of `timeScale` is a 12 % change in
+   * the speed of everything on screen, applied to a journal whose only other
+   * motion is a slow drift.
+   *
+   * At 0.5 the correction ramps from zero at the band's edge and reaches the
+   * ceiling at 0.24 s of error — which is still well inside one page turn, so
+   * nothing that used to be caught is now missed; it is caught proportionally.
+   * The log of 2026-09-17 records the owner seeing 7 % on `space_milk`, where
+   * the levitation was the only thing moving. After DP-15822 that is true of
+   * most of the story.
+   */
+  const SYNC_GAIN = 0.5 // how hard the playback rate leans on the error
   const SYNC_RATE_MAX = 0.12 // and never more than 12 % off real time
   const TAPE_WOBBLE = 0.3 // s — a step back shorter than this is decoder noise
 

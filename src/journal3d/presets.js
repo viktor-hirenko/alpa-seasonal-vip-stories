@@ -1,6 +1,6 @@
 import { gsap } from 'gsap'
 import { EASE } from '@/story/easing.js'
-import { TIMING, HOVER_AMP } from '@/story/timing.js'
+import { TIMING, HOVER_DRIFT } from '@/story/timing.js'
 import { DEPTH } from '@/story/journalGeometry.js'
 import { posVars, boxVars } from './poseTween.js'
 import { splineReader } from './hermite.js'
@@ -218,11 +218,22 @@ flyInFromFloor.PARAM_SCHEMA = {
  * THE YAW THE ENTRANCE LANDS ON, and hands to the first page turn.
  *
  * It is the last key's rotationY below, named because a second reader needs it:
- * nothing drives yaw between the handover at 6.0 and the first fold at 11.07,
- * so the journal sits at this angle for five seconds and the turn has to take
- * it from HERE rather than from zero. See the `from` param on `pageTurn`.
+ * nothing drives yaw on `.journal-box` between the handover at 6.0 and the first
+ * fold at 11.07, so the box sits at this angle and the turn has to take it from
+ * HERE rather than from zero. See the `from` param on `pageTurn`.
+ *
+ * ⚠️ IT IS ZERO SINCE DP-15822, and it was -4, measured off the clip. The mock
+ * says the cover "flies into the centre of the frame and ALIGNS FRONTALLY"
+ * (21770:4967), and four degrees of yaw under the stage's 1800 perspective is
+ * not nothing: it moved the projected box 12 px across and 15 px down, which is
+ * the whole of the 19.7 px by which frame 7 missed the mock's pose while this
+ * was -4 — the only one of the seventeen that did.
+ *
+ * The journal is still never rigidly square-on: the levitation swings +-8
+ * degrees of yaw across `.journal-hover`, continuously. What changed is that it
+ * now breathes AROUND frontal instead of around four degrees off it.
  */
-export const HANDOVER_YAW = -4
+export const HANDOVER_YAW = 0
 
 /**
  * THE ROLL THE ENTRANCE LANDS ON, and the four degrees it was short by.
@@ -267,7 +278,18 @@ export const HANDOVER_YAW = -4
  * can actually see. If the entrance ever reads as rolling too fast, this is the
  * number to move, and a picture rather than a gate will say so.
  */
-export const HANDOVER_ROT = 19.23
+/**
+ * ⚠️ THE LANDING MOVED ONTO THE MOCK, AND IT NOW OVERSHOOTS (2026-09-25,
+ * DP-15822, ADR-0012). It was 19.23 — the clip's own roll at 6.00, and the
+ * first row of the clip-measured path. The mock puts frame 7's cover at 3.10
+ * (21770:4716) and asks for the journal to "sit" onto that pose with a light
+ * overshoot and no hard stop (21770:4967), so the entrance arrives 2 degrees
+ * PAST it and JOURNAL_PATH eases back over the next 0.55 s.
+ *
+ * Everything above about the clip's roll is kept because it is what the number
+ * used to be and why; none of it is the reference any more.
+ */
+export const HANDOVER_ROT = 1.05
 
 export function swingOpen(t, params) {
   const p = P(
@@ -279,8 +301,14 @@ export function swingOpen(t, params) {
         [0.4, -76.3, 3.17, 0.92, 65.3, 50.0], //  130  front cover swinging into view
         [0.6667, -59.6, 4.14, 0.885, 67.1, 50.0], // 138  fills the canvas
         [1.0667, -36.5, 11.43, 0.845, 66.6, 50.0], // 150
-        [1.5667, -15.5, 18.35, 0.765, 61.6, 52.9], // 165
-        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.74, 58.56, 54.1], // 180  handover: JOURNAL_PATH's first row
+        // ⚠️ THE LAST TWO KEYS ARE AIMED AT THE MOCK, NOT AT THE CLIP. Their
+        // yaw is still the measured swing — Figma cannot draw a yaw, and the
+        // mock's own note ("flies into the centre, aligns frontally") needs one
+        // — but roll, size and centre now approach frame 7's pose and slightly
+        // overshoot it, so the cover decelerates INTO its place and settles back
+        // onto it instead of stopping dead on arrival.
+        [1.5667, -15.5, 7.5, 0.762, 59.8, 50.4], //  165
+        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.7508, 56.9, 47.95], // 180  handover: JOURNAL_PATH's first row
       ],
       // The row the PATH reaches one second after the handover, in this
       // preset's own seconds and without a yaw column — see `next` above.
@@ -375,56 +403,6 @@ export function journalPath(t, keys) {
 journalPath.PARAM_SCHEMA = {}
 
 /**
- * THE LEAN, THROUGH THE SLIDE — the two depth channels `journalPath` does not
- * touch and the page turn only lands.
- *
- * WHY IT IS A SEPARATE PRESET FROM `journalPath` even though both read a
- * measured polyline the same way. The pose path is ONE curve from the settled
- * cover to the dissolve and is nested once; the lean exists only on the slides
- * where the clip's page actually leans, so it is nested once PER SLIDE, between
- * that slide's turn and the next. Two tables, two lifetimes, two instruments —
- * clip-fit measured the pose, tiltprobe the lean.
- *
- * WHAT IT WRITES AND WHO ELSE WRITES IT. `rotationX` and `rotationY` on
- * `.journal-box`. `pageTurn` writes both too, and the two never overlap: the
- * turn runs from the cut to `flip.out + flip.back` and this starts at the
- * slide's first measured instant, which is later. Where they meet they agree by
- * construction — the turn lands on this table's first row (see SLIDE_LEAN_PATH).
- *
- * ⚠️ NOTHING NEEDS TO PUT rotationX BACK. A slide without measured rows never
- * gets one of these, and its turn carries rotationX to zero absolutely on the
- * way in, the same way it has always carried rotationY. So the channel cannot
- * leak from a leaning slide into a flat one, and an arbitrary backwards seek
- * (ADR-0008) lands on the same numbers as playing forwards to it: everything
- * here is a pure function of the clock, `set` and `fromTo` only, no `+=`.
- *
- * ⚠️ AND NO INVENTED WOBBLE UNDERNEATH IT. AT-1's plan said to damp
- * `HOVER_AMP.rotX/.rotY` on measured slides so a synthetic sine would not argue
- * with a measured curve. That is already true and for a better reason: the story
- * stopped building `hover` at all when the pose became a path (see `hover`
- * below). There is nothing to damp.
- */
-export function journalLean(t, rows) {
-  const at = splineReader(rows)
-  const t0 = rows[0][0]
-  const t1 = rows[rows.length - 1][0]
-  const head = { t: t0 }
-  const s = tl()
-  s.to(head, {
-    t: t1,
-    duration: t1 - t0,
-    ease: 'none',
-    onUpdate() {
-      const time = head.t
-      gsap.set(t.box, { rotationX: at(time, 1), rotationY: at(time, 2) })
-    },
-  })
-  return s
-}
-/** The times live IN the rows; a slider cannot move a measurement. */
-journalLean.PARAM_SCHEMA = {}
-
-/**
  * THE PAGE TURN, on its own.
  *
  * It used to be a flag on `rePose`, because a re-pose and a turn happened at the
@@ -457,12 +435,13 @@ journalLean.PARAM_SCHEMA = {}
  * `fromX` AND `toX` ARE THE SAME CONTRACT ON THE OTHER DEPTH AXIS, and they are
  * new in session AT-2. Until then `rotationX` was written exactly once in the
  * whole story — `swingOpen`'s head `set`, at zero — so a turn had nothing to
- * hand over and nothing to reset. Now that a slide can lean in depth
- * (SLIDE_LEAN_PATH), the turn has to do for `rotationX` precisely what it
- * already does for `rotationY`: begin at the value the previous slide left,
- * carry it across the swing, and land ABSOLUTELY on the value the incoming
- * slide starts from — which is zero for every slide that does not lean, and is
- * what keeps the channel from leaking out of the three slides that do.
+ * hand over and nothing to reset. The turn does for `rotationX` precisely what
+ * it already does for `rotationY`: begin at the value the previous slide left,
+ * carry it across the swing, and land ABSOLUTELY on the value the incoming slide
+ * starts from. ⚠️ Since DP-15822 both of those are zero on every slide — the
+ * depth belongs to the levitation on `.journal-hover`, a different element — but
+ * the contract is kept rather than hard-coded, because "land on an absolute
+ * value" is what makes the turn survive an arbitrary seek.
  *
  * It rides the BACK leg, not the whole turn. The out leg is 0.14 s of the page
  * swinging to edge-on; depth on a page seen edge-on is invisible, and starting
@@ -561,14 +540,12 @@ pageTurn.PARAM_DEFAULTS = { ...TIMING.flip }
  * is seeked arbitrarily (ADR-0008), and a plain `to` would record whatever
  * rotationY it found on its first render as its start value.
  *
- * `to` IS WHERE THE TURN LANDS, and it is not always square-on. The clip stops
- * several of its slides short of zero and leaves the page leaning - which under
- * the stage's perspective is the trapezium the owner kept pointing at on
- * review.html. Landing at zero everywhere was the reason our page always faced
- * the camera dead on. See SLIDE_LEAN in slides.js for the measured angles and
- * for why the ones under the bar are left at zero. It does NOT change with this
- * fix: the turn ends where it always ended, it just gets there the long way, so
- * `pose:check` measures the same settled poses.
+ * `to` IS WHERE THE TURN LANDS. It used to be a per-slide lean measured off the
+ * clip, which stops several of its slides short of zero and leaves the page
+ * tilted — the trapezium the owner kept pointing at on review.html. ⚠️ Since
+ * DP-15822 it is zero everywhere and the tilt comes from the levitation instead,
+ * which produces it continuously rather than parking on it. The parameter stays
+ * because the turn must land on an ABSOLUTE value to survive a seek.
  */
 function yawTurn(s, t, p) {
   s.to(t.box, { rotationY: p.peak, duration: p.out, ease: p.easeOut }, 0)
@@ -581,57 +558,59 @@ function yawTurn(s, t, p) {
 }
 
 /**
- * IDLE DRIFT — NO LONGER PART OF THE STORY. Kept as a library preset and used
- * by the lab; `buildStoryTimeline` does not build it any more.
+ * THE LEVITATION — the journal hanging in the room, breathing.
  *
- * IT WAS INVENTED, NOT MEASURED. Its job was to keep the journal alive between
- * slides, because the pose table held one pose per slide and the journal
- * genuinely stood still. The pose is a measured path now, and that path already
- * carries every bit of movement the clip has — adding a synthetic drift on top
- * would not make the journal livelier, it would double the motion and put it
- * out of step with the reference. Removed deliberately; see the log entry for
- * the measurement that decided it.
+ * ⚠️ IT IS A FUNCTION OF THE CLOCK, NOT A REPEATING TWEEN, and that is the whole
+ * reason this preset was rewritten rather than switched on (DP-15822). What
+ * stood here was a `repeat: -1, yoyo: true` timeline, and the story never built
+ * one — `buildStoryTimeline` returned `hoverTl: null` — because a repeating
+ * child re-renders at its OWN time zero the moment its parent is seeked, and
+ * this story is seeked on every tap. A proxy playhead swept linearly across the
+ * whole film, with the value computed from the playhead's second, lands on the
+ * same pose whatever route the player took to get there. That is the same shape
+ * `journalPath` and the CTA's rise already use (ADR-0008).
  *
- * Runs on `.journal-hover`, on its OWN standalone infinite timeline — never on
- * the master. `repeat: -1` on the master would make `tl.duration()` infinite and
- * destroy the whole video-sync and progress model.
+ * THE SHAPE: two sines per channel at non-integer period ratios, so nothing
+ * repeats inside 94 seconds and nothing crosses zero in step with anything else.
+ * The numbers, and why the depth channels are the big ones, are in HOVER_DRIFT.
+ *
+ * WHERE IT WRITES: `.journal-hover`, and only that. The pose owns
+ * `.journal-box`; two elements, two authors, no shared transform cache
+ * (ADR-0002). ⚠️ It must never be nested with `repeat: -1` on the master —
+ * that would make `tl.duration()` infinite and take the video sync and the
+ * progress bar with it. It spans the film explicitly instead.
  */
-export function hover(t, params) {
-  const p = P({ amp: HOVER_AMP, period: TIMING.hover, ease: EASE.hoverDrift }, params)
-  const s = gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: p.ease } })
-  s.fromTo(
-    t.hover,
-    { rotationZ: -p.amp.rotZ },
-    { rotationZ: p.amp.rotZ, duration: p.period.rotZ },
-    0,
-  )
-  s.fromTo(
-    t.hover,
-    { rotationY: -p.amp.rotY },
-    { rotationY: p.amp.rotY, duration: p.period.rotY },
-    p.period.stagger * 0,
-  )
-  s.fromTo(
-    t.hover,
-    { rotationX: -p.amp.rotX },
-    { rotationX: p.amp.rotX, duration: p.period.rotX },
-    p.period.stagger * 1,
-  )
-  s.fromTo(
-    t.hover,
-    { yPercent: -p.amp.y },
-    { yPercent: p.amp.y, duration: p.period.y },
-    p.period.stagger * 2,
-  )
-  s.fromTo(
-    t.hover,
-    { scale: 1 - p.amp.scale },
-    { scale: 1 + p.amp.scale, duration: p.period.scale },
-    p.period.stagger * 3,
-  )
+export function journalDrift(t, params) {
+  const p = P({ drift: HOVER_DRIFT, from: 0, to: TIMING.duration }, params)
+  const wave = (c, time) =>
+    c.amp[0] * Math.sin((2 * Math.PI * time) / c.period[0] + c.phase) +
+    // The second harmonic's phase is offset again, by an irrational-ish factor,
+    // so the two do not start together either — two sines in phase at t=0 make
+    // the opening second of the story read as one bigger sine.
+    c.amp[1] * Math.sin((2 * Math.PI * time) / c.period[1] + c.phase * 1.7)
+  const head = { t: p.from }
+  const s = tl()
+  s.to(head, {
+    t: p.to,
+    duration: p.to - p.from,
+    ease: 'none',
+    onUpdate() {
+      const time = head.t
+      const d = p.drift
+      gsap.set(t.hover, {
+        rotationZ: wave(d.rotZ, time),
+        rotationY: wave(d.rotY, time),
+        rotationX: wave(d.rotX, time),
+        xPercent: wave(d.x, time),
+        yPercent: wave(d.y, time),
+        scale: 1 + wave(d.scale, time),
+      })
+    },
+  })
   return s
 }
-hover.PARAM_SCHEMA = {}
+/** No sliders: the amplitudes and periods are one table, in timing.js. */
+journalDrift.PARAM_SCHEMA = {}
 
 /**
  * Per-slide re-pose, and with `flip: true` the PAGE TURN.

@@ -382,7 +382,10 @@ function toggleHover() {
   if (!targets) return
   hoverOn.value = !hoverOn.value
   if (hoverOn.value) {
-    hoverTl = presets.hover(targets)
+    // The drift is a function of the clock now, so the lab parks it at whatever
+    // second it is showing rather than playing it from zero.
+    hoverTl = presets.journalDrift(targets)
+    hoverTl.pause(AT_TIME ?? (slide.value?.at ?? 0) + SEEK_LEAD)
   } else if (hoverTl) {
     hoverTl.kill()
     hoverTl = null

@@ -1,4 +1,4 @@
-import { SLIDES, JOURNAL_PATH, SLIDE_LEAN_PATH, STORY_END, PAGE_ORDER, STORY_SEGMENTS } from './slides.js' // prettier-ignore
+import { SLIDES, JOURNAL_PATH, STORY_END, PAGE_ORDER, STORY_SEGMENTS } from './slides.js'
 import { TIMING, snap } from './timing.js'
 
 /**
@@ -177,16 +177,6 @@ export function buildStoryPlan(skip = {}) {
     row => [toStory(row[0]), ...row.slice(1)],
   )
 
-  // A LEAN BELONGS TO ITS SLIDE, so a dropped page takes its rows with it and
-  // the survivors' rows move with the rest. Simpler than the path's case: the
-  // rows never span a hole, because they never span a cut in the first place —
-  // each slide's lean lives strictly between its own turn and the next.
-  const lean = Object.fromEntries(
-    Object.entries(SLIDE_LEAN_PATH)
-      .filter(([frame]) => !dropped.has(Number(frame)))
-      .map(([frame, rows]) => [frame, rows.map(row => [toStory(row[0]), row[1], row[2]])]),
-  )
-
   const pageOrder = PAGE_ORDER.filter(p => slides.some(s => s.page === p))
   const storyEnd = toStory(STORY_END)
   const segments = buildSegments(slides, pageOrder, storyCut, removed, storyEnd)
@@ -198,7 +188,6 @@ export function buildStoryPlan(skip = {}) {
     slides,
     segments,
     path,
-    lean,
     timing: shiftTiming(TIMING, toStory),
     storyEnd,
     gaps,
@@ -248,7 +237,6 @@ function identityPlan() {
     slides: SLIDES,
     segments: STORY_SEGMENTS,
     path: JOURNAL_PATH,
-    lean: SLIDE_LEAN_PATH,
     timing: TIMING,
     storyEnd: STORY_END,
     gaps: [],

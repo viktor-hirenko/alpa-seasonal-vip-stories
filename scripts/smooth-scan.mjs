@@ -133,6 +133,12 @@ class CDP {
  * The journal's visible edge is `.journal-box`, not `.journal-pos` — the
  * positioner carries only cx/cy and its own rect is the whole stage. Session K
  * measured the wrong element first; this is that lesson, written down.
+ *
+ * ⚠️ AND THERE IS A SECOND ELEMENT SINCE DP-15822: `.journal-hover` carries the
+ * levitation. `getBoundingClientRect` picks it up for free — it is an ancestor
+ * of the box — but `gsap.getProperty` does not, so the per-channel numbers had
+ * to learn to add the two. Without that this gate would have called the story
+ * smooth while being blind to most of its motion.
  */
 const INSTALL = `(() => {
   const s = window.__story
@@ -140,6 +146,7 @@ const INSTALL = `(() => {
   const s3d = document.querySelector('.stage-3d')
   const box = document.querySelector('.journal-box')
   const pos = document.querySelector('.journal-pos')
+  const hov = document.querySelector('.journal-hover')
   const outro = document.querySelector('.story-outro')
   const speed = document.querySelector('.stage__speed')
   const g = s.gsap
@@ -159,6 +166,18 @@ const INSTALL = `(() => {
       const u = box.offsetWidth / jwv
       const br = box.getBoundingClientRect()
       const pcs = getComputedStyle(pos)
+      // THE ANGLES ARE THE SUM OF TWO ELEMENTS SINCE DP-15822. The pose is on
+      // .journal-box and the levitation on .journal-hover, and what the eye sees
+      // is both. Reading only the box made the drift invisible to this
+      // instrument, which is the very motion the story now leans on. So every
+      // angle, the scale and the two position channels are TOTALS here, and the
+      // box's own share is kept alongside as boxRotX and friends, for when the
+      // question is which of the two moved.
+      const tot = (pr, mul) => {
+        const a = num(box, pr), b = num(hov, pr)
+        if (a === null && b === null) return null
+        return mul === 'x' ? (a ?? 1) * (b ?? 1) : (a ?? 0) + (b ?? 0)
+      }
       const row = {
         t,
         // The projected quad's bounding box, design px, measured from the canvas.
@@ -167,9 +186,12 @@ const INSTALL = `(() => {
         // rotX is sampled since session AT-2, when SLIDE_LEAN_PATH gave it a
         // measured curve to follow. Before that it was a constant zero for the
         // whole story, and a channel nothing writes cannot jerk.
-        rotX: num(box, 'rotationX'),
-        rotY: num(box, 'rotationY'), rotZ: num(box, 'rotationZ'), sc: num(box, 'scaleX'),
-        cx: num(pos, 'xPercent'), cy: num(pos, 'yPercent'),
+        rotX: tot('rotationX'),
+        rotY: tot('rotationY'), rotZ: tot('rotationZ'), sc: tot('scaleX', 'x'),
+        cx: (num(pos, 'xPercent') ?? 0) + (num(hov, 'xPercent') ?? 0),
+        cy: (num(pos, 'yPercent') ?? 0) + (num(hov, 'yPercent') ?? 0),
+        boxRotX: num(box, 'rotationX'), boxRotY: num(box, 'rotationY'),
+        boxRotZ: num(box, 'rotationZ'), boxSc: num(box, 'scaleX'),
         op: Number(pcs.opacity), vis: pcs.visibility === 'visible',
         jw: jwv,
         objs: [],

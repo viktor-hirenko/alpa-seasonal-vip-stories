@@ -58,12 +58,12 @@ export const SYNC_EPSILON = 1 / FPS
  * tail noise: the middle of the curve and its tail agree at r = 0.83, and on 13
  * of the 16 cuts all three checkpoints fall on the same side of the median.
  *
- * ⚠️ FRAMES 11 AND 18 CANNOT HAVE THEIR MEASURED VALUE YET, and the cap is
- * applied in buildStoryTimeline rather than here so this table stays the
- * measurement. Their turns run past the first row of their own SLIDE_LEAN_PATH,
- * and the turn and the lean both write rotationY; the two tables are allowed to
- * meet but not to overlap. Lifting that needs those two slides' lean rows
- * re-measured from a later instant, not a smaller number here.
+ * ⚠️ EVERY SLIDE NOW PLAYS ITS MEASURED VALUE IN FULL (2026-09-25, DP-15822).
+ * Four of them used to be clipped — 10, 11, 18 and 22, though the note here
+ * only ever named 11 and 18 — because a turn that ran past the first row of
+ * SLIDE_LEAN_PATH would have had the lean writing rotationY underneath it. That
+ * table is gone with the clip it came off, nothing else writes rotationY between
+ * the turns, and the cap went with it.
  */
 export const SLIDE_FLIP_BACK = {
   8: 0.532,
@@ -210,17 +210,6 @@ export const TIMING = {
   // for one frame of difference, and the edge-on instant already lands on the
   // clip's, so it was left alone deliberately.
   flip: { peak: 90, out: 0.14, back: 0.6 },
-
-  /** Idle drift. Per-property periods are deliberately co-prime-ish so the
-   *  loop never reads as periodic. */
-  hover: {
-    rotZ: 6.5,
-    rotY: 8.5,
-    rotX: 7.25,
-    y: 5.5,
-    scale: 9.5,
-    stagger: 0.8,
-  },
 
   /** The retired draw-back, kept for the lab's `recede` button. The story does
    *  not play it, and there is no flash for it to precede: the journal
@@ -385,11 +374,50 @@ export const TIMING = {
   duration: 94.3667,
 }
 
-/** Idle-drift amplitudes, degrees / percent / ratio. */
-export const HOVER_AMP = {
-  rotZ: 0.9,
-  rotY: 2.5,
-  rotX: 1.5,
-  y: 0.6,
-  scale: 0.012,
+/**
+ * THE LEVITATION — the journal hanging in weightlessness, as a function of the
+ * clock (DP-15822).
+ *
+ * WHAT IT REPLACES. `HOVER_AMP` + `TIMING.hover` drove `hover()`, a repeating
+ * yoyo timeline, and the story never built one: `buildStoryTimeline` has
+ * returned `hoverTl: null` since the measured path arrived, because a repeating
+ * child re-renders at its OWN time zero when its parent is seeked, and this
+ * story is seeked constantly. The amplitudes below start from those numbers —
+ * they were invented rather than measured, and said so — and the shape is new.
+ *
+ * WHY TWO SINES PER CHANNEL AND WHY THESE PERIODS. One sine is a metronome: it
+ * returns to the same place every period and the eye finds it within two cycles.
+ * Two sines whose periods are NOT in an integer ratio never repeat inside the
+ * story's 94 seconds — 9.1 against 21.0 comes back together after 63 s, 8.9
+ * against 20.4 after 121 s, and the six channels together after longer than
+ * anyone will watch. That is the whole trick behind "organic" drift, and it is
+ * the same thing the storyboard asks for in words: «власна траєкторія, швидкість
+ * і фаза, без синхрону» (21770:4964).
+ *
+ * WHY THE DEPTH CHANNELS ARE THE BIG ONES. `rotY` reaches 8 degrees and `rotX`
+ * 4.5, an order above the roll — because under the stage's 1800 perspective a
+ * few degrees of yaw is what makes the page read as a solid object in a room
+ * rather than a sticker. The owner asked for exactly this on 2026-09-18 («на
+ * видео видно, как перспектива тоже меняется на слайде»); until DP-15822 it was
+ * answered with rows measured off the clip, which stalled at both ends of every
+ * slide. A continuous function has no ends to stall at.
+ *
+ * WHERE IT IS WRITTEN: `.journal-hover`, which exists for this and nothing else
+ * (ADR-0002). Its `transform-origin` is 0 0 and `.journal-box` is centred on
+ * that origin by negative margins, so a rotation here turns the journal about
+ * its own centre and an `xPercent` here is a percent of the stage — the same
+ * unit the pose uses. The pose keeps `.journal-box`; neither writes the other's
+ * element, so there is no cache to fight over.
+ *
+ *   amp     [first harmonic, second] — degrees, or percent of stage, or scale
+ *   period  [first, second] in seconds; pairwise non-integer ratios
+ *   phase   radians, spread so no two channels cross zero together
+ */
+export const HOVER_DRIFT = {
+  rotZ: { amp: [0.7, 0.35], period: [9.1, 21.0], phase: 0.0 },
+  rotY: { amp: [5.5, 2.5], period: [8.9, 20.4], phase: 1.31 },
+  rotX: { amp: [3.0, 1.5], period: [6.7, 15.4], phase: 2.62 },
+  y: { amp: [0.6, 0.3], period: [7.3, 16.9], phase: 3.93 },
+  x: { amp: [0.35, 0.18], period: [11.7, 27.1], phase: 5.24 },
+  scale: { amp: [0.007, 0.004], period: [13.1, 30.2], phase: 0.65 },
 }

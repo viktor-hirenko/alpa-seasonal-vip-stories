@@ -178,6 +178,7 @@ function predict(pose, jw, jh) {
  * change now breaks the import, in the open.
  */
 const { SLIDES, JOURNAL_PATH, poseAt, settledAt } = await import('../src/story/slides.js')
+const { TIMING, SLIDE_FLIP_BACK } = await import('../src/story/timing.js')
 
 /** Scene anchor -> screen, in design px. The forward form of the inversion the
  *  table was built with; P must match TIMING.persp.base. */
@@ -342,35 +343,37 @@ if (fitMode) {
   if (fails) process.exitCode = 1
 } else if (all) {
   /**
-   * THE POSE GATE, AND WHAT IT NOW ASSERTS.
+   * THE POSE GATE, AND WHAT IT ASSERTS SINCE DP-15822.
    *
-   * It used to render each slide in the lab, predict that slide's AABB from the
-   * pose table, and compare the two. Both sides of that came out of the same
-   * four numbers, so it was green by construction and could only ever catch a
-   * broken transform chain — never a wrong pose. With the pose table replaced by
-   * a measured path, keeping it would have been worse than useless: it would
-   * have gone green on the new numbers the moment they were written down, and
-   * looked like a verdict on them.
+   * ⚠️ IT USED TO COMPARE US WITH THE CLIP. `scripts/journal-reference.json` held
+   * the reference clip's own pose second by second, and this gate parked our
+   * journal at each of those seconds and compared the two MOTIONS. The owner
+   * retired the clip as the motion reference on 2026-09-25 (ADR-0012), which
+   * left the gate permanently and meaninglessly red — 190 samples out of
+   * tolerance on a build nobody had broken.
    *
-   * What it checks instead is THE CLAIM THIS SESSION MAKES: that the journal
-   * moves through a slide the way the clip's does. `scripts/journal-reference.json`
-   * holds the clip's own pose, second by second, as measured by clip-fit. For
-   * each slide, our journal is parked at each of those seconds IN THE PLAYER —
-   * not in the lab, so what is measured is what ships — and its motion SINCE
-   * THE SLIDE'S FIRST MEASURED SECOND is compared with the clip's motion over
-   * the same interval.
+   * WHAT IT ASSERTS NOW: that the journal is WHERE THE MOCK SAYS at the instant
+   * the mock draws — `slide.at + flip.out + SLIDE_FLIP_BACK[frame]`, the moment
+   * the page turn has finished. Both sides are real: the left is the rendered
+   * bounding box of `.journal-box` in design px, measured in the PLAYER rather
+   * than the lab so that what is measured is what ships; the right is the AABB
+   * predicted from the storyboard's own pose by the same projection
+   * _context/32-poses.md solved those poses with.
    *
-   * The comparison is of deltas rather than absolutes on purpose. clip-fit
-   * registers our page's type and art against the clip's, so its absolute answer
-   * carries our layout's own difference from the clip's edition; that offset is
-   * fixed within a slide and cancels in a delta, which is exactly why the path
-   * takes its motion from this instrument and its anchor from elsewhere. An
-   * absolute check would be measuring the layout, and would fail for the wrong
-   * reason.
+   * ⚠️ IT IS NOT GREEN BY CONSTRUCTION, which is the trap the old comment here
+   * warned about. The predicted box comes from the MOCK's four numbers; the
+   * measured one comes from a transform chain of four nested elements, a
+   * perspective, a face-size swap and a spline. Any of those can be wrong while
+   * the table is right — that is exactly the class of bug it catches.
+   *
+   * ⚠️ THE LEVITATION IS SWITCHED OFF FOR THE READING. It lives on
+   * `.journal-hover` and reaches 8 degrees of yaw and 4.5 of pitch, which moves
+   * the projected box by more than any tolerance worth having; and `predict()`
+   * only knows about roll. So the reading clears that one element's transform
+   * and puts it back. What that costs is that this gate says nothing about the
+   * drift — `smooth:scan` is the instrument for the drift, and it reads both
+   * elements summed.
    */
-  const REFP = JSON.parse(
-    readFileSync(new URL('./journal-reference.json', import.meta.url), 'utf8'),
-  )
   const PARK = t => `(async () => {
     const s = window.__story, v = s.video
     s.seek(${t})
@@ -382,101 +385,74 @@ if (fitMode) {
     s.tl.seek(${t}, false)
     s.applySegment?.(${t})
     const g = (window.__story && window.__story.gsap) || window.gsap
-    const box = document.querySelector('.journal-box'), pos = document.querySelector('.journal-pos')
-    const num = (el, pr) => { const v = Number(g.getProperty(el, pr)); return Number.isFinite(v) ? v : 0 }
-    return { t: s.tl.time(), rot: num(box, 'rotationZ'), scale: num(box, 'scaleX'),
-             cx: num(pos, 'xPercent'), cy: num(pos, 'yPercent') }
+    const hov = document.querySelector('.journal-hover')
+    const keep = hov.style.transform
+    // The levitation is an overlay on its own element; take it off for the
+    // reading and put it straight back, so the number is the POSE alone.
+    hov.style.transform = 'none'
+    const stage = document.querySelector('.stage')
+    const box = document.querySelector('.journal-box')
+    const sr = document.querySelector('.stage-3d').getBoundingClientRect()
+    const br = box.getBoundingClientRect()
+    const cs = getComputedStyle(stage)
+    const jw = parseFloat(cs.getPropertyValue('--jw'))
+    const jh = parseFloat(cs.getPropertyValue('--jh'))
+    const u = box.offsetWidth / jw
+    const out = { t: s.tl.time(), jw, jh,
+      cx: (br.left - sr.left + br.width / 2) / u,
+      cy: (br.top - sr.top + br.height / 2) / u,
+      w: br.width / u, h: br.height / u }
+    hov.style.transform = keep
+    return out
   })()`
-
-  /**
-   * GROUPED BY THE ROW'S OWN `frame`, not by re-deriving one from its second.
-   *
-   * Every column in the reference is relative to THE FIRST SAMPLE OF THE RUN
-   * THAT MEASURED IT, and the run is what `frame` names. Re-deriving the frame
-   * from `t` against SLIDES gives the same answer everywhere a run stops at the
-   * next slide's row — which was everywhere, until the outro was measured as one
-   * chain from 84.03 to 88.03 straight through frame 24's row at 85.0. Split
-   * there, the second half was compared against a zero it was never measured
-   * from, and the gate reported 76 design px of error on eleven rows that are
-   * right to a pixel.
-   */
-  const bySlide = new Map()
-  for (const r of REFP.rows) {
-    let f = r.frame
-    if (f === undefined) {
-      f = SLIDES[0].frame
-      for (const x of SLIDES) if (x.at <= r.t + 1e-6) f = x.frame
-    }
-    if (!bySlide.has(f)) bySlide.set(f, [])
-    bySlide.get(f).push(r)
-  }
 
   await cdp.send('Page.navigate', { url: `${ORIGIN}/index.html` })
   await sleep(Math.max(waitMs, 7000))
 
-  const TOL = { pos: 9, scale: 0.008, rot: 0.6 }
-  console.log(
-    `The journal's MOTION against the clip's, from ${REFP.src || 'journal-reference.json'}.`,
-  )
-  console.log("Each row: how far our journal has moved since this slide's first")
-  console.log("measured second, against how far the clip's moved over the same seconds.\n")
-  console.log(
-    'frame page                     t    ours dcx/dcy   clip dcx/dcy    err px   dsize    drot',
-  )
+  // Design pixels on a 1080-wide canvas. 9 px is what the gate has always
+  // allowed on position; the size and angle columns fall out of w/h, so one
+  // tolerance in px covers all three.
+  const TOL = { pos: 9, size: 9 }
+  console.log("The journal's POSE against the storyboard's, at the instant the mock draws.")
+  console.log('Left: the rendered box of .journal-box in design px, in the player, with the')
+  console.log('levitation switched off. Right: the box the mock pose predicts.\n')
+  console.log('frame page                     t    our cx/cy       mock cx/cy      dpos    dsize')
   let fails = 0,
     worstPos = 0,
-    worstScale = 0,
-    worstRot = 0
-  for (const [frame, rows] of [...bySlide].sort((a, b) => a[0] - b[0])) {
-    const page = SLIDES.find(x => x.frame === frame)?.page || ''
-    let ourBase = null
-    for (const r of rows) {
-      const m = await cdp.eval(PARK(r.t))
-      // The reference's own columns are ALREADY relative to the slide's first
-      // sample — dx/dy in design px, size as a ratio, rot in degrees — so this
-      // side only has to make ours relative too.
-      if (!ourBase) {
-        ourBase = m
-        continue
-      }
-      const ourDx = ((m.cx - ourBase.cx) / 100) * 1080
-      const ourDy = ((m.cy - ourBase.cy) / 100) * 1920
-      const refDx = r.dx
-      const refDy = r.dy
-      const ePos = Math.hypot(ourDx - refDx, ourDy - refDy)
-      const eScale = Math.abs(m.scale / ourBase.scale / r.size - 1)
-      const eRot = Math.abs(m.rot - ourBase.rot - r.rot)
-      // A comparison that produced no number is a FAILURE, not a pass. NaN loses
-      // every `>` it is put through, so a gate that only asks "is the error too
-      // big" reports a clean sheet when it has measured nothing at all — which
-      // is exactly what this gate did on its first run, against a reference
-      // whose columns it was reading by the wrong names.
-      const num = [ourDx, ourDy, refDx, refDy, ePos, eScale, eRot].every(Number.isFinite)
-      const bad = !num || ePos > TOL.pos || eScale > TOL.scale || eRot > TOL.rot
-      if (bad) fails++
-      worstPos = Math.max(worstPos, ePos)
-      worstScale = Math.max(worstScale, eScale)
-      worstRot = Math.max(worstRot, eRot)
-      console.log(
-        String(frame).padStart(5) +
-          '  ' +
-          page.padEnd(20) +
-          r.t.toFixed(2).padStart(7) +
-          `${fmt(ourDx)}/${fmt(ourDy)}`.padStart(16) +
-          `${fmt(refDx)}/${fmt(refDy)}`.padStart(16) +
-          ePos.toFixed(1).padStart(9) +
-          (eScale * 100).toFixed(2).padStart(8) +
-          '%' +
-          eRot.toFixed(2).padStart(8) +
-          (!num ? '  NOT MEASURED' : bad ? '  OUT' : ''),
-      )
+    worstSize = 0
+  const anchors = SLIDES.filter(s => s.frame >= 7 && s.frame <= 23)
+  for (const s of anchors) {
+    const t = +(s.frame === 7 ? JOURNAL_PATH[1][0] : s.at + TIMING.flip.out + (SLIDE_FLIP_BACK[s.frame] ?? TIMING.flip.back)).toFixed(3) // prettier-ignore
+    const m = await cdp.eval(PARK(t))
+    const want = predict(poseAt(t), m.jw, m.jh)
+    const dPos = Math.hypot(m.cx - want.cx, m.cy - want.cy)
+    const dSize = Math.hypot(m.w - want.w, m.h - want.h)
+    // NaN loses every `>` it is put through, so "did it measure anything at all"
+    // is asked first — a gate that reports a clean sheet on nothing measured is
+    // the failure mode this file has already had once.
+    const num = [m.cx, m.cy, m.w, m.h, dPos, dSize].every(Number.isFinite)
+    const bad = !num || dPos > TOL.pos || dSize > TOL.size
+    if (bad) fails++
+    if (num) {
+      worstPos = Math.max(worstPos, dPos)
+      worstSize = Math.max(worstSize, dSize)
     }
+    console.log(
+      String(s.frame).padStart(5) +
+        '  ' +
+        s.page.padEnd(20) +
+        t.toFixed(2).padStart(7) +
+        `${fmt(m.cx)}/${fmt(m.cy)}`.padStart(16) +
+        `${fmt(want.cx)}/${fmt(want.cy)}`.padStart(16) +
+        dPos.toFixed(1).padStart(9) +
+        dSize.toFixed(1).padStart(8) +
+        (!num ? '  NOT MEASURED' : bad ? '  OUT' : ''),
+    )
   }
   console.log(
-    `\n${fails} sample(s) out of tolerance` +
-      `\nworst: motion ${worstPos.toFixed(1)} design px (tol ${TOL.pos}), ` +
-      `size ${(worstScale * 100).toFixed(2)} % (tol ${(TOL.scale * 100).toFixed(1)} %), ` +
-      `angle ${worstRot.toFixed(2)}\u00b0 (tol ${TOL.rot}\u00b0)`,
+    `\n${fails} pose(s) out of tolerance` +
+      `\nworst: position ${worstPos.toFixed(1)} design px (tol ${TOL.pos}), ` +
+      `size ${worstSize.toFixed(1)} design px (tol ${TOL.size})`,
   )
   if (fails) process.exitCode = 1
 } else {
