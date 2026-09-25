@@ -112,6 +112,14 @@
 /// page stack reads at this angle.
 /// Right paper-stack edge (21770:3186). An SVG in the mock — the 7-stop CSS
 /// ramp I first inferred from metadata was wrong.
+/// ⚠️ 25.09: THE PAGE BLOCK'S EDGE IS MAGENTA NOW, NOT BRONZE, and the overlay
+/// could not have told us. The three lines are the stacked paper seen edge-on
+/// (21770:3839, `Rectangle 3465383`): same file, same geometry, same six stops
+/// — only recoloured, #B26C3B/#2C2C2C/#562C26 -> #B630A4/#301037/#561749. It is
+/// 24 design px of visible width, so it moved the greyscale number by nothing
+/// at all; the owner saw it on the storyboard (21770:4729) where the journal's
+/// leaves read pink. Measured on the same shots the overlay uses: the mock's
+/// column is (163,42,148) where ours was (155,97,57).
 .page__edge {
   position: absolute;
   left: 63.6%;
