@@ -127,11 +127,13 @@ export const PAGE_LAYOUTS = {
   },
 
   headline_win: {
-    // 371 / 472 / 398 / 466, three lines everywhere, pinned left at 108. Unlike
-    // every other heading this one has a NEIGHBOUR: the digit row starts at
-    // 634.53, so the budget is that gap and not the page.
-    headline: { maxWidth: 526, lines: 3 },
-    // 1230 fixed, right edge on 1334.38 with the currency and the tile row.
+    // 25.09: the heading is CENTRED and two lines in all four variants —
+    // "Your / biggest win:", "Votre / plus gros gain :", "Dein größter /
+    // Gewinn:", "La vostra / vincita più alta:" (renders of 21770:3317, 3336,
+    // 3370, 3404). It no longer has the digit row beside it, so the budget is
+    // the page again rather than the 526 gap.
+    headline: { lines: 2 },
+    // 1230 fixed, right edge on 1334.38 with the currency.
     game: { maxWidth: 1230, lines: 1 },
   },
 
@@ -208,8 +210,14 @@ export const PAGE_LAYOUTS = {
 
   final: {
     // 935 / 744 / 774 / 940; 1 / 1 / 1 / 2 lines. Two lines is also exactly the
-    // room to the subhead: (931.5 - 737.5) / 97.2 = 2.
-    headline: { maxWidth: 940, lines: 2 },
+    // room to the subhead: (844.71 - 668.51) / 99.4 = 2 at the 25.09 numbers.
+    // ⚠️ THE BUDGET IS 1000, NOT THE MOCK'S 940, AND THAT IS NOT A GUESS. The
+    // redraw puts this line at 92 px where it was 90, and our setting of
+    // "KEEP YOUR COURSE." needs 940 x 92/90 = 961 — one per cent past the
+    // mock's own box, so it WRAPPED onto a second line the mock does not have.
+    // The slot's width is what wraps it, the fitter only shrinks; 1000 leaves
+    // the English line whole and is still well inside the 1383 the body allows.
+    headline: { maxWidth: 1000, lines: 2 },
     // 995 / 1281 / 1339 / 995; 2 / 2 / 2 / 3 lines.
     subhead: { maxWidth: 1339, lines: 3 },
   },

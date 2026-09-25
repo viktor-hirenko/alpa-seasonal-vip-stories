@@ -53,14 +53,30 @@ const d = n => `calc(${+n.toFixed(3)} * var(--u))`
  * pull the origin back by it; every call site keeps the mock's own numbers.
  */
 const STROKE = 28.503
+/** Reference height the stroke, radius and glow above were measured at. */
+const REF_H = 843
+
+/**
+ * ⚠️ 25.09: THE CARD SHRANK, AND IT SHRANK AS ONE PIECE. Player's Pick now
+ * draws it 551 x 740 (23126:2944) where it was 635 x 843, and every other
+ * number moved with it by the same 740/843 = 0.87782 — stroke 28.503 -> 25.02,
+ * radius 50.898 -> 44.679, glow 21/81.2 -> 18.434/71.279 and 15/22.3 ->
+ * 13.167/19.575, all four to three decimals. So the card is one similarity
+ * class, like the digit tiles, and `height` drives it: `--thumb-k` carries the
+ * ratio into the stylesheet. A page that keeps the old size passes the old
+ * height and nothing changes for it.
+ */
+const k = computed(() => props.height / REF_H)
+const stroke = computed(() => STROKE * k.value)
 
 const boxStyle = computed(() => ({
-  width: d(props.width + STROKE * 2),
-  height: d(props.height + STROKE * 2),
-  top: d(props.top - STROKE),
+  width: d(props.width + stroke.value * 2),
+  height: d(props.height + stroke.value * 2),
+  top: d(props.top - stroke.value),
+  '--thumb-k': +k.value.toFixed(5),
   ...(props.left
-    ? { left: d(props.left - STROKE) }
-    : { left: '50%', marginLeft: d(-props.width / 2 - STROKE) }),
+    ? { left: d(props.left - stroke.value) }
+    : { left: '50%', marginLeft: d(-props.width / 2 - stroke.value) }),
 }))
 
 const imgStyle = computed(() => ({

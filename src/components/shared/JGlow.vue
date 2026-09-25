@@ -24,6 +24,12 @@ const props = defineProps({
   top: { type: Number, required: true },
   width: { type: Number, required: true },
   height: { type: Number, required: true },
+  /**
+   * Rotation of the bitmap, degrees. Seasonal Power's redrawn wash
+   * (23126:3149) is a 1675.1 x 837.6 bitmap turned -45deg inside a 1776.91
+   * square; pass the INNER box here, not the square the mock prints.
+   */
+  rotate: { type: Number, default: 0 },
   /** Most glows stack two copies; a few pages use only the first one. */
   plus: { type: Boolean, default: true },
   /**
@@ -74,6 +80,7 @@ const boxStyle = computed(() => {
     top: d(props.top),
     width: d(props.width),
     height: d(props.height),
+    ...(props.rotate ? { transform: `rotate(${props.rotate}deg)` } : {}),
     '--glow-src': artIsOpen.value ? `url(${glow})` : 'none',
   }
   if (!props.maskWidth || !props.maskHeight) return box

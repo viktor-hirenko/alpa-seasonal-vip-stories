@@ -2,29 +2,51 @@
   <!-- Seasonal Power. Figma set 21770:3030, EN variant 21770:3031.
        Slide frame 10, cut at 22.07 s. Dynamic value: the `points` param.
        The value is a plain gradient number here, not digit tiles. -->
-  <PageChrome :bg="bg">
+  <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
+    <template #backdrop>
+      <!-- 25.09: `galaxy 3` (21770:3034) is `hidden` and the page's own
+           background picture is gone with it; 23126:3146 draws the starfield
+           at 4096 x 2295, centred on 720.46, top -144, as a plain node with no
+           fade. -->
+      <PageBackdrop
+        tone="a"
+        :planets="false"
+        :left="-1327.54"
+        :top="-144"
+        :width="4096"
+        :height="2295"
+        :fade-end="0"
+      />
+      <!-- The wash left the hero and became a page-level mask group
+           (23126:3147): `left-[-15.18%] right-[-7.96%]` of the 1443 body at
+           aspect 1:1 -> a 1776.91 square at (-219.05, 143.31), holding a
+           1675.1 x 837.6 bitmap turned -45deg, plus-lighter. The square's
+           centre is (669.4, 1031.77), so the bitmap's own box starts at
+           (-168.15, 612.97). The hero's old mask group (21770:3037) is
+           `hidden`, so the hero itself no longer carries one.
+           ⚠️ THE MASK IS CENTRED, AND THE MOCK'S OWN OFFSET IS NOT USABLE
+           HERE. get_design_context prints
+           `mask-position: 339.502px 250.844px; mask-size: 1158.405px` on the
+           rotated child of a `display: contents` group, and taking it
+           literally pushes the halo to (1017, 1265) — on the page that reads
+           as light spilling down the RIGHT edge, +20 levels against the mock
+           on three sampled patches, while the left and the bottom already
+           agreed to one. Centring the mask puts the halo back on the badge:
+           6.3 % -> 4.1 % on this page. Same family as the `contents` traps in
+           Sports Desk and Gift. -->
+      <JGlow
+        :left="-168.15"
+        :top="612.97"
+        :width="1675.1"
+        :height="837.6"
+        :rotate="-45"
+        blend="plus"
+        :plus="false"
+      />
+    </template>
+
     <template #art>
-      <PageBackdrop :planets="false" />
-      <!-- The glow is this hero's OWN mask group (21770:3037), not the shared
-           Money Talks default: ONE copy rather than two, blended color-dodge
-           rather than hard-light + plus-lighter, and a box a quarter smaller
-           sitting 150 px lower. All three differ at once, which is why the page
-           read as too dark while the numbers were borrowed from a neighbour.
-           JGlow takes the MASK GROUP box, as on every other page. -->
-      <JHero
-        :left="261"
-        :top="566"
-        glow-blend="dodge"
-        :glow-plus="false"
-        :glow-x="0"
-        :glow-top="61.89"
-        :glow-width="1714.303"
-        :glow-height="857.151"
-        :glow-mask-x="201.617"
-        :glow-mask-y="-21.566"
-        :glow-mask-width="1439.453"
-        :glow-mask-height="862.734"
-      >
+      <JHero :left="261" :top="566" :glow="false">
         <!-- get_design_context on 21770:3036: a 1135.351 box centring the 919
              artwork at 15.88deg. The 143.234 that used to stand here was
              get_metadata's x for the ROTATED node — trap 1 in 91-handover.md,
@@ -44,7 +66,7 @@
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
+    <JHeading :text="copy.headline" :top="332.54" :size="92" v-bind="L.headline" />
     <!-- The mock's value box is centred on 700, not the body's 720.6, so it is
          placed explicitly rather than auto-centred.
          382 is the SHORT-value ceiling, not the mock's 188: at the clip's own
@@ -77,10 +99,10 @@ import PageChrome from '@/components/shared/PageChrome.vue'
 import JChip from '@/components/shared/JChip.vue'
 import JHeading from '@/components/shared/JHeading.vue'
 import JValue from '@/components/shared/JValue.vue'
+import JGlow from '@/components/shared/JGlow.vue'
 import JHero from '@/components/shared/JHero.vue'
 import JHeroIcon from '@/components/shared/JHeroIcon.vue'
 import PageBackdrop from '@/components/shared/PageBackdrop.vue'
-import bg from '@/assets/pages/bg-seasonal-power.webp'
 import { useStory } from '@/composables/useStoryData.js'
 import icon from '@/assets/pages/hero-seasonal-power.webp'
 

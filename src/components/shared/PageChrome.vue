@@ -38,9 +38,14 @@
         }"
       />
 
-      <!-- Specular sheen (21770:3191), mix-blend-mode: screen, inset slightly
-           beyond its box. -->
-      <img class="page__sheen" :src="sheen" alt="" />
+      <!-- ⚠️ THE SPECULAR SHEEN IS GONE, AND IT IS THE DESIGNER'S CALL. The
+           node is still in the file — `Rectangle 3465385`, 1442 x 1987 at
+           (1, -39), 21770:3191 on Money Talks and 21770:3844 on Sports Desk —
+           but every redrawn page marks it `hidden`, and no page's
+           get_design_context renders a screen-blend layer any more. Ours
+           lightened all seventeen: dropping it halved the mean disagreement on
+           every page measured (Sports Desk 16.4 -> 8.4, Gift 14.0 -> 6.0, VIP
+           Status 12.5 -> 4.7) without moving the hot-pixel share. -->
 
       <slot />
     </div>
@@ -79,6 +84,5 @@ defineProps({
 })
 
 import spine from '@/assets/pages/spine.svg'
-import sheen from '@/assets/pages/page-sheen.svg'
 import edge from '@/assets/pages/page-edge.svg'
 </script>

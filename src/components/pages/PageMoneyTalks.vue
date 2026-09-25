@@ -1,17 +1,31 @@
 <template>
-  <PageChrome>
-    <template #art>
+  <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
+    <template #backdrop>
       <PageBackdrop />
+    </template>
 
-      <JHero :left="261" :top="566">
+    <template #art>
+      <!-- The frame itself is turned 4deg since the redraw (21770:3196 renders
+           as a 1004.66 square inside a `rotate-4` wrapper, printed as a
+           1072.294 AABB at 183.81, 712.33). The square is centred on that
+           AABB's middle, hence 217.627 / 746.147. Both lighting mask groups on
+           this page are `hidden`, so the hero carries no glow. -->
+      <JHero
+        :left="217.627"
+        :top="746.147"
+        :width="1004.66"
+        :height="1004.66"
+        :rotate="4"
+        :glow="false"
+      >
         <JHeroIcon
           :src="icon"
-          :left="-276"
-          :top="-287"
-          :width="1469.05"
-          :height="1458.255"
-          :img-width="981.6"
-          :img-height="1093.178"
+          :left="-301.73"
+          :top="-313.75"
+          :width="1605.981"
+          :height="1594.179"
+          :img-width="1073.096"
+          :img-height="1195.073"
           :rotate="48.92"
         />
       </JHero>
@@ -19,14 +33,19 @@
 
     <JChip :top="129">{{ copy.chip }}</JChip>
     <!-- The mock breaks the headline explicitly over two lines. -->
-    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
-    <!-- 298.8 tall at three digits: the height at which our row is as wide as
-         the clip's (V-61, tile-fit) — 290 at the mock's tile proportions,
-         x1.0303 since session S drew the tile the clip's way (JDigitTiles' R).
-         The mock's 172 is what eight digits shrink to. Grows upwards from the
-         edge above the currency label, 1380.031 + 172. -->
-    <JDigitTiles :value="amount" :height="298.8" :bottom="1552.031" />
-    <JCurrency :top="1593" :size="160">{{ currency }}</JCurrency>
+    <JHeading :text="copy.headline" :top="332.54" :size="92" v-bind="L.headline" />
+    <!-- ⚠️ THE ROW MOVED ABOVE THE ART IN THE 25.09 REDRAW (23186:3055), the
+         same move as Sports Desk's. The old 298.8-tall row hung from 1552.031
+         is still in the file as node 21770:3205, marked `hidden`.
+         120.805 is the SHORT-value CEILING, not a constant: `slot` is the width
+         the row may take before useJournalFit shrinks it, so a player with more
+         digits than the mock's eight gets a smaller row instead of one that
+         runs off the page. The mock draws this same 120.805 at eight digits
+         here and at seven on Sports Desk, so the size is fixed in the design
+         and the shrink is ours alone, for values the designer never drew. -->
+    <JDigitTiles :value="amount" :height="120.805" :top="561.03" />
+    <!-- USD 23186:3054: 82 px at leading 0.94, right edge on 807.8. -->
+    <JCurrency :top="701.1" :size="82" align="right" :right="807.8">{{ currency }}</JCurrency>
   </PageChrome>
 </template>
 

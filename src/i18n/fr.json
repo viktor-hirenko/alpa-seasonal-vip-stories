@@ -49,7 +49,7 @@
     },
     "headline_win": {
       "chip": "Gain à la une",
-      "headline": ["Votre", "plus gros", "gain :"]
+      "headline": ["Votre", "plus gros gain :"]
     },
     "multiplier_moment": {
       "chip": "Moment multiplicateur",

@@ -198,19 +198,6 @@
   pointer-events: none;
 }
 
-/// Specular sheen across the whole sheet (21770:2952), `mix-blend-mode: screen`.
-.page__sheen {
-  position: absolute;
-  // The mock insets the SVG slightly beyond its own box
-  // (inset -1.61% -2.22% -1.61% -1.75% of a 1442 x 1987 layer at 1,-39).
-  left: du(-24.25);
-  top: du(-71);
-  width: du(1499.2);
-  height: du(2051);
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
-
 .page__art {
   position: absolute;
   pointer-events: none;
@@ -624,10 +611,12 @@
 
   img {
     position: absolute;
-    left: du(-20.42);
-    top: du(4.89);
-    width: du(579.414);
-    height: du(579.414);
+    // 25.09: 21770:4013 inside the turned 864.405 square (was -20.42 / 4.89
+    // inside 579.414).
+    left: du(-30.47);
+    top: du(7.29);
+    width: du(864.405);
+    height: du(864.405);
     max-width: none;
     object-fit: cover;
   }
@@ -644,11 +633,14 @@
   justify-content: center;
   overflow: clip;
   background: $page-bg;
-  border: du(28.503) solid $accent;
-  border-radius: du(50.898);
+  // Every length scales with the card — see JGameThumb's note on --thumb-k.
+  border: calc(#{du(28.503)} * var(--thumb-k, 1)) solid $accent;
+  border-radius: calc(#{du(50.898)} * var(--thumb-k, 1));
   box-shadow:
-    0 du(21) du(81.2) rgba(255, 0, 212, 0.56),
-    0 du(15) du(22.3) rgba(255, 0, 212, 0.27);
+    0 calc(#{du(21)} * var(--thumb-k, 1)) calc(#{du(81.2)} * var(--thumb-k, 1))
+      rgba(255, 0, 212, 0.56),
+    0 calc(#{du(15)} * var(--thumb-k, 1)) calc(#{du(22.3)} * var(--thumb-k, 1))
+      rgba(255, 0, 212, 0.27);
 
   img {
     flex: none;
@@ -681,21 +673,13 @@
 }
 
 /// Headline Win: gradient rule under the amount (21770:3330).
-.hw__divider {
-  position: absolute;
-  left: du(108);
-  top: du(729);
-  width: du(1227);
-  height: du(9);
-  background: linear-gradient(90deg, #{$accent} 0%, rgba(255, 255, 123, 0) 100%);
-}
-
 /// Headline Win: coin spray behind the thumbnail (21770:3333).
 .hw__coins {
-  left: du(279);
-  top: du(917);
-  width: du(1098);
-  height: du(770);
+  // 25.09: 21770:3333 grew and moved — 1272.617 x 892.455 at (104.38, 801.03).
+  left: du(104.38);
+  top: du(801.03);
+  width: du(1272.617);
+  height: du(892.455);
   object-fit: cover;
 }
 
@@ -1245,6 +1229,22 @@
   transform: scaleX(-1);
 }
 
+/// ⚠️ AND ITS SHEET IS CENTRED, NOT OFFSET FOR A SPINE. Every data page insets
+/// its body 6.32 % on the left and 1.53 % on the right to leave room for the
+/// binding tube; Final has no binding, and the mock insets it 3.93 % on BOTH
+/// sides and 1.13 % top and bottom (21770:4467). Ours kept the spine geometry,
+/// which put the whole page — warp, both lines of copy, everything — 37 px
+/// right of the mock. Measured on the overlay: the two text blocks matched the
+/// mock's width to 2 px and its baseline to 1 px, and sat 56 px to the right,
+/// 37 of that from this inset and the rest from aligning a page that has no
+/// spine to align by.
+.pf .page__body {
+  left: 3.93%;
+  right: 3.93%;
+  top: 1.13%;
+  bottom: 1.13%;
+}
+
 /// NO SPINE ON THE LAST PAGE. Every data page carries the magenta binding
 /// tube down its left edge; the mock's Final (21770:4465) does not — that page
 /// is framed on all four sides by the mirrored edge asset above and has no
@@ -1254,20 +1254,28 @@
   display: none;
 }
 
+/// ⚠️ 25.09: THE WARP IS NOW THE NODE'S OWN RENDER, PAGE-SIZED AND FLAT.
+/// 21770:4468 dims and re-tones the source — its render is half the file's red
+/// and a quarter of its blue — and the 0.35 the mock prints is baked into that
+/// render's alpha (mean 6.3 against the source's 18.9). Feeding the raw upload
+/// through `opacity: .35` and `plus-lighter`, as this page did, reproduced
+/// neither. `get_screenshot` on the node returns it already composited over the
+/// body colour at 1443 x 1868, which is exactly what the page must show, so it
+/// is drawn flat at the body's own box: no blend, no opacity, nothing left to
+/// get wrong. The colour wash still sits above it, as in the mock.
 .pf__warp {
-  left: du(-317.5);
-  top: du(-445);
-  width: du(2078);
-  height: du(2758);
+  left: 0;
+  top: 0;
+  width: du(1443);
+  height: du(1868);
   object-fit: cover;
-  opacity: 0.35;
-  mix-blend-mode: plus-lighter;
 }
 
 .pf__subhead {
   position: absolute;
   left: 50%;
-  top: du(931.5);
+  // 25.09: 844.71, not 931.5 (21770:4473).
+  top: du(844.71);
   transform: translateX(-50%);
   // Explicit box = the widest the mock draws for this slot across the four
   // language variants, which is what useJournalFit measures against. The
@@ -1347,7 +1355,8 @@
 .sp__subhead {
   position: absolute;
   left: 50%;
-  top: du(379);
+  // 25.09: 347, not 379 (21770:4156).
+  top: du(347);
   transform: translateX(-50%);
   // Explicit box = the widest the mock draws for this slot across the four
   // language variants, which is what useJournalFit measures against. The
@@ -1547,12 +1556,15 @@
 /// Radial bloom behind the helmet (21945:3037, Ellipse 3277): 1852.189 square
 /// centred on the "image" frame, hard-light. Shares bloom-tight.svg with
 /// Space Milk — same gradient, different box.
+/// ⚠️ 25.09: the ellipse shrank from 1852.189 to 1192.039 and moved down —
+/// 21945:3037 is centred on (50% - 7.48, 50% + 164.98) of the 1868 body, i.e.
+/// (714.02, 1098.98), so its box starts at (118, 502.96).
 .gift__bloom {
   position: absolute;
-  left: du(-206.77);
-  top: du(240.91);
-  width: du(1852.189);
-  height: du(1852.189);
+  left: du(118);
+  top: du(502.96);
+  width: du(1192.039);
+  height: du(1192.039);
   mix-blend-mode: hard-light;
   pointer-events: none;
 }
@@ -1591,15 +1603,12 @@
   }
 }
 
-/// Multiplier Moment: gradient rule under the amount (21811:3563 area). Same
-/// box as Headline Win's divider but the mock reverses the stops — fades IN
-/// left to right instead of out, since the content below is centred rather
-/// than right-aligned.
-.mm__divider {
-  position: absolute;
-  left: du(108);
-  top: du(729);
-  width: du(1227);
-  height: du(9);
-  background: linear-gradient(90deg, rgba(255, 255, 123, 0) 0%, #{$accent} 100%);
+/// Multiplier Moment: the same coin spray Headline Win has (23124:3041). The
+/// gradient rule that used to sit under the amount is gone from the node.
+.mm__coins {
+  left: du(103.97);
+  top: du(801.03);
+  width: du(1272.617);
+  height: du(892.455);
+  object-fit: cover;
 }

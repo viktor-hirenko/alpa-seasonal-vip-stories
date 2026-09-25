@@ -1,93 +1,98 @@
 <template>
-  <PageChrome>
-    <template #art>
+  <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
+    <template #backdrop>
       <PageBackdrop />
+    </template>
 
-      <JHero :left="261" :top="566">
-        <!-- `Lvl 1` ray burst: 1076 sq, centred, plus-lighter, rotated 90deg -->
-        <div class="j-hero__rays" :style="artBox(-78.5, -78.5, 1076, 1076)">
-          <JArt :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
-        </div>
+    <template #art>
+      <!-- ⚠️ NO GLOW AND NO RAY BURST SINCE 25.09. The `Lvl 1` burst that used
+           to fill this frame is gone from the node, and both lighting mask
+           groups on the body are `hidden`. Ours drew concentric rings around
+           the trophy that the mock has nowhere. -->
+      <JHero :left="219.4" :top="827.72" :glow="false">
+        <!-- Icon group 21770:3857 is still `display: contents`, so every child
+             below is positioned against the HERO's 919 square, not the group.
+             See the V-85 note in 36-visual-diff.md. -->
 
-        <!-- Icon group `21770:3857`. ⚠️ ITS OWN BOX IS A DECOY, AND THIS PAGE
-             FELL FOR IT (V-85). The mock prints the group as
-             `absolute contents h-[824.257px] left-[36.66px] w-[750.067px]`, but
-             `display: contents` throws the box away: the children below are
-             positioned by the HERO's 919 square, not by the group, and their
-             `inset` per cents are per cents OF THE HERO. Reading them against
-             750.067 x 824.257 and then adding the group's offset put the ball
-             38 px high and 100 px small and the cup 37 px right — the "cup is
-             bigger" the owner saw on his phone. `coins 1` below sits outside
-             the group and was right all along; it is the control that proves
-             the frame. Every child here is now hero-relative. -->
-
-        <!-- Ball `Sport_icon_512x512`: inset -2.94% 17.23% 41.61% 21.44%
-             of the 919 frame -> 197.03, -27.02, 563.623 sq; image 512 sq
-             (hypot(90.3217cqw, 9.67832cqh) = 512.0); rotate 6.12deg -->
-        <JHeroIcon
-          :src="ball"
-          :left="197.034"
-          :top="-27.019"
-          :width="563.623"
-          :height="563.623"
-          :img-width="512"
-          :img-height="512"
-          :rotate="6.12"
-        />
-
-        <!-- Trophy `21770:3858`: (197, 219.23) in the 919 frame, 563.636 sq,
-             inner image 512 sq rotated 6.12deg -->
+        <!-- Trophy 21770:3858: a 759.572 box centring the 689.986 artwork at
+             6.12deg. It grew with the redraw — 563.636 / 512 before. -->
         <JHeroIcon
           :src="trophy"
-          :left="197"
-          :top="219.23"
-          :width="563.636"
-          :height="563.636"
+          :left="114.81"
+          :top="121.21"
+          :width="759.572"
+          :height="759.572"
+          :img-width="689.986"
+          :img-height="689.986"
+          :rotate="6.12"
+        />
+
+        <!-- Ball 21770:3860: inset -2.94% 32.57% 41.61% 6.09% of the 919 frame
+             -> 55.97, -27.02, 563.6 sq; image hypot(90.3217cqw, 9.67832cqh)
+             = 512. Same size as before, moved left from 197.03. -->
+        <JHeroIcon
+          :src="ball"
+          :left="55.967"
+          :top="-27.019"
+          :width="563.6"
+          :height="563.6"
           :img-width="512"
           :img-height="512"
           :rotate="6.12"
         />
 
-        <!-- `coins 5`: inset 54.52% 78.62% 26.74% 6.09% of the 919 frame
-             -> 55.97, 501.04, 140.515 x 172.221; image
-             hypot(-68.9782cqw, 17.1996cqh) x hypot(31.0218cqw, 82.8004cqh)
-             = 101.35 x 149.11; rotate -17deg, mirrored -->
+        <!-- `coins 5`: inset 44.48% 83.43% 18.17% -13.89% -> -127.65, 408.77,
+             279.93 x 343.25; image hypot(-68.9782cqw, 17.1996cqh) x
+             hypot(31.0218cqw, 82.8004cqh) = 201.91 x 297.18. Twice the size it
+             was, and now hanging off the frame's left edge. -->
         <JHeroIcon
           :src="coins5"
-          :left="55.967"
-          :top="501.039"
-          :width="140.515"
-          :height="172.221"
-          :img-width="101.35"
-          :img-height="149.11"
+          :left="-127.65"
+          :top="408.77"
+          :width="279.93"
+          :height="343.25"
+          :img-width="201.91"
+          :img-height="297.18"
           :rotate="-17"
           mirror
         />
 
-        <!-- `coins 1`: inset 43.53% -7.02% 28.34% 75.3% of the 919 frame
-             -> 692.0, 400.0, 291.5 x 258.5; rotate -8.53deg -->
+        <!-- `coins 1`: inset 23.36% -32.16% 28% 81.78% -> 751.56, 214.68,
+             462.99 x 447.0; image hypot(64.6176cqw, -43.0992cqh) x
+             hypot(35.3824cqw, 56.9008cqh) = 355.83 x 302.55; turned -32.78deg
+             where it used to be -8.53. -->
         <JHeroIcon
           :src="coins1"
-          :left="692"
-          :top="400.01"
-          :width="291.5"
-          :height="258.5"
-          :img-width="261.41"
-          :img-height="222.19"
-          :rotate="-8.53"
+          :left="751.56"
+          :top="214.68"
+          :width="462.99"
+          :height="447"
+          :img-width="355.83"
+          :img-height="302.55"
+          :rotate="-32.78"
         />
       </JHero>
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
-    <!-- 292.6 tall at three digits: the height at which our row is as wide as
-         the clip's (V-61, tile-fit) — 284 at the mock's tile proportions,
-         x1.0303 since session S drew the tile the clip's way (JDigitTiles' R).
-         The mock's 200 is what seven digits shrink to. Grows upwards from the
-         edge above the currency label, 1371.031 + 200. -->
-    <JDigitTiles :value="amount" :height="292.6" :bottom="1571.031" />
-    <JCurrency :top="1603.031" :size="200">{{ currency }}</JCurrency>
+    <JHeading :text="copy.headline" :top="333.41" :size="82" v-bind="L.headline" />
+    <!-- ⚠️ THE ROW MOVED ABOVE THE ART IN THE 25.09 REDRAW (23186:3261). The
+         old big row — 292.6 tall, hung from 1571.031 under the currency — is
+         still in the file as node 21811:3914, marked `hidden`; the designer
+         replaced it with a 120.805 row at the top, directly under the heading,
+         and dropped the art to 827.72.
+         120.805 IS A CEILING, NOT A CONSTANT, and that is the part this page
+         must not lose: `height` is the tile height at a SHORT value and `slot`
+         is the width the row may take before useJournalFit shrinks it, so a
+         player with more digits than the mock's seven gets a smaller row rather
+         than one that runs off the page. The mock draws the same 120.805 at
+         seven digits here and at eight on Money Talks, so the size is fixed in
+         the design and the shrink is ours alone, for values the designer never
+         drew. -->
+    <JDigitTiles :value="amount" :height="120.805" :top="561.03" />
+    <!-- USD 23186:3260: 82 px at leading 0.94, right edge on 807.73 (the mock
+         writes it as -translate-x-full from 50% + 86.23). -->
+    <JCurrency :top="701.1" :size="82" align="right" :right="807.73">{{ currency }}</JCurrency>
   </PageChrome>
 </template>
 
@@ -99,7 +104,7 @@
  * Hero geometry is from get_design_context, NOT metadata. Metadata put the
  * icon group at left=117.295 (real: 36.66) and reported the `Lvl 1` ray burst
  * at x=997, i.e. off the frame — it is actually dead-centre. Percentage insets
- * from the mock are resolved to design px in the comments below.
+ * from the mock are resolved to design px in the comments above.
  */
 import PageChrome from '@/components/shared/PageChrome.vue'
 import PageBackdrop from '@/components/shared/PageBackdrop.vue'
@@ -109,12 +114,10 @@ import JDigitTiles from '@/components/shared/JDigitTiles.vue'
 import JCurrency from '@/components/shared/JCurrency.vue'
 import JHero from '@/components/shared/JHero.vue'
 import JHeroIcon from '@/components/shared/JHeroIcon.vue'
-import { artBox, artImg } from '@/components/shared/artBox.js'
 import trophy from '@/assets/pages/hero-sports-trophy.webp'
 import ball from '@/assets/pages/hero-sports-ball.webp'
 import coins1 from '@/assets/pages/coins-1.webp'
 import coins5 from '@/assets/pages/coins-5.webp'
-import rays from '@/assets/pages/rays.webp'
 import { useStory } from '@/composables/useStoryData.js'
 
 const story = useStory()

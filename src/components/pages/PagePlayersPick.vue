@@ -1,28 +1,22 @@
 <template>
   <PageChrome :spine-fade-to="'rgba(0, 10, 18, 0.8)'">
     <template #backdrop>
-      <!-- Canonical galaxy/planets art, but at this page's own offsets. -->
-      <div class="page__art art-box" :style="artBox(-804, 566, 3049.644, 2284.992)">
-        <JArt :src="galaxy" alt="" :style="artImg(2759, 1793, 10.96)" />
-      </div>
-      <div class="page__art art-box" :style="artBox(-542.59, -548, 1501.563, 1258.608)">
-        <JArt :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
-      </div>
-    </template>
-
-    <template #art>
-      <!-- Glow sits on the BODY here, not inside a hero frame: its box is a
-           percentage of the 1443-wide body, resolved to design px. -->
-      <JGlow :left="-435.2" :top="790.59" :width="2272.4" :height="1136.2" />
+      <!-- 25.09: galaxy and planets are gone; the starburst (23126:3060) sits
+           HIGHER here than on the other pages — top 150.14, not 278.82 — and
+           carries the same fade. There is no lighting mask group left, so the
+           page-level glow this file used to draw is gone with it. -->
+      <PageBackdrop :planets="false" :left="-1016.32" :top="150.14" />
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
+    <JHeading :text="copy.headline" :top="331" :size="82" v-bind="L.headline" />
     <!-- Game name: 96 px accent gradient, same treatment as the value labels.
          The mock's box is 848 wide at x=297 — page-centred, so a max-width
          states it exactly, and it is the budget useJournalFit fits into. -->
-    <JValue :value="gameName" :top="620" :size="96" v-bind="L.game" />
-    <JGameThumb :src="gameImage" :name="gameName" :top="841" />
+    <JValue :value="gameName" :top="606.58" :size="96" v-bind="L.game" />
+    <!-- The card shrank to 551 x 740 and rose to 833.03 (23126:2944); the
+         artwork inside it is still the 645 x 903 cover crop. -->
+    <JGameThumb :src="gameImage" :name="gameName" :top="833.03" :width="551" :height="740" />
   </PageChrome>
 </template>
 
@@ -36,12 +30,9 @@ import PageChrome from '@/components/shared/PageChrome.vue'
 import JChip from '@/components/shared/JChip.vue'
 import JHeading from '@/components/shared/JHeading.vue'
 import JValue from '@/components/shared/JValue.vue'
-import JGlow from '@/components/shared/JGlow.vue'
 import JGameThumb from '@/components/shared/JGameThumb.vue'
-import { artBox, artImg } from '@/components/shared/artBox.js'
+import PageBackdrop from '@/components/shared/PageBackdrop.vue'
 import { useStory } from '@/composables/useStoryData.js'
-import galaxy from '@/assets/pages/galaxy-3.webp'
-import planets from '@/assets/pages/planets-4.webp'
 
 const story = useStory()
 const L = story.layout('players_pick')

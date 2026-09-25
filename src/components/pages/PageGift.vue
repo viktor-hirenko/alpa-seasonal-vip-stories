@@ -1,22 +1,45 @@
 <template>
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
-      <div class="page__art art-box" :style="artBox(-804, -116, 3049.644, 2284.992)">
-        <JArt :src="galaxy" alt="" :style="artImg(2759, 1793, 10.96)" />
-      </div>
-      <div class="page__art art-box" :style="artBox(-542.59, 1026, 1501.563, 1258.608)">
-        <JArt :src="planets" alt="" :style="artImg(1286.704, 798.233, 24.41)" />
-      </div>
+      <!-- 25.09: galaxy and planets are gone from this node; the starfield
+           (23126:3666) is a PLAIN node here, not a Mask group, so it takes no
+           fade. 4096 x 2295, centred on 719.45, top -144. -->
+      <PageBackdrop
+        tone="a"
+        :planets="false"
+        :left="-1328.55"
+        :top="-144"
+        :width="4096"
+        :height="2295"
+        :fade-end="0"
+      />
     </template>
 
     <template #art>
-      <!-- Layer order is the mock's own (21945:3030 "image"): the two lighting
-           washes, the radial bloom, then the helmet with its ring on top.
+      <!-- Layer order is the mock's own (21945:3030 "image"): the lighting
+           wash, the radial bloom, then the helmet with its ring on top.
            ⚠️ AND THE WHOLE HERO SITS ABOVE THE COLOUR WASH HERE — the mock puts
-           the wash (21945:3027) BEFORE the hero, unlike Space Milk where it
+           the wash (23126:3670) BEFORE the hero, unlike Space Milk where it
            comes after the glow. Moving this glow below the wash by analogy cost
-           27 points of brightness down the left edge (V-91). Check the page. -->
-      <JGlow :left="-635.2" :top="530.16" :width="2665.6" :height="1332.8" />
+           27 points of brightness down the left edge (V-91). Check the page.
+           ⚠️ 25.09: THE GLOW SHRANK BY A THIRD AND DROPPED. 23126:3669 is
+           `left-[-9.86%] right-[-9.73%]` of the 1443 body at aspect 1200/600 ->
+           1725.68 x 862.84 at (-142.28, 607.9), one plus-lighter copy, where it
+           used to be 2665.6 x 1332.8 at (-635.2, 530.16) as a hard-light pair.
+           Gift is the page where the background is the ONLY difference, and it
+           measured 26.9 % because of this and the starfield. -->
+      <JGlow
+        :left="-142.28"
+        :top="607.9"
+        :width="1725.68"
+        :height="862.84"
+        blend="plus"
+        :plus="false"
+        :mask-x="202.957"
+        :mask-y="-21.711"
+        :mask-width="1449.047"
+        :mask-height="868.484"
+      />
       <JArt class="gift__bloom" :src="bloom" alt="" />
       <div class="page__art art-box" :style="artBox(31.79, 469.13, 1321.579, 1321.579)">
         <JArt :src="helmet" alt="" :style="artImg(1051.288, 1051.288, -17.74)" />
@@ -61,10 +84,9 @@
  * layers for a difference the 0.68-scaled page does not show.
  */
 import PageChrome from '@/components/shared/PageChrome.vue'
+import PageBackdrop from '@/components/shared/PageBackdrop.vue'
 import JGlow from '@/components/shared/JGlow.vue'
 import { artBox, artImg } from '@/components/shared/artBox.js'
-import galaxy from '@/assets/pages/galaxy-3.webp'
-import planets from '@/assets/pages/planets-4.webp'
 import bloom from '@/assets/pages/bloom-tight.svg'
 import ring from '@/assets/pages/cover-ellipse.svg'
 import helmet from '@/assets/pages/gift-helmet.webp'

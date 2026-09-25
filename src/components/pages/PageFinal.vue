@@ -4,7 +4,8 @@
       <JArt class="page__art pf__warp" :src="warp" alt="" />
     </template>
 
-    <JHeading :text="copy.headline" :top="737.5" :size="90" v-bind="L.headline" />
+    <!-- 25.09: both lines rose — 668.51 at 92 px, from 737.5 at 90 (21770:4472). -->
+    <JHeading :text="copy.headline" :top="668.51" :size="92" v-bind="L.headline" />
     <p class="pf__subhead" data-fit-role="display" :data-fit-lines="L.subhead.lines">
       <span v-for="(line, i) in copy.subhead" :key="i">{{ line }}</span>
     </p>

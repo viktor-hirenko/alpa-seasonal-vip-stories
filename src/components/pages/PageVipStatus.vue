@@ -1,22 +1,45 @@
 <template>
   <PageChrome :tint="'rgba(255, 0, 181, 0.62)'">
     <template #backdrop>
-      <JArt class="page__art page__starfield" :src="starfield" alt="" />
+      <!-- 21770:3107 kept its box and changed its picture: the starfield is
+           now the shared starburst at its own exposure (`d`). Plain node, so
+           no fade. -->
+      <PageBackdrop
+        tone="d"
+        :planets="false"
+        :left="-1328"
+        :top="-144"
+        :width="4096"
+        :height="2295"
+        :fade-end="0"
+      />
+      <!-- ⚠️ 25.09: the wash left the hero for the page (23126:3029) —
+           `left-[-30.19%] right-[-27.29%]` of the 1443 body at aspect 1200/600
+           -> 2272.43 x 1136.22 at (-435.64, 460.25), one plus-lighter copy
+           where it was one hard-light copy inside the 919 frame. -->
+      <JGlow
+        :left="-435.64"
+        :top="460.25"
+        :width="2272.43"
+        :height="1136.22"
+        blend="plus"
+        :plus="false"
+        :mask-x="267.266"
+        :mask-y="-28.59"
+        :mask-width="1908.199"
+        :mask-height="1143.676"
+      />
     </template>
 
     <template #art>
-      <JHero :left="261" :top="566" :glow-plus="false">
-        <!-- `Lvl 1` ray burst: 1076 sq centred at y + 16.5, rotated 90deg -->
-        <div class="j-hero__rays" :style="artBox(-78.5, -62, 1076, 1076)">
-          <JArt :src="rays" alt="" :style="artImg(1076, 1076, 90)" />
-        </div>
-
+      <!-- The `Lvl 1` ray burst is gone from the node. -->
+      <JHero :left="261" :top="566" :glow="false">
         <JLevelBadge :src="badge" />
       </JHero>
     </template>
 
     <JChip :top="129">{{ copy.chip }}</JChip>
-    <JHeading :text="copy.headline" :top="389" v-bind="L.headline" />
+    <JHeading :text="copy.headline" :top="332.54" :size="92" v-bind="L.headline" />
     <!-- Level name: 200 px gradient, same treatment as the currency labels. -->
     <JValue :value="levelName" :top="1504" :size="200" v-bind="L.level" />
   </PageChrome>
@@ -29,11 +52,12 @@
  * the badge artwork and the level name.
  *
  * Two things specific to this page:
- *   - a 4096 x 2295 starfield background, centred and bleeding well past the
- *     page on both sides;
+ *   - a 4096 x 2295 starburst background, centred and bleeding well past the
+ *     page on both sides — since 25.09 the shared file at its own exposure;
  *   - a magenta colour wash (rgba(255,0,181,0.62), mix-blend-mode: color).
  *     Without it the page reads dark navy instead of magenta.
- *   - only ONE glow copy (hard-light), unlike the two-copy stack elsewhere.
+ *   - only ONE glow copy, and since 25.09 it is plus-lighter and lives on the
+ *     page rather than inside the hero frame.
  */
 import PageChrome from '@/components/shared/PageChrome.vue'
 import JChip from '@/components/shared/JChip.vue'
@@ -41,10 +65,9 @@ import JHeading from '@/components/shared/JHeading.vue'
 import JValue from '@/components/shared/JValue.vue'
 import JHero from '@/components/shared/JHero.vue'
 import JLevelBadge from '@/components/shared/JLevelBadge.vue'
-import { artBox, artImg } from '@/components/shared/artBox.js'
+import JGlow from '@/components/shared/JGlow.vue'
+import PageBackdrop from '@/components/shared/PageBackdrop.vue'
 import { useStory } from '@/composables/useStoryData.js'
-import starfield from '@/assets/pages/starfield.webp'
-import rays from '@/assets/pages/rays.webp'
 
 const story = useStory()
 const L = story.layout('vip_status')

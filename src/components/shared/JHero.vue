@@ -1,6 +1,7 @@
 <template>
   <div class="page__art j-hero" :style="frameStyle">
     <JGlow
+      v-if="glow"
       :left="glowBox.left"
       :top="glowBox.top"
       :width="glowWidth"
@@ -52,6 +53,23 @@ const props = defineProps({
   glowMaskY: { type: Number, default: 0 },
   glowMaskWidth: { type: Number, default: 0 },
   glowMaskHeight: { type: Number, default: 0 },
+  /**
+   * Rotation of the FRAME itself, degrees. Almost every hero sits square, but
+   * the 25.09 redraw turned Money Talks' (21770:3196 renders as a 1004.66
+   * square inside a `rotate-4` wrapper), and a frame rotation moves its
+   * children too — folding it into the child's own angle would put the art in
+   * the wrong place. Pass the INNER square as width/height, not the AABB the
+   * mock prints around it.
+   */
+  rotate: { type: Number, default: 0 },
+  /**
+   * Whether the hero carries a glow at all. Since the 25.09 redraw several
+   * pages have none: the designer switched their `lighting_1296x576` mask
+   * groups to `hidden` and let the new starfield backdrop light the page
+   * instead (Sports Desk 21770:3849, Money Talks 21770:3196). A hero that
+   * still draws one then reads as a bright halo the mock does not have.
+   */
+  glow: { type: Boolean, default: true },
   /** Most pages stack two glow copies; VIP Status has only the hard-light one. */
   glowPlus: { type: Boolean, default: true },
   /** Blend of the first glow copy — see JGlow. Seasonal Power uses 'dodge'. */
@@ -65,6 +83,7 @@ const frameStyle = computed(() => ({
   top: d(props.top),
   width: d(props.width),
   height: d(props.height),
+  ...(props.rotate ? { transform: `rotate(${props.rotate}deg)` } : {}),
 }))
 
 const glowBox = computed(() => ({
