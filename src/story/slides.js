@@ -109,31 +109,29 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  *            on screen. Every spread's content is centred inside it, so the
  *            symmetric crop is the one that costs the least type.
  *
- *            ⚠️ THE COVER IS THE EXCEPTION and keeps the mock's own frame-7
- *            pose, 57.75 / 48.67. Its type is LEFT-ALIGNED and it is the wider
- *            face (1093 design px against the spread's 1065), so centring it
- *            eats the beginning of every line.
+ *            ⚠️ THE COVER IS THE EXCEPTION, at 51.75 / 48.67. Its type is
+ *            LEFT-ALIGNED and it is the wider face (1093 design px against the
+ *            spread's 1065), so centring it eats the beginning of every line.
+ *            The mock's own frame-7 pose is 57.75; the owner moved it 6 % left
+ *            so the left corner crosses the screen edge and the vertical
+ *            «JOURNAL» down the right edge comes into view — see below.
  *
- *            ⚠️ AND THE VERTICAL «JOURNAL» DOWN ITS RIGHT EDGE CANNOT BE SHOWN
- *            AT THIS SIZE. Measured on rendered frames, not modelled: the
- *            type spans 1308 of the 1465 face, which is 976 design px on screen
- *            against the 886 a 19.5:9 phone shows, and the 3.11 deg roll adds
- *            64 more because the top and bottom lines are 1000 px apart. At
- *            57.75 the left type just clears the crop and the lettering sits
- *            105..149 px outside; slide left until the lettering appears and
- *            «FEATURING» loses 84 px while the lettering is still 50 px out.
- *            The only lever is scale, and it is steep — with the levitation's
- *            own swing counted and the left type never crossing the edge on
- *            430x932, 393x852 or 360x800:
- *              0.7461 (here) -> the lettering never appears; it sits 152 px
- *                               outside the crop and the levitation moves it
- *                               by 25, so no swing of it can help
- *              0.670         -> 20 % of it at rest, nothing at the swing's worst
- *              0.640         -> 96 % at rest, 47 % at the worst
- *              0.616         -> whole at every instant
- *            Taking any of those makes the cover visibly smaller than the
- *            spreads that follow (0.681), which is why it is the owner's call
- *            and not a session's.
+ *            ⚠️ WHETHER THE LETTERING SHOWS DEPENDS ON THE SCREEN'S ASPECT, and
+ *            that is the whole story. The canvas is 1080x1920 and it is
+ *            COVER-FITTED, so a 9:16 screen shows all 1080 of it while a 19.5:9
+ *            phone shows 886 and cuts 97 off each side. The lettering lives in
+ *            exactly that cut. Measured on rendered frames at 540x960:
+ *              left edge of the cover   -19.5..-2.7 px  (just off screen, as asked)
+ *              «JOURNAL» right edge     538..547 of 540 (whole at the ends of the
+ *                                       drift, 7 px clipped at its middle)
+ *              «FEATURING» left         >= 17.9      «VIP CLUB» right  <= 502
+ *            The same pose on 430x932 puts «FEATURING» 30 px and the player's
+ *            name 35 px off the left edge, and the lettering is still 13 px off
+ *            the right — a tall phone cannot show both ends of this face at any
+ *            offset, because the face is 568 px wide there against 430 of
+ *            screen. Only scale can, and it is steep: 0.616 fits the whole face
+ *            on a 19.5:9 phone and makes the cover visibly smaller than the
+ *            spreads that follow (0.681). That trade is the owner's call.
  *   [t, rot, scale, cx, cy] — t in absolute video seconds, rot in CSS degrees,
  *   cx/cy the centre as a percent of the 1080x1920 canvas.
  *
@@ -146,8 +144,8 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  */
 // prettier-ignore
 export const JOURNAL_PATH = [
-  [6.00, 3.11, 0.7461, 57.75, 48.67], // the cover's pose — see the note above
-  [11.19, 3.11, 0.7461, 57.75, 48.67], //   ...and nothing moves until the first fold
+  [6.00, 3.11, 0.7461, 51.75, 48.67], // the cover's pose — see the note above
+  [11.19, 3.11, 0.7461, 51.75, 48.67], //   ...and nothing moves until the first fold
   [11.23, 3.00, 0.6810, 50.00, 50.00], // the object becomes a spread: centred, edge-on, invisible
   [84.80, 3.00, 0.6810, 50.00, 50.00], //   ...and nothing moves for the next 73 seconds
   [86.00, 8.00, 0.6000, 49.80, 50.60], // the recede — «спершу повільно»

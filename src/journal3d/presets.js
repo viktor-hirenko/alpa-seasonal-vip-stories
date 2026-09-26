@@ -317,8 +317,7 @@ export function swingOpen(t, params) {
         //    which zeroes both tangents there on purpose, so the journal ran
         //    right, STOOD STILL for 0.4 s at the top of its swing and then went
         //    back. That is the «задерживается» in the middle of the entrance.
-        //    The peak is still 67.1 and the return still lands on 57.75; it is
-        //    a turn now instead of a stop.
+        //    It is a turn now instead of a stop.
         //  - the roll held twice as long. 0.08 then 0.08 is another flat pair,
         //    so it did not move for the first 0.15 s, then ran 0.6 deg/s, then
         //    2.95, then stopped again. The header always described this column
@@ -338,13 +337,21 @@ export function swingOpen(t, params) {
         //                                        sideways 23 -> 12
         // The sideways twelve are the swing turning around, which is the motion
         // itself and not a fault in it.
-        [0.0, -104, 0.08, 1.02, 54.5, 50.0],
-        [0.2028, -90, 0.488, 0.961, 57.2, 49.946],
-        [0.4102, -76.3, 0.887, 0.92, 64.0, 49.84],
-        [0.6781, -59.6, 1.374, 0.8847, 67.1, 49.659],
-        [1.0884, -36.5, 2.047, 0.845, 62.2, 49.334],
-        [1.5361, -15.5, 2.658, 0.7985, 58.6, 48.973],
-        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.7461, 57.75, 48.67], // handover: JOURNAL_PATH's first row
+        //
+        // THE WHOLE `cx` COLUMN THEN MOVED 6 LEFT, and only that column, so the
+        // journal flies the same flight and stops further along it: the owner
+        // wants the left corner to cross the screen edge so the vertical
+        // «JOURNAL» on the right comes into view. A constant added to every key
+        // leaves every difference — and therefore every speed — untouched, so
+        // none of the smoothing above is disturbed. The resting place is
+        // JOURNAL_PATH's 51.75, and the note there carries the measurement.
+        [0.0, -104, 0.08, 1.02, 48.5, 50.0],
+        [0.2028, -90, 0.488, 0.961, 51.2, 49.946],
+        [0.4102, -76.3, 0.887, 0.92, 58.0, 49.84],
+        [0.6781, -59.6, 1.374, 0.8847, 61.1, 49.659],
+        [1.0884, -36.5, 2.047, 0.845, 56.2, 49.334],
+        [1.5361, -15.5, 2.658, 0.7985, 52.6, 48.973],
+        [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.7461, 51.75, 48.67], // handover: JOURNAL_PATH's first row
       ],
       // The row the PATH reaches one second after the handover, in this
       // preset's own seconds and without a yaw column — see `next` above.
