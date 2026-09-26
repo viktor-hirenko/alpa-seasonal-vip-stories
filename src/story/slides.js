@@ -125,7 +125,9 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  *            The only lever is scale, and it is steep — with the levitation's
  *            own swing counted and the left type never crossing the edge on
  *            430x932, 393x852 or 360x800:
- *              0.7461 (here) -> the lettering never appears
+ *              0.7461 (here) -> the lettering never appears; it sits 152 px
+ *                               outside the crop and the levitation moves it
+ *                               by 25, so no swing of it can help
  *              0.670         -> 20 % of it at rest, nothing at the swing's worst
  *              0.640         -> 96 % at rest, 47 % at the worst
  *              0.616         -> whole at every instant

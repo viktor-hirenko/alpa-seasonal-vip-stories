@@ -304,49 +304,46 @@ export function swingOpen(t, params) {
         // measurement nothing contradicted, and only its destination moved, from
         // the clip's 19.23 deg to the mock's 3.11. Scaling keeps it MONOTONE,
         // which is the whole point: any peak on the way in is a nod.
-        // ⚠️ THE ENTRANCE IS THE STORYBOARD'S, NOT THE CLIP'S (25.09, second
-        // pass). What stood here was the clip's swing: the journal appeared
-        // BACK-cover to camera at yaw -104, turned through edge-on, threw its
-        // centre out to cx 67 and came back to 57.75. Two of those are visible
-        // direction reversals, and the owner read the whole thing as steps —
-        // «идет один участок, поворачивается, потом меняет траекторию, как бы
-        // задерживается, потом снова меняет».
+        // [t from start, rotationY, rotationZ, scale, cx, cy]
         //
-        // The mock draws something far simpler, and it is what frames 4-7 show:
-        // the cover RISES from below, straightening out of a tilt and growing.
-        // Measured on the drawn frames — «VIP CLUB» bbox against its own tilt —
-        // the roll runs 24.5 -> 8.8 -> 4.0 deg and the size 0.75 -> 0.94 -> 1.0
-        // of the settled pose, while the centre climbs and barely moves
-        // sideways. No edge-on instant anywhere. Figma's own note on frame 7
-        // asks for exactly that: «вилітає в центр кадру, вирівнюється
-        // фронтально. Рух гаситься плавно… без різкої зупинки».
+        // ⚠️ THE TRAJECTORY IS THE ONE THAT ALWAYS FLEW — back cover to camera,
+        // through edge-on, the swing out and the return. Only the places where
+        // it STOPPED were taken out, and every pose it passes through is the
+        // pose it passed through before. A pass that replaced the trajectory
+        // with the storyboard's rise was wrong and is reverted.
         //
-        // So every channel is now one decelerating curve to the landing pose,
-        // final + (start − final)·(1 − u)^k, sampled at nine keys: k = 1.9 for
-        // roll, size and cx, 2.4 for the rise so the journal is at its height
-        // before it finishes straightening, as the storyboard has it. There is
-        // no yaw at all. Measured in the DOM over 4.2..5.9 s, frames where a
-        // channel ACCELERATED instead of decelerating: roll 22 -> 0, centre
-        // 20 -> 0, size 13 -> 1.
+        // WHAT ACTUALLY STEPPED, measured frame by frame in the DOM:
+        //  - `cx` held. 67.1 then 66.6 is a FLAT pair to hermite.js's limiter,
+        //    which zeroes both tangents there on purpose, so the journal ran
+        //    right, STOOD STILL for 0.4 s at the top of its swing and then went
+        //    back. That is the «задерживается» in the middle of the entrance.
+        //    The peak is still 67.1 and the return still lands on 57.75; it is
+        //    a turn now instead of a stop.
+        //  - the roll held twice as long. 0.08 then 0.08 is another flat pair,
+        //    so it did not move for the first 0.15 s, then ran 0.6 deg/s, then
+        //    2.95, then stopped again. The header always described this column
+        //    as «a straight climb» and the numbers never were one; now they are.
+        //  - the scale pulled back. 0.762 at the sixth key sat 0.036 below the
+        //    curve its neighbours describe, so the shrink slowed and then
+        //    surged 2x. It is on that curve now.
+        //  - the TIMES were clip frame numbers, and nothing made them a
+        //    deceleration: the yaw ran 93 -> 55 -> 63 -> 58 -> 42 deg/s. They
+        //    come from one monotone deceleration of the yaw's own progress,
+        //    t = D·(1 − (1−p)^(1/1.4)).
         //
-        // ⚠️ THE COVER KEEPS ITS SIZE, and that is a constraint, not a choice.
-        // Its type spans 1308 design px of a 1465 face; at 0.7461 that is 976
-        // on screen against the 886 a 19.5:9 phone shows, and the 3.11 deg roll
-        // adds another 64 because «VIP CLUB» at the top and «FEATURING» at the
-        // bottom are 1000 px apart vertically. 57.75 is the position where the
-        // left-hand type just clears the crop; move it left far enough for the
-        // vertical «JOURNAL» to appear on the right and «FEATURING» is cut by
-        // 84 px while the lettering is STILL 50 px outside. Measured on the
-        // rendered frames, not modelled. The only lever is size — see the table
-        // in slides.js.
-        [0.0, 0, 26.0, 0.52, 55.6, 104.0],
-        [0.2583, 0, 20.871, 0.5707, 56.082, 88.829],
-        [0.5167, 0, 16.361, 0.6152, 56.505, 76.41],
-        [0.775, 0, 12.482, 0.6535, 56.87, 66.579],
-        [1.0333, 0, 9.243, 0.6855, 57.174, 59.153],
-        [1.2917, 0, 6.661, 0.711, 57.416, 53.926],
-        [1.55, 0, 4.753, 0.7299, 57.596, 50.656],
-        [1.8084, 0, 3.55, 0.7418, 57.709, 49.046],
+        // Measured over 4.1..5.9 s, against the table that flew before:
+        //   frames where a channel STOOD STILL   roll 20 -> 0, scale 4 -> 0
+        //   frames where it ACCELERATED instead
+        //   of decelerating                      yaw 15 -> 3, roll 25 -> 2,
+        //                                        sideways 23 -> 12
+        // The sideways twelve are the swing turning around, which is the motion
+        // itself and not a fault in it.
+        [0.0, -104, 0.08, 1.02, 54.5, 50.0],
+        [0.2028, -90, 0.488, 0.961, 57.2, 49.946],
+        [0.4102, -76.3, 0.887, 0.92, 64.0, 49.84],
+        [0.6781, -59.6, 1.374, 0.8847, 67.1, 49.659],
+        [1.0884, -36.5, 2.047, 0.845, 62.2, 49.334],
+        [1.5361, -15.5, 2.658, 0.7985, 58.6, 48.973],
         [2.0667, HANDOVER_YAW, HANDOVER_ROT, 0.7461, 57.75, 48.67], // handover: JOURNAL_PATH's first row
       ],
       // The row the PATH reaches one second after the handover, in this
