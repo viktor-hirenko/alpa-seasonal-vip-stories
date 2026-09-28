@@ -41,6 +41,39 @@ PREVIEW="$REFS/DP-15152 - preview.mp4"
 # and stays the reference for the proxies only.
 SFX="$REFS/DP-15152 - clean bg sfx.mp4"
 
+# ⚠️ 2026-09-28: `clean bg sfx.mp4` IS NO LONGER A RAW DELIVERABLE. The v2 master
+# ("DP-15152 - clean bg sfx v2 raw.mp4", the flying objects) was exported 13
+# FRAMES EARLY — picture and sound alike. Measured, not guessed: cross-correlating
+# the per-frame brightness of the intro and of the outro against v1 both minimise
+# at +13 frames (error 2.30 -> 0.55 and 3.91 -> 0.75), the audio envelope minimises
+# at +430 ms, and frame-by-frame new[i] == old[i+13] exactly (YAVG matches to the
+# hundredth). The old master simply carries 13 frames more of the opening star
+# flare. Our whole 94 s timeline — 17 page cuts, the entrance at 3.9333, the
+# recede — is calibrated to that head, so shipping the raw file would have run the
+# background 0.43 s ahead of the DOM everywhere.
+#
+# So SFX is now ASSEMBLED: v1's first 13 frames (the flare build-up, where the
+# room and its objects are not yet on screen, so the splice is invisible) followed
+# by all of v2 bar its last 13. 2831 frames, 94.366667 s, the same clock as ever;
+# verified at 0 frames of shift in both intro and outro and 0 ms on the audio.
+#
+#   ffmpeg -i "$REFS/DP-15152 - clean bg sfx v1.mp4" \
+#          -i "$REFS/DP-15152 - clean bg sfx v2 raw.mp4" \
+#     -filter_complex "[0:v]trim=start_frame=0:end_frame=13,setpts=PTS-STARTPTS[v0]; \
+#       [1:v]trim=start_frame=0:end_frame=2818,setpts=PTS-STARTPTS[v1]; \
+#       [v0][v1]concat=n=2:v=1:a=0[v]; \
+#       [0:a]atrim=start=0:end=0.433333,asetpts=PTS-STARTPTS[a0]; \
+#       [1:a]atrim=start=0:end=93.933334,asetpts=PTS-STARTPTS[a1]; \
+#       [a0][a1]concat=n=2:v=0:a=1[a]" -map "[v]" -map "[a]" \
+#     -c:v libx264 -preset fast -crf 16 -pix_fmt yuv420p -r 30 \
+#     -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart \
+#     "$REFS/DP-15152 - clean bg sfx.mp4"
+#
+# ⚠️ WHEN v3 LANDS, CHECK ITS HEAD BEFORE ENCODING ANYTHING. The cheap test is the
+# one above: pull the per-frame YAVG of 0..9 s from the new master and from this
+# one, and slide one against the other. A zero shift means encode it directly; any
+# other number means assemble it the same way rather than re-timing the story.
+
 need() { [ -f "$1" ] || { echo "missing: $1" >&2; exit 1; }; }
 
 # ⚠️ A KEYFRAME ON EVERY SECOND THE PLAYER CAN BE SENT TO — see
