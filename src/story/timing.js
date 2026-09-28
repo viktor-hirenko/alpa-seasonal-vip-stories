@@ -297,13 +297,34 @@ export const TIMING = {
    * 104.0..104.5 px against the mock's 96 x 1.08 = 103.68, which is how we know
    * the mock's type size is the clip's type size.
    *
-   * `at` IS THE TEXT'S OWN FIRST FRAME. It was pinned to 88.10 because the
-   * clip's white area jumps there, 0.67 % -> 2.98 %, and fitting the zoom with
-   * its start held at that second costs almost nothing: rms 0.107 against 0.089
-   * for a freely-chosen start of 88.03. What was read as a white flash covering
-   * the arrival is the arrival — the title is white, and those are its pixels.
-   * There is no flash: session E measured the clip's mean luma on every frame
-   * from 86.00 to 89.00 and it never exceeds 119.8.
+   * `at` IS THE TEXT'S OWN FIRST FRAME, AND IT IS NO LONGER THE CLIP'S.
+   *
+   * The clip puts it at 88.10: its white area jumps there, 0.67 % -> 2.98 %,
+   * and fitting the zoom with the start held at that second costs almost
+   * nothing (rms 0.107 against 0.089 for a freely-chosen 88.03). What was read
+   * as a white flash covering the arrival is the arrival — the title is white,
+   * and those are its pixels. There is no flash: session E measured the clip's
+   * mean luma on every frame from 86.00 to 89.00 and it never exceeds 119.8.
+   *
+   * ⚠️ 2026-09-28, AT THE SUPERVISOR'S REQUEST, IT IS 88.60 — A DELIBERATE
+   * DEPARTURE FROM THE CLIP, NOT A CORRECTION TO IT. The clip starts the text
+   * on the same frame the journal starts leaving (TIMING.exit.at is 88.10 too),
+   * so for 0.7 s the two run at once and in opposite directions: the journal
+   * shrinking into the room while the title flies AT the camera from 11.57x.
+   * Shot every 0.15 s off the production build, the 88.05 frame is a white
+   * "EXE" across the whole screen with the journal still legible underneath it.
+   * The supervisor asked for a beat between the two — "0.3, 0.5" — and half a
+   * second is what that is.
+   *
+   * 88.60 rather than 88.80, which is where the journal is fully gone: the ask
+   * was for the delay he named, and at 88.60 the journal is already dissolving
+   * (exit.fadeAt 88.55 -> 88.80), so the collision is over without the screen
+   * ever going empty.
+   *
+   * WHAT IT COSTS: the title's hold at rest, 3.58 s -> 3.08 s. `exitAt` is
+   * absolute and untouched — outroText places its exit at `exitAt - at` inside
+   * a timeline nested at `at`, so the title still leaves on 92.4333 and the
+   * hyperspace burst still fires on 92.83, both of which ARE the clip's.
    *
    * `exitAt` is NOT `speed.at`. The text starts growing at 92.4333 — the first
    * frame whose pitch leaves the 104.0..104.5 plateau — and the burst only
@@ -330,7 +351,7 @@ export const TIMING = {
    * the clip's text has all but finished shrinking (scale 1.95 and falling).
    */
   outro: {
-    at: 88.1,
+    at: 88.6,
     dur: 0.75,
     scale: 11.57,
     exitAt: 92.4333,
