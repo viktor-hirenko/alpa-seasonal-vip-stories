@@ -254,31 +254,31 @@ export const TIMING = {
    * page, and the yellow type on it has gone dim but is still legible.
    */
   /**
-   * THE JOURNAL SHRINKS AWAY WITH THE TITLE — it does not simply fade on the
-   * spot. Re-measured 2026-09-10 after the owner said so, and he is right.
+   * THE FADE AT THE END OF THE DEPARTURE. ⚠️ SINCE 2026-09-28 THIS IS ONLY A
+   * FADE — `scale` and `dur` are no longer used for anything on screen.
    *
-   * WHY THE EARLIER READING SAID "FADE". The numbers above were taken from the
-   * strength of a difference mask (`preview` minus `clean bg`) inside the page.
-   * That mask weakens when the journal goes transparent — and equally when the
-   * journal simply gets SMALLER, because fewer pixels differ. The two are
-   * indistinguishable to it, and shrinking is what is actually happening.
+   * It used to be a second shrink: the journal's own path stopped on 88.03, this
+   * started on 88.10, and `power1.in` began the motion again from zero velocity
+   * and took it to seventy times the path's speed inside 0.6 s. Measured off the
+   * built story, the rate went -14.5 %/s, then -4.2 (a visible stall), then
+   * -74.7, -235, -1005. That is the jump the owner reported. The departure is
+   * one curve in JOURNAL_PATH now and its header carries the whole measurement;
+   * buildStoryTimeline no longer passes `from`, so the shrink here is inert.
    *
-   * THE LANDMARK THAT SEPARATES THEM is the page's own yellow copy, which no
-   * white title and no glow can be confused with. Its width in the clip:
+   * What the clip actually shows, and what the fade is still fitted to (session
+   * E, frame by frame — width of the journal in clip px):
    *
-   *   87.60  744      88.25  440 (0.59)     88.55  122 (0.16)
+   *   87.60  822      88.20  514 (0.63)     88.55  312
    *   87.90  744      88.40  254 (0.34)     88.70  gone
    *   88.10  714
    *
    * and its CENTRE holds at 524..574 / 898..946 throughout — the journal is not
-   * travelling, it is scaling about its own middle. In the log domain the steps
-   * are -0.53, -0.55, -0.75, i.e. very close to constant, which is why the ease
-   * is `power1.in` rather than a linear ramp.
+   * travelling, it is scaling about its own middle.
    *
-   * `scale` is the fraction of the path's last scale that is left at the end of
-   * `dur`. The fade is kept, but as a short tail at the very end: at 88.55 the
-   * yellow copy is still legible at 122 px wide, so the journal is small by
-   * then, not transparent.
+   * `fadeAt` and `fadeDur` are absolute in the story's clock through `at`, so
+   * the journal still finishes dissolving on 88.80, exactly as before. It is
+   * simply much smaller by then — 0.10 against 0.20 — because the curve gets it
+   * there by scale rather than by a last-second collapse.
    */
   exit: { at: 88.1, dur: 0.6, scale: 0.15, fadeAt: 88.55, fadeDur: 0.25 },
 

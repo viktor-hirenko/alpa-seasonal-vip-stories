@@ -135,12 +135,48 @@ export const RECEDE_POSE = { rot: 20.4, scale: 0.444, cx: 48.6, cy: 64.5 }
  *   [t, rot, scale, cx, cy] — t in absolute video seconds, rot in CSS degrees,
  *   cx/cy the centre as a percent of the 1080x1920 canvas.
  *
- * THE LAST FOUR ROWS ARE THE RECEDE (21770:4988): "the journal shrinks and flies
- * off into the depth; the motion accelerates towards the end — slowly at first".
- * It leaves from rest, because hermite.js zeroes both tangents of the flat run
- * before it, and lands on the mock's frame-24 pose — measured off the drawn
- * frame at 51.9 % rather than taken from that frame's metadata, which is 223
- * design px out. See the header of _context/32-poses.md.
+ * THE LAST THIRTEEN ROWS ARE THE DEPARTURE (21770:4988): "the journal shrinks
+ * and flies off into the depth; the motion accelerates towards the end — slowly
+ * at first". It leaves from rest, because hermite.js zeroes both tangents of the
+ * flat run before it, and it passes through the mock's frame-24 lean and drift —
+ * measured off the drawn frame at 51.9 % rather than taken from that frame's
+ * metadata, which is 223 design px out. See the header of _context/32-poses.md.
+ *
+ * ⚠️ 2026-09-28: THE SCALE COLUMN OF THOSE ROWS IS A CURVE, NOT FOUR MEASURED
+ * POSES, AND THE SEPARATE EXIT SHRINK IS GONE. What shipped before was two
+ * animations stitched end to end and they did not agree about speed. Measured
+ * frame by frame off the built story, in percent of size per second:
+ *
+ *     85.7  -14.6     87.5  -13.8   |  88.10    -4.2   <- a stall
+ *     86.6  -16.1     88.0  -14.5   |  88.30   -74.7
+ *     87.0  -15.1                   |  88.50  -235.1
+ *                                   |  88.70 -1005
+ *
+ * i.e. three seconds at a FLAT -15 %/s doing a third of the work, then a hitch,
+ * then 0.6 s doing the rest at up to seventy times the speed. The hitch is
+ * mechanical: the path ended on 88.03, TIMING.exit started on 88.10, nothing
+ * moved in between, and `power1.in` then began the shrink from zero velocity
+ * all over again. The owner saw it without being told where to look — «плавно
+ * уменьшается, потом резкий скачок».
+ *
+ * It read as intentional only because the clip put the white outro title on
+ * 88.10 too: the title hit, the journal bolted, one event. Moving the title to
+ * 88.60 for the supervisor left the bolt with nothing to explain it.
+ *
+ * So the departure is now ONE accelerating curve, sampled every 0.35 s:
+ *
+ *     scale(t) = 0.6810 * exp(-A * u^3.5),  u = (t - 84.80) / 3.90,
+ *                A = ln(0.6810 / 0.0666) = 2.3247
+ *
+ * u^3.5 has zero slope at u = 0, which is not a nicety — the 73-second flat run
+ * before 84.80 makes hermite.js zero that tangent anyway, so a curve that wanted
+ * to start at any other speed would fight the spline and ripple. Verified on the
+ * spline THROUGH these keys, not on the formula: the rate runs 0 -> -22 -> -50
+ * -> -89 -> -149 -> -211 %/s with NO interval anywhere where it falls. The
+ * endpoint 0.0666 is what the old dissolve ended on, so the journal is exactly
+ * as gone as it always was; it is merely smaller earlier — 0.33 against 0.46 at
+ * 87.60, and 0.08 against 0.18 when the title arrives, which also gives the
+ * supervisor's complaint more room, not less.
  */
 // prettier-ignore
 export const JOURNAL_PATH = [
@@ -148,15 +184,27 @@ export const JOURNAL_PATH = [
   [11.19, 3.11, 0.7461, 51.75, 48.67], //   ...and nothing moves until the first fold
   [11.23, 3.00, 0.6810, 50.00, 50.00], // the object becomes a spread: centred, edge-on, invisible
   [84.80, 3.00, 0.6810, 50.00, 50.00], //   ...and nothing moves for the next 73 seconds
-  [86.00, 8.00, 0.6000, 49.80, 50.60], // the recede — «спершу повільно»
-  [87.00, 14.50, 0.5150, 49.20, 51.30], //   ...picking up
-  [88.03, 20.38, 0.4441, 48.64, 51.90], //   ...and the measured frame-24 pose at the end
+  [85.15, 3.64, 0.6807, 49.99, 50.08], // the departure, and it is ONE gesture: see below
+  [85.50, 5.21, 0.6771, 49.94, 50.27],
+  [85.85, 7.17, 0.6652, 49.85, 50.50],
+  [86.20, 9.17, 0.6385, 49.71, 50.73],
+  [86.55, 11.50, 0.5916, 49.49, 50.98],
+  [86.90, 13.87, 0.5218, 49.26, 51.23],
+  [87.25, 15.98, 0.4313, 49.06, 51.45],
+  [87.60, 17.97, 0.3285, 48.87, 51.66],
+  [87.95, 19.93, 0.2265, 48.68, 51.85],
+  [88.03, 20.38, 0.2047, 48.64, 51.90], // the measured frame-24 lean and drift
+  [88.40, 22.49, 0.1175, 48.44, 52.12], //   ...its lean and drift continued at their own rate
+  [88.70, 24.20, 0.0666, 48.28, 52.29], //   ...the size the separate dissolve used to end on
+  [88.90, 25.35, 0.0427, 48.17, 52.41], //   ...one row past the fade, so nothing eases out on screen
 ]
 
 /** Where the last PAGE segment ends for the progress bar: the second the outro
- *  title arrives (TIMING.outro.at). Not the journal's exit — that is a dissolve
- *  at 88.35 (TIMING.exit) — and not the path's end, which is 88.03. */
-export const STORY_END = 88.1
+ *  title arrives (TIMING.outro.at). It follows that second — when the title moved
+ *  to 88.60 this moved with it, or the bar would read full through half a second
+ *  in which nothing had happened yet. Not the journal's exit, which now runs to
+ *  88.90 inside JOURNAL_PATH, and not the fade, which is TIMING.exit. */
+export const STORY_END = 88.6
 
 /** Timecodes snapped to the 30 fps grid on read (ADR-0009). */
 export const SLIDES = RAW.map(s => ({ ...s, at: snap(s.at) }))

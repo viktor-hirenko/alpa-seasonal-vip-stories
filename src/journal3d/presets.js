@@ -768,10 +768,13 @@ export function journalDissolve(t, params) {
   const s = tl()
   if (!t.pos) return s
   s.set(t.pos, { autoAlpha: 1 })
-  // THE SHRINK IS THE EXIT; the fade is a tail on the end of it. See
-  // TIMING.exit for the measurement, and note that `scale` goes on `.journal-box`
-  // — the same element the pose owns — which is safe here only because
-  // JOURNAL_PATH has ended by this second and nothing else writes it after.
+  // ⚠️ `from` IS NOT PASSED BY THE STORY ANY MORE, so this branch is dead there
+  // and the preset does the fade alone. It was a SECOND shrink: it restarted the
+  // motion from zero velocity 0.07 s after JOURNAL_PATH had stopped and then ran
+  // up to seventy times the path's speed, which is the jump the owner reported
+  // on 2026-09-28. The departure is one curve in JOURNAL_PATH now — its header
+  // carries the measurement. The branch is kept because the lab still drives
+  // this preset on its own, where there is no path to inherit a size from.
   if (p.from != null) {
     s.set(t.box, { scale: p.from }, 0)
     s.to(t.box, { scale: p.from * p.scale, duration: p.dur, ease: 'power1.in' }, 0)

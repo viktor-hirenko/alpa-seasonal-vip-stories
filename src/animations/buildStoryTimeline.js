@@ -230,7 +230,12 @@ export function buildStoryTimeline(targets, ctx) {
   // a button in the lab, the way `hover` did when the path replaced it.
   // `from` is the scale the path leaves behind, so the shrink starts from
   // exactly where the pose stopped rather than from a number repeated here.
-  nest(tl, journalDissolve(targets, { from: path[path.length - 1][2] }), snap(timing.exit.at))
+  // NO `from` SINCE 2026-09-28, AND THAT IS THE POINT: journalDissolve used to
+  // own a second shrink, which restarted the motion from zero velocity 0.07 s
+  // after JOURNAL_PATH had stopped and then ran seventy times faster than it.
+  // The whole departure is one curve in JOURNAL_PATH now (its header carries the
+  // measurement), and this preset is left with the job its name describes.
+  nest(tl, journalDissolve(targets), snap(timing.exit.at))
   // Nested at 88.10, the second the title's own first pixels appear — what the
   // old code called the flash was this arrival (TIMING.outro). Its exit leads
   // the burst by 0.23 s and lives inside the same child, so there is one nest
