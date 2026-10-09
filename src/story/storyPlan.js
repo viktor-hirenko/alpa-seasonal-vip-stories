@@ -70,8 +70,12 @@ const shiftTiming = (timing, toStory) => ({
     at: toStory(timing.outro.at),
     exitAt: toStory(timing.outro.exitAt),
   },
-  cta: { from: toStory(timing.cta.from), to: toStory(timing.cta.to) },
-  replay: { at: toStory(timing.replay.at) },
+  // ⚠️ SPREAD FIRST, LIKE EVERY BLOCK ABOVE. `delay` and `rise` are durations,
+  // not timecodes, so they do not shift — but they have to SURVIVE. Rebuilt from
+  // `from` and `to` alone this block lost them, the CTA's progress came out NaN,
+  // and "Continue Journey" was never rendered on any link that dropped a page.
+  cta: { ...timing.cta, from: toStory(timing.cta.from), to: toStory(timing.cta.to) },
+  replay: { ...timing.replay, at: toStory(timing.replay.at) },
   duration: toStory(timing.duration),
 })
 

@@ -25,7 +25,7 @@ https://<host>/vip-stories/?user_language=de&user_currency=EUR
   &top_multiplier=2257&top_multiplier_game=Tiger+Jackpots
   &favorite_game_name=Tiger+Jackpots
   &favorite_game_thunbnail=https://cdn.example.com/games/tiger.png
-  &bonuses=2572257&sports_wins=2572257&sports_multiplier=257
+  &bonuses=2572257&sports_wins=2572257&sports_multiplier=257&packs=257
   &final_link=https://example.com/promotions/andromeda
 ```
 
@@ -63,31 +63,32 @@ https://<host>/vip-stories/?user_language=de&user_currency=EUR
 Кожен рядок — одна сторінка журнала. **«Вирішує долю сторінки»** означає, що без
 цього параметра сторінці нічого сказати — див. розділ _Коли даних немає_.
 
-| #     | Сторінка              | Параметр                        | Тип          | Вирішує долю                  |
-| ----- | --------------------- | ------------------------------- | ------------ | ----------------------------- |
-| 1     | Cover                 | `name`                          | текст        | ні                            |
-| 2     | Editor's Note         | `name`                          | текст        | ні                            |
-| 3     | Days in the Spotlight | `days`                          | ціле         | **так**                       |
-| 4     | Seasonal Power        | `points`                        | ціле         | **так**                       |
-| 5     | VIP Status            | `level`                         | див. нижче   | **так**                       |
-| 6     | Money Talks           | `total_wins`                    | ціле         | **так**                       |
-| 7     | Headline Win          | `biggest_win`                   | ціле         | **так**                       |
-| 7     | Headline Win          | `biggest_win_game`              | текст        | ні                            |
-| 7     | Headline Win          | `biggest_win_game_thunbnail`    | URL картинки | ні                            |
-| 8     | Multiplier Moment     | `top_multiplier`                | число        | **так**                       |
-| 8     | Multiplier Moment     | `top_multiplier_game`           | текст        | ні                            |
-| 8     | Multiplier Moment     | `top_multiplier_game_thunbnail` | URL картинки | ні                            |
-| 9     | Player's Pick         | `favorite_game_name`            | текст        | **так**                       |
-| 9     | Player's Pick         | `favorite_game_thunbnail`       | URL картинки | (досить одного з двох)        |
-| 10    | Bonus Report          | `bonuses`                       | ціле         | **так**                       |
-| 11    | Sports Desk           | `sports_wins`                   | ціле         | **так**                       |
-| 12    | Top Sport Signal      | `sports_multiplier`             | число        | **так**                       |
-| 14    | Space Milk            | `days`                          | ціле         | ні (бере значення сторінки 3) |
-| 16    | Gift                  | `promocode`                     | текст        | ні                            |
-| 16    | Gift                  | `bonus_label`                   | текст        | ні                            |
-| 16/17 | Gift, Final           | `final_link`                    | URL          | ні                            |
+| #     | Сторінка              | Параметр                        | Тип          | Вирішує долю           |
+| ----- | --------------------- | ------------------------------- | ------------ | ---------------------- |
+| 1     | Cover                 | `name`                          | текст        | ні                     |
+| 2     | Editor's Note         | `name`                          | текст        | ні                     |
+| 3     | Days in the Spotlight | `days`                          | ціле         | **так**                |
+| 4     | Seasonal Power        | `points`                        | ціле         | **так**                |
+| 5     | VIP Status            | `level`                         | див. нижче   | **так**                |
+| 6     | Money Talks           | `total_wins`                    | ціле         | **так**                |
+| 7     | Headline Win          | `biggest_win`                   | ціле         | **так**                |
+| 7     | Headline Win          | `biggest_win_game`              | текст        | ні                     |
+| 7     | Headline Win          | `biggest_win_game_thunbnail`    | URL картинки | ні                     |
+| 8     | Multiplier Moment     | `top_multiplier`                | число        | **так**                |
+| 8     | Multiplier Moment     | `top_multiplier_game`           | текст        | ні                     |
+| 8     | Multiplier Moment     | `top_multiplier_game_thunbnail` | URL картинки | ні                     |
+| 9     | Player's Pick         | `favorite_game_name`            | текст        | **так**                |
+| 9     | Player's Pick         | `favorite_game_thunbnail`       | URL картинки | (досить одного з двох) |
+| 10    | Bonus Report          | `bonuses`                       | ціле         | **так**                |
+| 11    | Sports Desk           | `sports_wins`                   | ціле         | **так**                |
+| 12    | Top Sport Signal      | `sports_multiplier`             | число        | **так**                |
+| 14    | Space Milk            | `packs`                         | ціле         | **так**                |
+| 16/17 | Gift, Final           | `final_link`                    | URL          | ні                     |
 
-Сторінки 13 (Sponsor), 15 (Joke) і 17 (Final) персональних даних не несуть.
+Сторінки 13 (Sponsor), 15 (Joke), 16 (Gift) і 17 (Final) персональних даних не несуть.
+
+`packs` — кількість пачок Space Milk. Це **окреме значення, не `days`**: сторінка 14
+не бере число зі сторінки 3, і без `packs` її немає.
 
 ### `level`
 
@@ -124,7 +125,8 @@ https://<host>/vip-stories/?user_language=de&user_currency=EUR
 ### `final_link`
 
 Куди веде гравця закриття історії або кнопка наприкінці. Має бути повним
-`http(s)` посиланням. Якщо його немає, хрестик просто закриває історію.
+`http(s)` посиланням. Якщо його немає, хрестик просто закриває історію, а кнопка
+«Continue Journey» показується, але нікуди не веде.
 
 ---
 
@@ -146,14 +148,18 @@ https://<host>/vip-stories/?user_language=de&user_currency=EUR
 сторінка б зайняла — приблизно чотири з половиною кожна. Нічого не лишається
 порожнім і жодна фраза не обривається.
 
-Так працюють десять сторінок: Days in the Spotlight, Seasonal Power, VIP Status,
+Так працюють одинадцять сторінок: Days in the Spotlight, Seasonal Power, VIP Status,
 Money Talks, Headline Win, Multiplier Moment, Player's Pick, Bonus Report,
-Sports Desk і Top Sport Signal. Обкладинка, слово редактора і весь фінальний блок
-(спонсор, Space Milk, жарт, подарунок, фінальна сторінка) показуються завжди —
-вони не говорять про числа гравця, тож і викидати нічого.
+Sports Desk, Top Sport Signal і Space Milk. Обкладинка, слово редактора, спонсор,
+жарт, подарунок і фінальна сторінка показуються завжди — вони не говорять про числа
+гравця, тож і викидати нічого.
 
-Гравець, у якого немає жодного з десяти, отримує історію приблизно на 51 секунду
-замість 94: обкладинка, слово редактора і фінальний блок.
+Гравець, у якого немає жодного з одинадцяти, отримує історію приблизно на 46 секунд
+замість 94: обкладинка, слово редактора, спонсор, жарт, подарунок і фінальна
+сторінка.
+
+Кнопка «Continue Journey» з'являється на сторінці Gift і лишається до кінця в
+будь-якому варіанті — скільки б сторінок не випало.
 
 **Що це означає для вас:** окремий варіант посилання для гравців, у яких чогось
 немає, більше не потрібен. Надсилайте те, що маєте; те, чого немає, просто не
@@ -181,7 +187,7 @@ https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
   &biggest_win=222257&biggest_win_game=Dragon+Coins
   &top_multiplier=2257&top_multiplier_game=Tiger+Jackpots
   &favorite_game_name=Tiger+Jackpots
-  &bonuses=2572257&sports_wins=2572257&sports_multiplier=257
+  &bonuses=2572257&sports_wins=2572257&sports_multiplier=257&packs=257
   &final_link=https://example.com/x
 ```
 
@@ -193,7 +199,7 @@ https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
   &days=257&points=1200000&level=GOLD&total_wins=2222577
   &biggest_win=222257&biggest_win_game=Dragon+Coins
   &top_multiplier=2257&top_multiplier_game=Tiger+Jackpots
-  &favorite_game_name=Tiger+Jackpots&bonuses=2572257
+  &favorite_game_name=Tiger+Jackpots&bonuses=2572257&packs=257
   &final_link=https://example.com/x
 ```
 
@@ -203,12 +209,13 @@ Multiplier Moment і Player's Pick зникають:
 ```
 https://<host>/vip-stories/?user_language=en&user_currency=EUR&name=Marianna
   &days=257&points=1200000&level=GOLD
-  &bonuses=2572257&sports_wins=2572257&sports_multiplier=257
+  &bonuses=2572257&sports_wins=2572257&sports_multiplier=257&packs=257
   &final_link=https://example.com/x
 ```
 
-**Новачок, тільки ім'я (7 сторінок, 51 секунда)** — усі десять сторінок з даними
-зникають; лишаються обкладинка, слово редактора і фінальний блок:
+**Новачок, тільки ім'я (6 сторінок, 46 секунд)** — усі одинадцять сторінок з даними
+зникають; лишаються обкладинка, слово редактора, спонсор, жарт, подарунок і фінальна
+сторінка:
 
 ```
 https://<host>/vip-stories/?user_language=en&name=Marianna
@@ -222,12 +229,13 @@ https://<host>/vip-stories/?user_language=en&name=Marianna
 
 ## Як перевірити посилання перед розсилкою
 
-Відкрийте його з видимою консоллю браузера. Історія пише попередження про:
+Відкрийте його і порахуйте кроки у смужці згори: їх має бути стільки, скільки
+сторінок ви очікуєте. Це єдина перевірка, яка ловить одрук в імені параметра на
+бойовій адресі.
 
-- ім'я параметра, якого не знає (зазвичай одрук);
-- значення `level`, якого немає серед семи;
-- відсутній ключ перекладу.
+У консолі браузера бойова збірка пише лише одне попередження — про значення
+`level`, якого немає серед семи. Попередження про незнайоме ім'я параметра і про
+відсутній ключ перекладу є тільки в dev-збірці (`npm run dev`).
 
 Серверної валідації немає, тож посилання, яке виглядає правильно і показує
-правильні числа, — правильне. І порахуйте кроки у смужці згори: їх має бути
-стільки, скільки сторінок ви очікуєте.
+правильні числа, — правильне.
