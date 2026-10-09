@@ -1,5 +1,10 @@
 <template>
-  <div class="j-thumb" :style="boxStyle">
+  <!-- ⚠️ NO PICTURE AND NO NAME MEANS NO CARD. The name card is the fallback for
+       a missing picture; with the name missing too it was the mock's frame
+       around nothing. Thor draws no frame without the parameter
+       (your_story.vue:182), and that is the answer here as well. It covers a
+       picture that fails to load on a link with no name, not only an absent one. -->
+  <div v-if="(src && !failed) || name" class="j-thumb" :style="boxStyle">
     <img v-if="src && !failed" :src="src" alt="" :style="imgStyle" @error="failed = true" />
     <div v-else class="j-thumb__fallback">
       <span>{{ name }}</span>

@@ -73,7 +73,8 @@
           <p class="en__mini-issue">
             <span v-for="(line, i) in cover.issue" :key="i">{{ line }}</span>
           </p>
-          <p class="en__mini-featuring">{{ cover.featuring }}</p>
+          <!-- Goes with the name, exactly as on the cover it miniaturises. -->
+          <p v-if="playerName" class="en__mini-featuring">{{ cover.featuring }}</p>
           <p class="en__mini-name">{{ playerName }}</p>
         </div>
       </div>

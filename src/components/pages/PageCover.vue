@@ -36,7 +36,9 @@
         <span v-for="(line, i) in copy.intro" :key="i">{{ line }}</span>
       </p>
 
-      <p class="cover__featuring">{{ copy.featuring }}</p>
+      <!-- The label introduces the name, so it goes when the name does: a link
+           with no `name` left "Featuring:" ending on its colon. -->
+      <p v-if="playerName" class="cover__featuring">{{ copy.featuring }}</p>
       <!-- The one text on this page that takes arbitrary player input, so it
            is the one that carries a fit role (see useJournalFit). -->
       <p class="cover__name" data-fit-role="value" data-fit-lines="1">{{ playerName }}</p>
